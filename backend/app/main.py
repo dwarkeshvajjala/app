@@ -6,12 +6,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
-from app.core.db import close_client, get_client
+from app.core.db import close_client, get_client, get_db
 from app.core.errors import register_exception_handlers
+from app.core.indexes import ensure_indexes
+from app.modules.auth.router import router as auth_router
+from app.modules.workspaces.router import router as workspaces_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    await ensure_indexes(get_db())
     yield
     await close_client()
 
@@ -28,6 +32,9 @@ app.add_middleware(
 )
 
 register_exception_handlers(app)
+
+app.include_router(auth_router, prefix="/api/v1")
+app.include_router(workspaces_router, prefix="/api/v1")
 
 
 @app.get("/health")

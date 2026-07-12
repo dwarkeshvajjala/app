@@ -4,7 +4,9 @@ Collaborative website review platform. Full specification: [`docs/spec/00-README
 
 ## Status
 
-**Milestone 0 (Project Setup) complete.** Monorepo scaffold, CI skeleton, and a working local dev loop (backend `/health` reachable from the dashboard shell, workspace-linked packages, generated API types). No product features yet - those start at Milestone 1.
+**Milestones 0-1 complete.** Monorepo scaffold + CI skeleton (M0), and Auth & Workspaces (M1): Google OAuth, email OTP, JWT access tokens + httpOnly-cookie refresh tokens with rotation/theft-detection, workspace CRUD, membership + roles, and the full permission matrix enforced server-side (32 backend tests, all green). Frontend has a working login (Google + OTP) → workspace picker/create → members list + invite flow. Projects, share links, and the review SDK start at Milestone 2.
+
+Google OAuth and Resend email need real credentials to fully exercise (see `.env.example`) - without them, OTP codes are logged to the server console instead of emailed, and the Google button will fail at Google's side once clicked (the exchange code itself is fully implemented and tested with mocks).
 
 ## Repository Layout
 

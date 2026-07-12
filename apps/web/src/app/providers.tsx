@@ -2,8 +2,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
-// AuthProvider / WorkspaceProvider / WSProvider / PermissionProvider land alongside
-// Milestones 1, 2, and 7 respectively (05-Frontend-Architecture.md §5.4).
+import { AuthProvider } from "../features/auth/AuthContext";
+
+// WorkspaceProvider (beyond auth's own workspace_id/role) / WSProvider / PermissionProvider
+// land alongside Milestones 2 and 7 (05-Frontend-Architecture.md §5.4).
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -17,5 +19,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
       }),
   );
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>
+  );
 }

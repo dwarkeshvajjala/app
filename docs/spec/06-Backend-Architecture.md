@@ -97,9 +97,12 @@ A typed exception hierarchy in `core/errors.py`:
 ```
 BacklineError
   NotFoundError            -> 404
-  PermissionDeniedError     -> 403
+  AuthenticationError       -> 401 (missing/invalid/expired/revoked credentials)
+  PermissionDeniedError      -> 403 (valid session, not authorized for this action/resource)
   ValidationError             -> 422 (mirrors Pydantic's, but for business-rule validation)
   ConflictError                -> 409 (e.g., share link already revoked)
   ExternalServiceError           -> 502 (Slack/ClickUp/etc. failures)
 ```
+The 401/403 split is load-bearing, not cosmetic: the frontend's API client (`14-State-Management.md`) treats a 401 as worth a silent refresh-and-retry (`13-Authentication.md` §13.6), and a 403 as a permission error to surface as-is - collapsing both into one status code would make silent token refresh indistinguishable from "you don't have access," so `get_current_session` and refresh-token validation raise `AuthenticationError`, while role/workspace-scope checks (`core/permissions.py`, `require_workspace_match`) raise `PermissionDeniedError`.
+
 One global exception handler in `main.py` maps each to a consistent JSON error shape (`12-API-WebSocket.md` §12.4). No router ever constructs an `HTTPException` directly - always raise the typed error and let the handler translate it, so the response shape can't drift between endpoints.

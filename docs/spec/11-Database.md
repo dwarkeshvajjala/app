@@ -166,7 +166,37 @@ Append-only audit log (`06-Backend-Architecture.md` §6.6).
 ```
 Indexes: `{ workspace_id: 1, created_at: -1 }`; `{ type: 1, created_at: -1 }`. TTL: none - this is the audit trail, retained indefinitely (or per a future data-retention policy TDR).
 
-## 11.14 Key Aggregations
+## 11.14 `refresh_tokens`
+
+Referenced by `13-Authentication.md` §13.1/§13.6 but not enumerated in the original collection list - added here per the "no silent drift" rule (`00-README.md`). Not `users`/`workspaces`-scoped by tenant (a refresh token belongs to a `user`, not a workspace - a member switches workspace context via a new access JWT, `13-Authentication.md` §13.3, without re-authenticating).
+
+```
+{
+  _id, user_id, token_hash,          // sha256 of the opaque refresh token; raw token never stored
+  family_id,                          // shared across all tokens descended from one login, for theft detection
+  issued_at, expires_at, revoked_at?,
+  replaced_by_token_hash?            // set when rotated, so reuse-of-a-rotated-token is detectable
+}
+```
+Indexes: `{ token_hash: 1 }` unique; `{ user_id: 1 }`; TTL on `expires_at` (Mongo TTL index - once expired, both the row and its ability to authenticate are gone).
+
+**Rotation/theft-detection note:** `POST /auth/refresh` looks up by `token_hash`. If the row is `revoked_at`-set (already rotated once), every other non-revoked token sharing that `family_id` is revoked immediately (`13-Authentication.md` §13.6's "reuse of an already-rotated token immediately revokes the whole session family").
+
+## 11.15 `otp_codes`
+
+Referenced by `13-Authentication.md` §13.2, not enumerated in the original collection list - same amendment basis as §11.14.
+
+```
+{
+  _id, email, code_hash,             // sha256 of the 6-digit code; raw code never stored
+  attempts: int,                      // incremented per failed verify; capped at 5 (13-Authentication.md §13.2)
+  expires_at, consumed_at?,
+  created_at
+}
+```
+Indexes: `{ email: 1, created_at: -1 }`; TTL on `expires_at`.
+
+## 11.16 Key Aggregations
 
 **Kanban board counts per project** (drives the board header without a separate count query per column):
 ```python

@@ -1,0 +1,108 @@
+from datetime import UTC, datetime
+from typing import Any
+
+from bson import ObjectId
+from bson.errors import InvalidId
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
+
+def _to_object_id(value: str) -> ObjectId | None:
+    try:
+        return ObjectId(value)
+    except InvalidId:
+        return None
+
+
+class WorkspaceRepository:
+    """`workspaces` - 11-Database.md §11.1. Global collection (not workspace-scoped -
+    it *is* the tenant), per 03-System-Architecture.md §3.5."""
+
+    def __init__(self, db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
+        self.db = db
+
+    async def create(self, *, name: str, slug: str) -> dict[str, Any]:
+        now = datetime.now(UTC)
+        doc = {
+            "name": name,
+            "slug": slug,
+            "plan": "free",
+            "branding_json": {},
+            "created_at": now,
+            "updated_at": now,
+        }
+        result = await self.db.workspaces.insert_one(doc)
+        doc["_id"] = result.inserted_id
+        return doc
+
+    async def find_by_slug(self, slug: str) -> dict[str, Any] | None:
+        return await self.db.workspaces.find_one({"slug": slug})
+
+    async def find_by_id(self, workspace_id: str) -> dict[str, Any] | None:
+        oid = _to_object_id(workspace_id)
+        if oid is None:
+            return None
+        return await self.db.workspaces.find_one({"_id": oid})
+
+    async def update(self, workspace_id: str, *, name: str | None) -> None:
+        patch: dict[str, Any] = {"updated_at": datetime.now(UTC)}
+        if name is not None:
+            patch["name"] = name
+        await self.db.workspaces.update_one({"_id": ObjectId(workspace_id)}, {"$set": patch})
+
+
+class MembershipRepository:
+    """`memberships` - 11-Database.md §11.3. `workspace_id`/`user_id` are stored as
+    strings (matching the JWT's `workspace_id`/`sub` claims, 13-Authentication.md §13.3)
+    rather than ObjectId, so session comparisons never need a conversion step."""
+
+    def __init__(self, db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
+        self.db = db
+
+    async def create(
+        self, *, workspace_id: str, user_id: str, role: str, invited_by: str | None
+    ) -> dict[str, Any]:
+        doc = {
+            "user_id": user_id,
+            "workspace_id": workspace_id,
+            "role": role,
+            "invited_by": invited_by,
+            "created_at": datetime.now(UTC),
+        }
+        result = await self.db.memberships.insert_one(doc)
+        doc["_id"] = result.inserted_id
+        return doc
+
+    async def find(self, *, workspace_id: str, user_id: str) -> dict[str, Any] | None:
+        return await self.db.memberships.find_one(
+            {"workspace_id": workspace_id, "user_id": user_id}
+        )
+
+    async def find_by_id(self, *, workspace_id: str, membership_id: str) -> dict[str, Any] | None:
+        oid = _to_object_id(membership_id)
+        if oid is None:
+            return None
+        return await self.db.memberships.find_one({"workspace_id": workspace_id, "_id": oid})
+
+    async def list_for_workspace(self, workspace_id: str) -> list[dict[str, Any]]:
+        cursor = self.db.memberships.find({"workspace_id": workspace_id})
+        return [doc async for doc in cursor]
+
+    async def list_for_user(self, user_id: str) -> list[dict[str, Any]]:
+        cursor = self.db.memberships.find({"user_id": user_id})
+        return [doc async for doc in cursor]
+
+    async def update_role(self, *, workspace_id: str, membership_id: str, role: str) -> None:
+        await self.db.memberships.update_one(
+            {"workspace_id": workspace_id, "_id": ObjectId(membership_id)},
+            {"$set": {"role": role}},
+        )
+
+    async def delete(self, *, workspace_id: str, membership_id: str) -> None:
+        await self.db.memberships.delete_one(
+            {"workspace_id": workspace_id, "_id": ObjectId(membership_id)}
+        )
+
+    async def count_by_role(self, *, workspace_id: str, role: str) -> int:
+        return await self.db.memberships.count_documents(
+            {"workspace_id": workspace_id, "role": role}
+        )

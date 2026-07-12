@@ -13,10 +13,11 @@ dependencies = [
   "arq==0.26.3",
   "httpx==0.28.1",
   "python-jose[cryptography]==3.3.0",
-  "passlib[bcrypt]==1.7.4",
   "boto3==1.35.74",
   "resend==2.5.1",
   "python-multipart==0.0.19",
+  "google-auth==2.36.0",
+  "email-validator==2.2.0",
 ]
 
 [dependency-groups]
@@ -26,6 +27,7 @@ dev = [
   "pytest==8.3.4",
   "pytest-asyncio==0.24.0",
   "httpx==0.28.1",
+  "types-python-jose==3.3.4.20240106",
 ]
 
 [tool.ruff]
@@ -34,6 +36,9 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+# B008: FastAPI's Depends()-as-default-value is the framework's intended dependency
+# injection idiom, not the mutable-default-argument bug this rule otherwise catches.
+ignore = ["B008"]
 
 [tool.mypy]
 python_version = "3.12"

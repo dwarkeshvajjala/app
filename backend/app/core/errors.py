@@ -17,6 +17,17 @@ class NotFoundError(BacklineError):
     status_code = status.HTTP_404_NOT_FOUND
 
 
+class AuthenticationError(BacklineError):
+    """Missing, malformed, expired, or revoked credentials - distinct from
+    PermissionDeniedError (a valid session that simply isn't authorized for the
+    action/resource). The frontend's api-client treats 401 as "worth a silent
+    refresh retry" and 403 as "show a permission error," so this distinction is
+    load-bearing, not cosmetic."""
+
+    code = "UNAUTHENTICATED"
+    status_code = status.HTTP_401_UNAUTHORIZED
+
+
 class PermissionDeniedError(BacklineError):
     code = "PERMISSION_DENIED"
     status_code = status.HTTP_403_FORBIDDEN

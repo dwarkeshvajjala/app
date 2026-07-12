@@ -1,0 +1,83 @@
+from fastapi import APIRouter, Cookie, Depends, Response
+
+from app.core.config import get_settings
+from app.core.db import get_db
+from app.core.errors import AuthenticationError
+from app.core.session import Session, get_current_session
+from app.modules.auth import service as auth_service
+from app.modules.auth.schemas import (
+    AccessTokenOut,
+    GoogleCallbackRequest,
+    OtpRequestRequest,
+    OtpVerifyRequest,
+    SwitchWorkspaceRequest,
+    TokenPairOut,
+)
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+REFRESH_COOKIE_NAME = "refresh_token"
+REFRESH_COOKIE_PATH = "/api/v1/auth"
+
+
+def _set_refresh_cookie(response: Response, raw_refresh_token: str) -> None:
+    settings = get_settings()
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=raw_refresh_token,
+        max_age=settings.jwt_refresh_ttl_days * 24 * 60 * 60,
+        httponly=True,
+        secure=settings.environment != "local",
+        samesite="strict",
+        path=REFRESH_COOKIE_PATH,
+    )
+
+
+@router.post("/google/callback", response_model=TokenPairOut)
+async def google_callback(body: GoogleCallbackRequest, response: Response) -> TokenPairOut:
+    issued = await auth_service.login_with_google(get_db(), body.code)
+    _set_refresh_cookie(response, issued.refresh_token)
+    return TokenPairOut(access_token=issued.access_token, user=issued.user)
+
+
+@router.post("/otp/request", status_code=204)
+async def otp_request(body: OtpRequestRequest) -> None:
+    await auth_service.request_otp(get_db(), body.email)
+
+
+@router.post("/otp/verify", response_model=TokenPairOut)
+async def otp_verify(body: OtpVerifyRequest, response: Response) -> TokenPairOut:
+    issued = await auth_service.verify_otp(get_db(), body.email, body.code)
+    _set_refresh_cookie(response, issued.refresh_token)
+    return TokenPairOut(access_token=issued.access_token, user=issued.user)
+
+
+@router.post("/refresh", response_model=TokenPairOut)
+async def refresh(
+    response: Response,
+    refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
+) -> TokenPairOut:
+    if refresh_token is None:
+        raise AuthenticationError("No refresh token cookie present.")
+    issued = await auth_service.refresh_tokens(get_db(), refresh_token)
+    _set_refresh_cookie(response, issued.refresh_token)
+    return TokenPairOut(access_token=issued.access_token, user=issued.user)
+
+
+@router.post("/logout", status_code=204)
+async def logout(
+    response: Response,
+    session: Session = Depends(get_current_session),
+    refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
+) -> None:
+    if refresh_token is not None:
+        await auth_service.logout(get_db(), refresh_token)
+    response.delete_cookie(REFRESH_COOKIE_NAME, path=REFRESH_COOKIE_PATH)
+
+
+@router.post("/switch-workspace", response_model=AccessTokenOut)
+async def switch_workspace(
+    body: SwitchWorkspaceRequest, session: Session = Depends(get_current_session)
+) -> AccessTokenOut:
+    access_token = await auth_service.switch_workspace(get_db(), session.user_id, body.workspace_id)
+    return AccessTokenOut(access_token=access_token)

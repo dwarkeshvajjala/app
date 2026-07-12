@@ -24,8 +24,13 @@ class Settings(BaseSettings):
 
     google_oauth_client_id: str = ""
     google_oauth_client_secret: str = ""
+    google_oauth_redirect_uri: str = "http://localhost:5173/auth/callback"
+
+    otp_ttl_minutes: int = 10
+    otp_max_attempts: int = 5
 
     resend_api_key: str = ""
+    resend_from_address: str = "Backline <onboarding@backline.app>"
 
     clickup_oauth_client_id: str = ""
     clickup_oauth_client_secret: str = ""
