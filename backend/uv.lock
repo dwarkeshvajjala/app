@@ -44,6 +44,7 @@ source = { editable = "." }
 dependencies = [
     { name = "arq" },
     { name = "boto3" },
+    { name = "cryptography" },
     { name = "email-validator" },
     { name = "fastapi" },
     { name = "google-auth" },
@@ -73,6 +74,7 @@ dev = [
 requires-dist = [
     { name = "arq", specifier = "==0.26.3" },
     { name = "boto3", specifier = "==1.35.74" },
+    { name = "cryptography", specifier = "==49.0.0" },
     { name = "email-validator", specifier = "==2.2.0" },
     { name = "fastapi", specifier = "==0.115.6" },
     { name = "google-auth", specifier = "==2.36.0" },

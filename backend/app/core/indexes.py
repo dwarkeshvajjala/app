@@ -43,3 +43,9 @@ async def ensure_indexes(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
 
     await db.revision_diffs.create_index([("page_id", 1), ("to_revision_id", 1)])
     await db.recovery_logs.create_index([("comment_id", 1), ("created_at", -1)])
+
+    await db.integrations.create_index([("workspace_id", 1), ("type", 1)])
+
+    # notifications: shape/indexes documented in docs/tdr/0009 (11-Database.md never
+    # gave this collection an explicit schema, unlike every other one).
+    await db.notifications.create_index([("workspace_id", 1), ("user_id", 1), ("created_at", -1)])

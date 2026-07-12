@@ -73,6 +73,7 @@ async def update_comment(
         get_db(),
         comment_id=comment_id,
         workspace_id=require_workspace_context(session),
+        actor_user_id=session.user_id,
         body=body.body,
         status=body.status,
         assignee_id=body.assignee_id,

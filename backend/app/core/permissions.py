@@ -35,6 +35,10 @@ PERMISSIONS: dict[str, frozenset[Role]] = {
     "comment:create": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER, Role.GUEST}),
     "comment:reply": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER, Role.GUEST}),
     "comment:reanchor": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER}),
+    # 17.3/17.4: "Create task from comment" / "create card from comment" - member
+    # (owner/admin/member), not guest - matches every other comment-mutating action.
+    "comment:create_integration_task": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER}),
+    "notification:manage": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER}),
 }
 
 

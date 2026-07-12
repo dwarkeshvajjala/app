@@ -5,12 +5,14 @@ from typing import Any
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.actor_access import resolve_actor_project_access
+from app.core.arq_pool import get_arq_pool
 from app.core.errors import NotFoundError, ValidationError
 from app.core.events import append_event
 from app.core.session import Actor, GuestSession, Session, actor_identity
 from app.modules.comments import events as comment_events
 from app.modules.comments.repository import CommentRepository
 from app.modules.comments.schemas import AnchorIn, CommentOut, ContextIn
+from app.modules.notifications import service as notification_service
 from app.modules.pages.repository import PageRepository
 from app.modules.projects.repository import ProjectRepository
 from app.modules.realtime.pubsub import publish as publish_realtime_event
@@ -42,6 +44,20 @@ async def _broadcast_comment_event(
         )
 
 
+async def _dispatch_integration_event(
+    db: AsyncIOMotorDatabase[dict[str, Any]], *, workspace_id: str, event_type: str, comment_id: str
+) -> None:
+    # Deferred import: integrations/service.py imports get_comment_out from this same
+    # module (for its manual create-task/create-card triggers), so importing it at
+    # module scope here would be circular. See projects/service.py's identical pattern
+    # for share_links.
+    from app.modules.integrations.service import dispatch_comment_event
+
+    await dispatch_comment_event(
+        db, workspace_id=workspace_id, event_type=event_type, comment_id=comment_id
+    )
+
+
 async def _comment_out(doc: dict[str, Any]) -> CommentOut:
     screenshot_url = None
     if doc.get("screenshot_key"):
@@ -66,6 +82,17 @@ async def _comment_out(doc: dict[str, Any]) -> CommentOut:
         created_at=doc["created_at"],
         edited_at=doc.get("edited_at"),
     )
+
+
+async def get_comment_out(
+    db: AsyncIOMotorDatabase[dict[str, Any]], comment_id: str
+) -> CommentOut | None:
+    """Public accessor for cross-module reuse (integrations/service.py's manual
+    create-task/create-card triggers need a fully-built CommentOut, not a raw doc)."""
+    doc = await CommentRepository(db).find_by_id(comment_id)
+    if doc is None:
+        return None
+    return await _comment_out(doc)
 
 
 async def _resolve_page_and_access(
@@ -134,6 +161,12 @@ async def create_comment(
         workspace_id=page["workspace_id"],
         project_id=page["project_id"],
         comment=comment_out,
+    )
+    await _dispatch_integration_event(
+        db,
+        workspace_id=page["workspace_id"],
+        event_type="comment.created",
+        comment_id=comment_out.id,
     )
     return comment_out
 
@@ -208,6 +241,12 @@ async def create_reply(
         project_id=parent_page["project_id"],
         comment=comment_out,
     )
+    await _dispatch_integration_event(
+        db,
+        workspace_id=parent["workspace_id"],
+        event_type="comment.created",
+        comment_id=comment_out.id,
+    )
     return comment_out
 
 
@@ -252,6 +291,7 @@ async def update_comment(
     *,
     comment_id: str,
     workspace_id: str,
+    actor_user_id: str,
     body: str | None,
     status: str | None,
     assignee_id: str | None,
@@ -278,9 +318,20 @@ async def update_comment(
         workspace_id=workspace_id,
         type=comment_events.COMMENT_UPDATED,
         actor_type="member",
-        actor_id=None,
+        actor_id=actor_user_id,
         payload={"comment_id": comment_id, **{k: v for k, v in patch.items() if k != "edited_at"}},
     )
+
+    status_changed = status is not None and status != existing["status"]
+
+    if assignee_id is not None and assignee_id != existing.get("assignee_id"):
+        await notification_service.notify_comment_assigned(
+            db,
+            workspace_id=workspace_id,
+            comment_id=comment_id,
+            assignee_user_id=assignee_id,
+            actor_user_id=actor_user_id,
+        )
 
     updated = await repo.find_by_id(comment_id)
     assert updated is not None
@@ -293,7 +344,37 @@ async def update_comment(
         project_id=page["project_id"],
         comment=comment_out,
     )
+    if status_changed:
+        await _dispatch_integration_event(
+            db,
+            workspace_id=workspace_id,
+            event_type="comment.status_changed",
+            comment_id=comment_id,
+        )
+        if status == "resolved" and updated["author_type"] == "guest":
+            await _notify_guest_comment_resolved(db, updated)
     return comment_out
+
+
+async def _notify_guest_comment_resolved(
+    db: AsyncIOMotorDatabase[dict[str, Any]], comment_doc: dict[str, Any]
+) -> None:
+    """17.6's opt-in guest notification: "your feedback was addressed" when a comment
+    they authored moves to resolved - only if they supplied an email at session
+    creation (never required, F1). Dispatched via Arq, off the request path."""
+    from app.modules.share_links.repository import GuestSessionRepository
+
+    guest_doc = await GuestSessionRepository(db).find_by_id(comment_doc["author_guest_id"])
+    if guest_doc is None or not guest_doc.get("email"):
+        return
+
+    pool = await get_arq_pool()
+    await pool.enqueue_job(
+        "send_guest_resolved_email_job",
+        guest_email=guest_doc["email"],
+        guest_name=guest_doc["display_name"],
+        comment_body=comment_doc["body"],
+    )
 
 
 async def toggle_layer(

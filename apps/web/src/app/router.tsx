@@ -4,6 +4,8 @@ import { AuthCallbackPage } from "../features/auth/AuthCallbackPage";
 import { useAuth } from "../features/auth/AuthContext";
 import { LoginPage } from "../features/auth/LoginPage";
 import { BoardPage } from "../features/board/BoardPage";
+import { ClickUpOAuthCallbackPage } from "../features/integrations/ClickUpOAuthCallbackPage";
+import { IntegrationsPage } from "../features/integrations/IntegrationsPage";
 import { ProjectOverviewPage } from "../features/projects/ProjectOverviewPage";
 import { ReviewEntryPage } from "../features/review/ReviewEntryPage";
 import { ShareLinksPage } from "../features/share-links/ShareLinksPage";
@@ -29,6 +31,7 @@ function RequireAuth() {
 const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
   { path: "/auth/callback", element: <AuthCallbackPage /> },
+  { path: "/integrations/clickup/callback", element: <ClickUpOAuthCallbackPage /> },
   // Guest reviewer entry - no dashboard chrome, no member auth (05-Frontend-Architecture.md §5.2).
   { path: "/review/:shareToken", element: <ReviewEntryPage /> },
   {
@@ -41,6 +44,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <WorkspaceHomePage /> },
           { path: "members", element: <MembersPage /> },
+          { path: "integrations", element: <IntegrationsPage /> },
           { path: "p/:projectId", element: <ProjectOverviewPage /> },
           { path: "p/:projectId/board", element: <BoardPage /> },
           { path: "p/:projectId/share-links", element: <ShareLinksPage /> },

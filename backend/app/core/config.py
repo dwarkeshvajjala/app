@@ -34,7 +34,12 @@ class Settings(BaseSettings):
 
     clickup_oauth_client_id: str = ""
     clickup_oauth_client_secret: str = ""
-    trello_api_key: str = ""
+    clickup_oauth_redirect_uri: str = "http://localhost:5173/integrations/clickup/callback"
+
+    # Fernet key (32 url-safe base64-encoded bytes) for encrypting OAuth tokens at the
+    # application layer before they reach Mongo (Rule 6, §17.3's "encrypted at the
+    # application layer" requirement) - `Fernet.generate_key()` for a real one.
+    integrations_encryption_key: str = "3BlglP1BAPCTRMmqdD-QptnHVoxDjZpU0p6dhbXEVmg="
 
     cors_allow_origins: list[str] = ["http://localhost:5173"]
 
@@ -48,6 +53,9 @@ class Settings(BaseSettings):
     # (03-System-Architecture.md §3.3), since there's no agency-authored <script> tag to
     # carry that information the way there is in snippet mode.
     public_api_base_url: str = "http://localhost:8000"
+    # The dashboard's own origin - used to build backlinks from a ClickUp task/Trello
+    # card back to the comment's Board (17.3's "deep link back to the comment's pin").
+    public_dashboard_base_url: str = "http://localhost:5173"
 
 
 @lru_cache

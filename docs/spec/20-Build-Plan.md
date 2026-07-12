@@ -110,6 +110,18 @@ person and wasn't performed - verified instead via a real external site
 Slack (`17-Notifications-Integrations.md` §17.2), ClickUp (§17.3), Trello (§17.4), email digests (§17.6), webhook retry engine (§17.7), in-app notification center.
 **DoD:** comment -> ClickUp round trip preserves screenshot/metadata/backlink on 100% of a 20-run test batch; Slack notifications deliver and retry correctly under a simulated webhook failure.
 
+Without real ClickUp app credentials, "20 runs" means the round-trip test
+(`tests/test_integrations.py`) run 20 times against a mocked ClickUp API boundary,
+100% pass, not 20 live API calls - same category of gap as Google OAuth's existing
+"needs real credentials to fully exercise" note. Slack's retry-under-failure half of the
+DoD *was* verified against a real, live failure: a local HTTP server standing in for the
+webhook, deliberately failing once, driven through the actual `app.workers.main`
+worker process and the actual Redis queue - genuinely retried after ~5s and succeeded.
+`docs/tdr/0009-notifications-integrations-scope-and-design.md` covers the rest: the
+`notifications` collection shape (11-Database.md never defined one), why Trello connects
+via a pasted key+token instead of an app-level OAuth flow, why only Slack gets automatic
+dispatch, and why only the daily digest (not per-member instant mode) shipped.
+
 ## Milestone 11 - Security, Performance & Accessibility Hardening (1 week)
 Rate limiting audit, workspace-scoping lint rule enforced in CI (`06-Backend-Architecture.md` §6.4), signed URL expiry review, axe-core accessibility pass on all dashboard screens and the widget, Lighthouse budget verification, dependency security audit.
 **DoD:** no critical/high findings from a security review pass; WCAG AA automated checks pass on every screen; all performance budgets in `19-Testing-CI.md` §19.5 are green.

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { useOutletContext, useParams, useSearchParams } from "react-router-dom";
 
+import * as integrationsApi from "../integrations/api";
 import type { WorkspaceOut } from "../workspaces/api";
 import * as workspacesApi from "../workspaces/api";
 import { useWSEvent } from "../../app/WSProvider";
@@ -85,6 +86,27 @@ export function BoardPage() {
   const { data: members } = useQuery({
     queryKey: qk.members(workspace.id),
     queryFn: () => workspacesApi.listMembers(workspace.id),
+  });
+
+  const { data: integrations } = useQuery({
+    queryKey: ["workspace", workspace.id, "integrations"],
+    queryFn: () => integrationsApi.listIntegrations(workspace.id),
+  });
+  const clickupIntegration = (integrations ?? []).find((i) => i.type === "clickup");
+  const trelloIntegration = (integrations ?? []).find((i) => i.type === "trello");
+  const [taskLinks, setTaskLinks] = useState<Record<string, string>>({});
+
+  const createClickUpTaskMutation = useMutation({
+    mutationFn: (commentId: string) =>
+      integrationsApi.createClickUpTask(commentId, clickupIntegration!.id),
+    onSuccess: (result, commentId) =>
+      setTaskLinks((prev) => ({ ...prev, [commentId]: result.task_url })),
+  });
+  const createTrelloCardMutation = useMutation({
+    mutationFn: (commentId: string) =>
+      integrationsApi.createTrelloCard(commentId, trelloIntegration!.id),
+    onSuccess: (result, commentId) =>
+      setTaskLinks((prev) => ({ ...prev, [commentId]: result.card_url })),
   });
 
   const memberName = useMemo(() => {
@@ -362,6 +384,37 @@ export function BoardPage() {
                           </option>
                         ))}
                       </select>
+                      {taskLinks[comment.id] ? (
+                        <a
+                          href={taskLinks[comment.id]}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-accent-primary text-xs underline"
+                        >
+                          View linked task
+                        </a>
+                      ) : (
+                        <div className="flex gap-2">
+                          {clickupIntegration && (
+                            <button
+                              onClick={() => createClickUpTaskMutation.mutate(comment.id)}
+                              disabled={createClickUpTaskMutation.isPending}
+                              className="text-text-muted text-xs underline"
+                            >
+                              Send to ClickUp
+                            </button>
+                          )}
+                          {trelloIntegration && (
+                            <button
+                              onClick={() => createTrelloCardMutation.mutate(comment.id)}
+                              disabled={createTrelloCardMutation.isPending}
+                              className="text-text-muted text-xs underline"
+                            >
+                              Send to Trello
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
               </div>

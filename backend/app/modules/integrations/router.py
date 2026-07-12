@@ -1,0 +1,84 @@
+from fastapi import APIRouter, Depends
+
+from app.core.config import get_settings
+from app.core.db import get_db
+from app.core.permissions import require_permission
+from app.core.session import Session, require_workspace_context
+from app.modules.integrations import service as integration_service
+from app.modules.integrations.schemas import (
+    CreateClickUpTaskResult,
+    CreateTrelloCardResult,
+    IntegrationCreate,
+    IntegrationOut,
+)
+
+router = APIRouter(tags=["integrations"])
+
+
+@router.get("/workspaces/{workspace_id}/integrations", response_model=list[IntegrationOut])
+async def list_integrations(
+    workspace_id: str,
+    session: Session = Depends(require_permission("integration:manage")),
+) -> list[IntegrationOut]:
+    return await integration_service.list_integrations(get_db(), workspace_id)
+
+
+@router.post(
+    "/workspaces/{workspace_id}/integrations", response_model=IntegrationOut, status_code=201
+)
+async def create_integration(
+    workspace_id: str,
+    body: IntegrationCreate,
+    session: Session = Depends(require_permission("integration:manage")),
+) -> IntegrationOut:
+    return await integration_service.create_integration(
+        get_db(), workspace_id=workspace_id, actor_user_id=session.user_id, body=body
+    )
+
+
+@router.delete("/integrations/{integration_id}", status_code=204)
+async def disconnect_integration(
+    integration_id: str,
+    session: Session = Depends(require_permission("integration:manage")),
+) -> None:
+    await integration_service.disconnect_integration(
+        get_db(),
+        integration_id=integration_id,
+        workspace_id=require_workspace_context(session),
+    )
+
+
+@router.post(
+    "/comments/{comment_id}/integrations/clickup/create-task",
+    response_model=CreateClickUpTaskResult,
+)
+async def create_clickup_task(
+    comment_id: str,
+    integration_id: str,
+    session: Session = Depends(require_permission("comment:create_integration_task")),
+) -> CreateClickUpTaskResult:
+    return await integration_service.create_clickup_task(
+        get_db(),
+        comment_id=comment_id,
+        workspace_id=require_workspace_context(session),
+        integration_id=integration_id,
+        dashboard_base_url=get_settings().public_dashboard_base_url,
+    )
+
+
+@router.post(
+    "/comments/{comment_id}/integrations/trello/create-card",
+    response_model=CreateTrelloCardResult,
+)
+async def create_trello_card(
+    comment_id: str,
+    integration_id: str,
+    session: Session = Depends(require_permission("comment:create_integration_task")),
+) -> CreateTrelloCardResult:
+    return await integration_service.create_trello_card(
+        get_db(),
+        comment_id=comment_id,
+        workspace_id=require_workspace_context(session),
+        integration_id=integration_id,
+        dashboard_base_url=get_settings().public_dashboard_base_url,
+    )

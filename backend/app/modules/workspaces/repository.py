@@ -21,6 +21,10 @@ class WorkspaceRepository:
             "slug": slug,
             "plan": "free",
             "branding_json": {},
+            # None until the first daily digest run touches it (17.6,
+            # modules/notifications/digest.py) - a fresh workspace's first run just
+            # establishes this checkpoint rather than emailing its entire history.
+            "last_digest_sent_at": None,
             "created_at": now,
             "updated_at": now,
         }

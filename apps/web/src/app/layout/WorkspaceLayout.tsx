@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate, Outlet, useParams } from "react-router-dom";
 
 import { useAuth } from "../../features/auth/AuthContext";
+import { NotificationBell } from "../../features/notifications/NotificationBell";
 import * as workspacesApi from "../../features/workspaces/api";
 import { qk } from "../../lib/query-keys";
 
@@ -55,8 +56,12 @@ export function WorkspaceLayout() {
           <Link to={`/w/${workspaceSlug}/members`} className="text-text-muted text-sm">
             Members
           </Link>
+          <Link to={`/w/${workspaceSlug}/integrations`} className="text-text-muted text-sm">
+            Integrations
+          </Link>
         </div>
         <div className="flex items-center gap-4">
+          <NotificationBell />
           <Link to="/" className="text-text-muted text-xs underline">
             Switch workspace
           </Link>
