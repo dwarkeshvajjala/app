@@ -10,6 +10,7 @@ from app.core.errors import register_exception_handlers
 from app.core.indexes import ensure_indexes
 from app.core.redis_client import close_redis, get_redis
 from app.modules.auth.router import router as auth_router
+from app.modules.comments.router import router as comments_router
 from app.modules.pages.router import router as pages_router
 from app.modules.projects.router import router as projects_router
 from app.modules.share_links.router import router as share_links_router
@@ -56,6 +57,7 @@ app.include_router(share_links_router, prefix="/api/v1")
 app.include_router(pages_router, prefix="/api/v1")
 app.include_router(snapshots_router, prefix="/api/v1")
 app.include_router(storage_router, prefix="/api/v1")
+app.include_router(comments_router, prefix="/api/v1")
 
 
 @app.get("/health")

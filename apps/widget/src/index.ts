@@ -3,7 +3,8 @@ import { computeAnchor } from "./anchor";
 import { captureSnapshot } from "./dom-snapshot";
 import { ensureGuestSession } from "./guest-session";
 import { captureScreenshot } from "./screenshot";
-import type { BacklineConfig, CapturePayload } from "./types";
+import type { BacklineConfig } from "./types";
+import { parseUserAgent } from "./user-agent";
 import { createShadowRoot, openComposer, promptForName, renderPin, showTooltip } from "./ui";
 
 interface RegisterPageResponse {
@@ -13,6 +14,11 @@ interface RegisterPageResponse {
 interface UploadResponse {
   upload_url: string;
   key: string;
+}
+
+interface CommentResponse {
+  id: string;
+  layer: "client" | "team";
 }
 
 async function registerCurrentPage(
@@ -106,28 +112,39 @@ async function init(config: BacklineConfig): Promise<void> {
       let screenshotKey: string | null = null;
       if (screenshotBlob) {
         controls.setStatus("Uploading screenshot...");
-        screenshotKey = await uploadScreenshot(api, guest.guestSessionToken, projectId, screenshotBlob);
+        screenshotKey = await uploadScreenshot(
+          api,
+          guest.guestSessionToken,
+          projectId,
+          screenshotBlob,
+        );
       }
 
-      const payload: CapturePayload = {
-        anchor,
-        metadata: {
-          url: window.location.href,
-          viewport: { width: window.innerWidth, height: window.innerHeight },
-          user_agent: navigator.userAgent,
-        },
-        screenshot_key: screenshotKey,
-        capture_status: screenshotKey ? "ok" : "failed",
-      };
+      controls.setStatus("Posting comment...");
+      const { browser, os, device_type: deviceType } = parseUserAgent(navigator.userAgent);
 
-      // Comment submission is Milestone 4 - the snapshot and screenshot are genuinely
-      // captured and stored (M3's Definition of Done); posting `body` alongside them
-      // as a real comment happens once POST /pages/{id}/comments exists.
-      console.info("[Backline] capture ready (comment posting lands in Milestone 4):", {
-        body,
-        ...payload,
-      });
-      controls.setStatus("Captured. Posting comments arrives in Milestone 4.");
+      try {
+        await api.request<CommentResponse>(`/api/v1/pages/${pageId}/comments`, {
+          method: "POST",
+          guestToken: guest.guestSessionToken,
+          body: JSON.stringify({
+            body,
+            anchor,
+            context: {
+              browser,
+              os,
+              device_type: deviceType,
+              viewport: { width: window.innerWidth, height: window.innerHeight },
+              url: window.location.href,
+            },
+            screenshot_key: screenshotKey,
+            capture_status: screenshotKey ? "ok" : "failed",
+          }),
+        });
+        controls.setStatus("Comment posted.");
+      } catch {
+        controls.setStatus("Could not post your comment. Please try again.");
+      }
     });
   });
 }

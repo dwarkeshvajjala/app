@@ -52,6 +52,25 @@ async def generate_presigned_put(key: str, content_type: str, expires_in: int = 
     return await asyncio.to_thread(_generate)
 
 
+async def generate_presigned_get(key: str, expires_in: int = 3600) -> str:
+    """18-Storage-Deployment.md §18.2: screenshots are never served from a public
+    bucket - a signed GET (1 hour TTL) is generated on-demand whenever a comment is
+    read, since a screenshot's page context may not be intended as publicly enumerable
+    even for a client-visible comment."""
+    settings = get_settings()
+
+    def _generate() -> str:
+        client = _make_client()
+        url: str = client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": settings.r2_bucket_name, "Key": key},
+            ExpiresIn=expires_in,
+        )
+        return url
+
+    return await asyncio.to_thread(_generate)
+
+
 async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
     """Server-side upload, used for snapshot JSON (the backend compresses and writes it
     itself, unlike screenshots which the client PUTs directly via a presigned URL)."""

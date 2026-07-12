@@ -21,7 +21,10 @@ const HOST_STYLES = `
     font-size: 13px; cursor: pointer; width: 100%;
   }
   .bl-pin {
-    position: absolute; width: 28px; height: 28px; border-radius: 50% 50% 50% 0;
+    /* fixed, not absolute: pin coordinates come from clientX/clientY (viewport-relative,
+       e.g. MouseEvent or getBoundingClientRect()) - absolute positioning is relative to
+       the document, which drifts from the intended point as soon as the page scrolls. */
+    position: fixed; width: 28px; height: 28px; border-radius: 50% 50% 50% 0;
     background: #4F46E5; transform: rotate(-45deg) translate(-50%, -50%);
     z-index: 2147482999; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
   }

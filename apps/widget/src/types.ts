@@ -47,14 +47,3 @@ export interface AnchorPayload {
     normalized_text: string;
   };
 }
-
-export interface CapturePayload {
-  anchor: AnchorPayload;
-  metadata: {
-    url: string;
-    viewport: { width: number; height: number };
-    user_agent: string;
-  };
-  screenshot_key: string | null;
-  capture_status: "ok" | "failed";
-}
