@@ -5,7 +5,22 @@ import { ensureGuestSession } from "./guest-session";
 import { captureScreenshot } from "./screenshot";
 import type { BacklineConfig } from "./types";
 import { parseUserAgent } from "./user-agent";
-import { createShadowRoot, openComposer, promptForName, renderPin, showTooltip } from "./ui";
+import {
+  createShadowRoot,
+  openComposer,
+  promptForName,
+  renderPin,
+  showToast,
+  showTooltip,
+} from "./ui";
+import { connectReviewSocket } from "./ws-client";
+
+const STATUS_LABELS: Record<string, string> = {
+  todo: "To do",
+  in_progress: "In progress",
+  resolved: "Resolved",
+  wont_fix: "Won't fix",
+};
 
 interface RegisterPageResponse {
   id: string;
@@ -95,6 +110,25 @@ async function init(config: BacklineConfig): Promise<void> {
 
   showTooltip(shadow);
 
+  // Realtime signal (12-API-WebSocket.md §12.6): presence is announced just by
+  // connecting with this page's id. The only event this session reacts to is
+  // comment.updated on a comment *this guest created* - a status change on a comment
+  // the guest can't currently see rendered isn't worth reconciling against, since the
+  // widget doesn't yet keep a local list of every comment on the page (creation only,
+  // see docs/tdr/0006).
+  const ownCommentIds = new Set<string>();
+  connectReviewSocket(
+    config.apiBaseUrl ?? "http://localhost:8000",
+    guest.guestSessionToken,
+    pageId,
+    (type, payload) => {
+      if (type !== "comment.updated") return;
+      if (!payload?.id || !ownCommentIds.has(payload.id)) return;
+      const label = STATUS_LABELS[payload.status] ?? payload.status;
+      showToast(shadow, `Your comment was updated: ${label}`);
+    },
+  );
+
   document.addEventListener("click", (event) => {
     const target = event.target as Element | null;
     if (!target || target.closest("[data-backline-root]")) return;
@@ -124,23 +158,27 @@ async function init(config: BacklineConfig): Promise<void> {
       const { browser, os, device_type: deviceType } = parseUserAgent(navigator.userAgent);
 
       try {
-        await api.request<CommentResponse>(`/api/v1/pages/${pageId}/comments`, {
-          method: "POST",
-          guestToken: guest.guestSessionToken,
-          body: JSON.stringify({
-            body,
-            anchor,
-            context: {
-              browser,
-              os,
-              device_type: deviceType,
-              viewport: { width: window.innerWidth, height: window.innerHeight },
-              url: window.location.href,
-            },
-            screenshot_key: screenshotKey,
-            capture_status: screenshotKey ? "ok" : "failed",
-          }),
-        });
+        const created = await api.request<CommentResponse>(
+          `/api/v1/pages/${pageId}/comments`,
+          {
+            method: "POST",
+            guestToken: guest.guestSessionToken,
+            body: JSON.stringify({
+              body,
+              anchor,
+              context: {
+                browser,
+                os,
+                device_type: deviceType,
+                viewport: { width: window.innerWidth, height: window.innerHeight },
+                url: window.location.href,
+              },
+              screenshot_key: screenshotKey,
+              capture_status: screenshotKey ? "ok" : "failed",
+            }),
+          },
+        );
+        ownCommentIds.add(created.id);
         controls.setStatus("Comment posted.");
       } catch {
         controls.setStatus("Could not post your comment. Please try again.");

@@ -9,6 +9,7 @@ from app.core.errors import NotFoundError
 from app.core.events import append_event
 from app.core.session import Actor, actor_identity
 from app.modules.pages.repository import PageRepository
+from app.modules.realtime.pubsub import publish as publish_realtime_event
 from app.modules.snapshot_engine import events as snapshot_events
 from app.modules.snapshot_engine.repository import RevisionRepository
 from app.modules.snapshot_engine.schemas import RevisionOut
@@ -81,6 +82,12 @@ async def submit_snapshot(
         type=snapshot_events.REVISION_CREATED,
         actor_type=actor_type,
         actor_id=actor_id,
+        payload={"page_id": page_id, "revision_id": revision_id},
+    )
+    await publish_realtime_event(
+        f"workspace:{page['workspace_id']}:all",
+        event_type="revision.created",
+        workspace_id=page["workspace_id"],
         payload={"page_id": page_id, "revision_id": revision_id},
     )
 

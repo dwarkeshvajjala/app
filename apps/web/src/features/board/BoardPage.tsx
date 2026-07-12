@@ -1,13 +1,30 @@
 import { LayerBadge, RecoveryBadge, StatusBadge } from "@backline/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useOutletContext, useParams, useSearchParams } from "react-router-dom";
 
 import type { WorkspaceOut } from "../workspaces/api";
 import * as workspacesApi from "../workspaces/api";
+import { useWSEvent } from "../../app/WSProvider";
 import { qk } from "../../lib/query-keys";
+import { useConnectionStore } from "../../stores/connectionStore";
+import { usePresenceStore } from "../../stores/presenceStore";
 import * as boardApi from "./api";
 import type { CommentOut, CommentStatus } from "./api";
+
+const CONNECTION_LABEL: Record<string, string> = {
+  connected: "Live",
+  connecting: "Connecting...",
+  reconnecting: "Reconnecting...",
+  disconnected: "Offline",
+};
+
+const CONNECTION_DOT: Record<string, string> = {
+  connected: "bg-status-resolved",
+  connecting: "bg-status-in-progress",
+  reconnecting: "bg-status-in-progress",
+  disconnected: "bg-status-wont-fix",
+};
 
 const STATUSES: CommentStatus[] = ["todo", "in_progress", "resolved", "wont_fix"];
 const STATUS_LABELS: Record<CommentStatus, string> = {
@@ -78,6 +95,55 @@ export function BoardPage() {
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: qk.projectComments(projectId ?? "") });
 
+  const connectionStatus = useConnectionStore((state) => state.status);
+  const presenceByPageId = usePresenceStore((state) => state.byPageId);
+
+  // Targeted cache merges on live events, not a blind invalidate (14-State-Management.md
+  // §14.4) - a busy review session would otherwise thrash the board with full refetches.
+  const upsertComment = useCallback(
+    (payload: CommentOut & { project_id: string }) => {
+      if (payload.project_id !== projectId) return;
+      queryClient.setQueryData<CommentOut[]>(qk.projectComments(projectId ?? ""), (old) => {
+        if (!old) return old;
+        const existingIndex = old.findIndex((c) => c.id === payload.id);
+        if (existingIndex === -1) return [...old, payload];
+        const next = [...old];
+        next[existingIndex] = payload;
+        return next;
+      });
+    },
+    [projectId, queryClient],
+  );
+  useWSEvent("comment.created", upsertComment);
+  useWSEvent("comment.updated", upsertComment);
+
+  useWSEvent(
+    "presence.updated",
+    useCallback((payload: { page_id: string; active_sessions: string[] }) => {
+      usePresenceStore.getState().setPresence(payload.page_id, payload.active_sessions);
+    }, []),
+  );
+
+  // page_id -> url, so a presence.updated event (page-scoped) can be shown next to the
+  // matching page filter option - the only place BoardPage otherwise keeps that mapping.
+  const pageIdToUrl = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const comment of comments ?? []) {
+      const url = commentContext(comment).url;
+      if (url) map.set(comment.page_id, url);
+    }
+    return map;
+  }, [comments]);
+
+  const reviewerCountByUrl = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const [pageId, sessions] of Object.entries(presenceByPageId)) {
+      const url = pageIdToUrl.get(pageId);
+      if (url) counts.set(url, sessions.length);
+    }
+    return counts;
+  }, [presenceByPageId, pageIdToUrl]);
+
   const updateMutation = useMutation({
     mutationFn: ({
       commentId,
@@ -141,7 +207,16 @@ export function BoardPage() {
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Board</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-semibold">Board</h1>
+          <span className="text-text-muted flex items-center gap-1.5 text-xs">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${CONNECTION_DOT[connectionStatus]}`}
+              aria-hidden="true"
+            />
+            {CONNECTION_LABEL[connectionStatus]}
+          </span>
+        </div>
         <div className="flex gap-2">
           <button
             onClick={() => setView("kanban")}
@@ -208,11 +283,15 @@ export function BoardPage() {
           className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
         >
           <option value="">All pages</option>
-          {pageUrls.map((url) => (
-            <option key={url} value={url}>
-              {url}
-            </option>
-          ))}
+          {pageUrls.map((url) => {
+            const reviewerCount = reviewerCountByUrl.get(url) ?? 0;
+            return (
+              <option key={url} value={url}>
+                {url}
+                {reviewerCount > 0 ? ` (${reviewerCount} reviewing)` : ""}
+              </option>
+            );
+          })}
         </select>
       </div>
 

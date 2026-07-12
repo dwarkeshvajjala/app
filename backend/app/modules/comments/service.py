@@ -13,7 +13,33 @@ from app.modules.comments.repository import CommentRepository
 from app.modules.comments.schemas import AnchorIn, CommentOut, ContextIn
 from app.modules.pages.repository import PageRepository
 from app.modules.projects.repository import ProjectRepository
+from app.modules.realtime.pubsub import publish as publish_realtime_event
 from app.modules.storage.r2_client import generate_presigned_get
+
+
+async def _broadcast_comment_event(
+    *, event_type: str, workspace_id: str, project_id: str, comment: CommentOut
+) -> None:
+    """Fan out to both the workspace-wide member channel and, only when the comment is
+    client-visible, the project's guest channel (12-API-WebSocket.md §12.6's subscription
+    split) - a team-only comment never reaches a guest connection, at the pub/sub layer,
+    not filtered after the fact. `project_id` rides along in the WS payload only (not in
+    `CommentOut`/the REST response) purely so a dashboard client already holding many
+    projects' comments in cache can tell which project's query to merge this into."""
+    payload = {**comment.model_dump(mode="json"), "project_id": project_id}
+    await publish_realtime_event(
+        f"workspace:{workspace_id}:all",
+        event_type=event_type,
+        workspace_id=workspace_id,
+        payload=payload,
+    )
+    if comment.layer == "client":
+        await publish_realtime_event(
+            f"project:{project_id}:client",
+            event_type=event_type,
+            workspace_id=workspace_id,
+            payload=payload,
+        )
 
 
 async def _comment_out(doc: dict[str, Any]) -> CommentOut:
@@ -101,7 +127,14 @@ async def create_comment(
         actor_id=actor_id,
         payload={"comment_id": str(created["_id"]), "page_id": page_id, "layer": effective_layer},
     )
-    return await _comment_out(created)
+    comment_out = await _comment_out(created)
+    await _broadcast_comment_event(
+        event_type="comment.created",
+        workspace_id=page["workspace_id"],
+        project_id=page["project_id"],
+        comment=comment_out,
+    )
+    return comment_out
 
 
 async def create_reply(
@@ -166,7 +199,14 @@ async def create_reply(
             "layer": effective_layer,
         },
     )
-    return await _comment_out(created)
+    comment_out = await _comment_out(created)
+    await _broadcast_comment_event(
+        event_type="comment.created",
+        workspace_id=parent["workspace_id"],
+        project_id=parent_page["project_id"],
+        comment=comment_out,
+    )
+    return comment_out
 
 
 async def list_comments(
@@ -242,7 +282,16 @@ async def update_comment(
 
     updated = await repo.find_by_id(comment_id)
     assert updated is not None
-    return await _comment_out(updated)
+    comment_out = await _comment_out(updated)
+    page = await PageRepository(db).find_by_id(updated["page_id"])
+    assert page is not None
+    await _broadcast_comment_event(
+        event_type="comment.updated",
+        workspace_id=workspace_id,
+        project_id=page["project_id"],
+        comment=comment_out,
+    )
+    return comment_out
 
 
 async def toggle_layer(
@@ -274,7 +323,21 @@ async def toggle_layer(
 
     updated = await repo.find_by_id(comment_id)
     assert updated is not None
-    return await _comment_out(updated)
+    comment_out = await _comment_out(updated)
+    page = await PageRepository(db).find_by_id(updated["page_id"])
+    assert page is not None
+    # Note: a client->team toggle has no corresponding "hide this" WS event (the spec's
+    # event table has no comment.deleted/comment.hidden type) - a guest who already has
+    # this comment in a local list (once the widget maintains one) would only stop
+    # seeing it on their next full refetch, not live. Documented in TDR-0006, not solved
+    # here: inventing new protocol surface wasn't asked for by this milestone.
+    await _broadcast_comment_event(
+        event_type="comment.updated",
+        workspace_id=workspace_id,
+        project_id=page["project_id"],
+        comment=comment_out,
+    )
+    return comment_out
 
 
 async def reanchor(
@@ -302,4 +365,13 @@ async def reanchor(
 
     updated = await repo.find_by_id(comment_id)
     assert updated is not None
-    return await _comment_out(updated)
+    comment_out = await _comment_out(updated)
+    page = await PageRepository(db).find_by_id(updated["page_id"])
+    assert page is not None
+    await _broadcast_comment_event(
+        event_type="comment.updated",
+        workspace_id=workspace_id,
+        project_id=page["project_id"],
+        comment=comment_out,
+    )
+    return comment_out

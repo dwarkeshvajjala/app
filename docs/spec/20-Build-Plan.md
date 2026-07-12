@@ -66,6 +66,15 @@ was not performed and can't be by construction).
 WebSocket gateway, Redis pub/sub fan-out, all event types in `12-API-WebSocket.md` §12.6, targeted React Query cache updates (no blind invalidation).
 **DoD:** two browser sessions (one dashboard, one guest reviewer) see each other's actions live, without a manual refresh, including presence.
 
+Of §12.6's 7 event types, 4 shipped (`comment.created`, `comment.updated`,
+`presence.updated`, `revision.created`) and 3 were deferred to the milestone that
+actually produces the underlying fact (`comment.recovery_updated` -> M8's recovery
+pipeline, `typing.*` -> no composer focus/blur wiring exists yet, `notification.new` ->
+M10's notification system) - see `docs/tdr/0006-realtime-layer-scope-and-limitations.md`,
+which also documents the presence privacy scoping decision and two known gaps (no WS
+signal for a comment leaving the guest-visible layer; the widget still has no local
+comment list to reconcile via delta-sync on reconnect, since no milestone has built one).
+
 ## Milestone 8 - Revision Engine + Recovery Pipeline v1 (1.5 weeks)
 Full diff engine (`10-Revision-Recovery.md`), recovery orchestration, Tier 2 (text fingerprint) fallback, recovery_logs, dashboard recovery-status indicators (`16-Dashboard.md` §16.2's pin treatments).
 **DoD:** all golden dataset fixtures (§19.2) pass; a real structural change to a test site's page correctly updates affected comments' `recovery_status` end to end, verified via Playwright journey #4.

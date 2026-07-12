@@ -29,6 +29,11 @@ const HOST_STYLES = `
     z-index: 2147482999; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
   }
   .bl-status { font-size: 12px; color: #6B6B76; margin-top: 8px; }
+  .bl-toast {
+    position: fixed; bottom: 24px; left: 24px; z-index: 2147483000;
+    background: #14141A; color: #F2F2F5; padding: 10px 14px; border-radius: 8px;
+    font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.25); max-width: 240px;
+  }
 `;
 
 export function createShadowRoot(): ShadowRoot {
@@ -48,6 +53,14 @@ export function showTooltip(shadow: ShadowRoot): void {
   tooltip.textContent = "Tap anywhere on the page to leave feedback.";
   shadow.appendChild(tooltip);
   setTimeout(() => tooltip.remove(), 6000);
+}
+
+export function showToast(shadow: ShadowRoot, text: string): void {
+  const toast = document.createElement("div");
+  toast.className = "bl-toast";
+  toast.textContent = text;
+  shadow.appendChild(toast);
+  setTimeout(() => toast.remove(), 6000);
 }
 
 export function promptForName(shadow: ShadowRoot): Promise<string> {

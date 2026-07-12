@@ -1,3 +1,5 @@
+import asyncio
+import contextlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -13,6 +15,8 @@ from app.modules.auth.router import router as auth_router
 from app.modules.comments.router import router as comments_router
 from app.modules.pages.router import router as pages_router
 from app.modules.projects.router import router as projects_router
+from app.modules.realtime.pubsub import run_subscriber
+from app.modules.realtime.router import router as realtime_router
 from app.modules.share_links.router import router as share_links_router
 from app.modules.snapshot_engine.router import router as snapshots_router
 from app.modules.storage.r2_client import ensure_bucket_exists
@@ -24,7 +28,11 @@ from app.modules.workspaces.router import router as workspaces_router
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await ensure_indexes(get_db())
     await ensure_bucket_exists()
+    subscriber_task = asyncio.create_task(run_subscriber())
     yield
+    subscriber_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await subscriber_task
     await close_client()
     await close_redis()
 
@@ -58,6 +66,9 @@ app.include_router(pages_router, prefix="/api/v1")
 app.include_router(snapshots_router, prefix="/api/v1")
 app.include_router(storage_router, prefix="/api/v1")
 app.include_router(comments_router, prefix="/api/v1")
+# Deliberately not under /api/v1 - 12-API-WebSocket.md §12.6 specifies the connection URL
+# as `wss://api.backline.app/ws?...`, not `/api/v1/ws`.
+app.include_router(realtime_router)
 
 
 @app.get("/health")

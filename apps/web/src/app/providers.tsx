@@ -3,9 +3,11 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { AuthProvider } from "../features/auth/AuthContext";
+import { WSProvider } from "./WSProvider";
 
-// WorkspaceProvider (beyond auth's own workspace_id/role) / WSProvider / PermissionProvider
-// land alongside Milestones 2 and 7 (05-Frontend-Architecture.md §5.4).
+// WorkspaceProvider (beyond auth's own workspace_id/role) / PermissionProvider still
+// land in a later milestone (05-Frontend-Architecture.md §5.4) - WSProvider needs
+// AuthProvider's workspaceId, so it nests inside it.
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -21,7 +23,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>{children}</AuthProvider>
+      <AuthProvider>
+        <WSProvider>{children}</WSProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
