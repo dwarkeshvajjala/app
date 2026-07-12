@@ -3,6 +3,9 @@ import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-rou
 import { AuthCallbackPage } from "../features/auth/AuthCallbackPage";
 import { useAuth } from "../features/auth/AuthContext";
 import { LoginPage } from "../features/auth/LoginPage";
+import { ProjectOverviewPage } from "../features/projects/ProjectOverviewPage";
+import { ReviewEntryPage } from "../features/review/ReviewEntryPage";
+import { ShareLinksPage } from "../features/share-links/ShareLinksPage";
 import { MembersPage } from "../features/workspaces/MembersPage";
 import { WorkspaceHomePage } from "../features/workspaces/WorkspaceHomePage";
 import { WorkspacePickerPage } from "../features/workspaces/WorkspacePickerPage";
@@ -21,10 +24,12 @@ function RequireAuth() {
 }
 
 // Full route tree (05-Frontend-Architecture.md §5.2) fills in as later milestones
-// add projects/share-links/board/pages screens.
+// add the board/page-detail screens.
 const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
   { path: "/auth/callback", element: <AuthCallbackPage /> },
+  // Guest reviewer entry - no dashboard chrome, no member auth (05-Frontend-Architecture.md §5.2).
+  { path: "/review/:shareToken", element: <ReviewEntryPage /> },
   {
     element: <RequireAuth />,
     children: [
@@ -35,6 +40,8 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <WorkspaceHomePage /> },
           { path: "members", element: <MembersPage /> },
+          { path: "p/:projectId", element: <ProjectOverviewPage /> },
+          { path: "p/:projectId/share-links", element: <ShareLinksPage /> },
         ],
       },
     ],

@@ -194,6 +194,112 @@ export interface paths {
         patch: operations["update_member_role_api_v1_workspaces__workspace_id__members__member_id__patch"];
         trace?: never;
     };
+    "/api/v1/workspaces/{workspace_id}/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Projects */
+        get: operations["list_projects_api_v1_workspaces__workspace_id__projects_get"];
+        put?: never;
+        /** Create Project */
+        post: operations["create_project_api_v1_workspaces__workspace_id__projects_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Project */
+        get: operations["get_project_api_v1_projects__project_id__get"];
+        put?: never;
+        post?: never;
+        /** Archive Project */
+        delete: operations["archive_project_api_v1_projects__project_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Project */
+        patch: operations["update_project_api_v1_projects__project_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/share-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Share Links */
+        get: operations["list_share_links_api_v1_projects__project_id__share_links_get"];
+        put?: never;
+        /** Create Share Link */
+        post: operations["create_share_link_api_v1_projects__project_id__share_links_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/share-links/{share_link_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Revoke Share Link */
+        patch: operations["revoke_share_link_api_v1_share_links__share_link_id__revoke_patch"];
+        trace?: never;
+    };
+    "/api/v1/review/{share_token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resolve Share Link */
+        get: operations["resolve_share_link_api_v1_review__share_token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/guest-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Guest Session */
+        post: operations["create_guest_session_api_v1_guest_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -224,6 +330,24 @@ export interface components {
         GoogleCallbackRequest: {
             /** Code */
             code: string;
+        };
+        /** GuestSessionCreate */
+        GuestSessionCreate: {
+            /** Share Token */
+            share_token: string;
+            /** Display Name */
+            display_name: string;
+            /** Email */
+            email?: string | null;
+            /** Passcode */
+            passcode?: string | null;
+        };
+        /** GuestSessionOut */
+        GuestSessionOut: {
+            /** Guest Session Token */
+            guest_session_token: string;
+            /** Display Name */
+            display_name: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -289,6 +413,103 @@ export interface components {
             email: string;
             /** Code */
             code: string;
+        };
+        /** ProjectCreate */
+        ProjectCreate: {
+            /** Name */
+            name: string;
+            /** Target Origin */
+            target_origin: string;
+        };
+        /** ProjectOut */
+        ProjectOut: {
+            /** Id */
+            id: string;
+            /** Workspace Id */
+            workspace_id: string;
+            /** Name */
+            name: string;
+            /** Target Origin */
+            target_origin: string;
+            settings: components["schemas"]["ProjectSettingsOut"];
+            /** Archived At */
+            archived_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ProjectSettingsOut */
+        ProjectSettingsOut: {
+            /** Proxy Mode */
+            proxy_mode: boolean;
+            /** Snippet Installed */
+            snippet_installed: boolean;
+        };
+        /** ProjectUpdate */
+        ProjectUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Target Origin */
+            target_origin?: string | null;
+        };
+        /** ReviewResolveOut */
+        ReviewResolveOut: {
+            /** Project Id */
+            project_id: string;
+            /** Project Name */
+            project_name: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "snippet" | "proxy";
+            /** Requires Passcode */
+            requires_passcode: boolean;
+        };
+        /** ShareLinkCreate */
+        ShareLinkCreate: {
+            /**
+             * Mode
+             * @default snippet
+             * @enum {string}
+             */
+            mode: "snippet" | "proxy";
+            /** Passcode */
+            passcode?: string | null;
+            /** Expires At */
+            expires_at?: string | null;
+        };
+        /** ShareLinkOut */
+        ShareLinkOut: {
+            /** Id */
+            id: string;
+            /** Project Id */
+            project_id: string;
+            /** Token */
+            token: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "snippet" | "proxy";
+            /** Has Passcode */
+            has_passcode: boolean;
+            /** Expires At */
+            expires_at: string | null;
+            /** Revoked At */
+            revoked_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** SwitchWorkspaceRequest */
         SwitchWorkspaceRequest: {
@@ -789,6 +1010,326 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_projects_api_v1_workspaces__workspace_id__projects_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_project_api_v1_workspaces__workspace_id__projects_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_project_api_v1_projects__project_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_project_api_v1_projects__project_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_project_api_v1_projects__project_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_share_links_api_v1_projects__project_id__share_links_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareLinkOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_share_link_api_v1_projects__project_id__share_links_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShareLinkCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareLinkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_share_link_api_v1_share_links__share_link_id__revoke_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                share_link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_share_link_api_v1_review__share_token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                share_token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewResolveOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_guest_session_api_v1_guest_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuestSessionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestSessionOut"];
+                };
             };
             /** @description Validation Error */
             422: {

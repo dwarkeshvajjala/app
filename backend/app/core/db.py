@@ -11,7 +11,11 @@ def get_client() -> AsyncIOMotorClient[dict[str, Any]]:
     global _client
     if _client is None:
         settings = get_settings()
-        _client = AsyncIOMotorClient(settings.mongo_uri)
+        # tz_aware=True: BSON datetimes carry no timezone, so pymongo returns naive
+        # ones by default even though everything is written as tz-aware UTC
+        # (datetime.now(UTC)) - without this, comparing a value read back from Mongo
+        # against datetime.now(UTC) raises TypeError, naive vs. aware.
+        _client = AsyncIOMotorClient(settings.mongo_uri, tz_aware=True)
     return _client
 
 

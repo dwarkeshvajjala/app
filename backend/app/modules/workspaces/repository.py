@@ -2,15 +2,9 @@ from datetime import UTC, datetime
 from typing import Any
 
 from bson import ObjectId
-from bson.errors import InvalidId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-
-def _to_object_id(value: str) -> ObjectId | None:
-    try:
-        return ObjectId(value)
-    except InvalidId:
-        return None
+from app.core.mongo_utils import to_object_id
 
 
 class WorkspaceRepository:
@@ -38,7 +32,7 @@ class WorkspaceRepository:
         return await self.db.workspaces.find_one({"slug": slug})
 
     async def find_by_id(self, workspace_id: str) -> dict[str, Any] | None:
-        oid = _to_object_id(workspace_id)
+        oid = to_object_id(workspace_id)
         if oid is None:
             return None
         return await self.db.workspaces.find_one({"_id": oid})
@@ -78,7 +72,7 @@ class MembershipRepository:
         )
 
     async def find_by_id(self, *, workspace_id: str, membership_id: str) -> dict[str, Any] | None:
-        oid = _to_object_id(membership_id)
+        oid = to_object_id(membership_id)
         if oid is None:
             return None
         return await self.db.memberships.find_one({"workspace_id": workspace_id, "_id": oid})

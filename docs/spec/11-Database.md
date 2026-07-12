@@ -44,10 +44,15 @@ Indexes: `{ workspace_id: 1, user_id: 1 }` unique compound; `{ user_id: 1 }`.
   _id, workspace_id, name,
   target_origin,                 // the reviewed site's base URL
   settings_json: { proxy_mode: bool, snippet_installed: bool },
+  archived_at?,                   // soft-archive (12-API-WebSocket.md §12.3's DELETE /projects/{id});
+                                  // never a hard delete, so archived projects stay auditable
   created_at, updated_at
 }
 ```
-Indexes: `{ workspace_id: 1 }`.
+Indexes: `{ workspace_id: 1 }`. `archived_at` was implied by §12.3's "archive" semantics for
+`DELETE /projects/{id}` but missing from the original field list - added per the
+"no silent drift" rule (`00-README.md`). Archived projects are excluded from the default
+project list but remain individually fetchable.
 
 ## 11.5 `share_links`
 

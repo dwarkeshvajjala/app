@@ -22,6 +22,18 @@ class AccessTokenClaims(BaseModel):
     exp: int
 
 
+class GuestTokenClaims(BaseModel):
+    """13-Authentication.md §13.4: `sub` is a guest_session_id, no `role`, hardcoded
+    `scope: "guest"`. Scoped to exactly one share_link_id - never valid for another
+    project's resources (03-System-Architecture.md §3.5)."""
+
+    sub: str
+    scope: str = "guest"
+    share_link_id: str
+    iat: int
+    exp: int
+
+
 def create_access_token(
     user_id: str, workspace_id: str | None = None, role: str | None = None
 ) -> str:
@@ -49,9 +61,41 @@ def decode_access_token(token: str) -> AccessTokenClaims:
     return AccessTokenClaims.model_validate(payload)
 
 
+def create_guest_token(guest_session_id: str, share_link_id: str) -> str:
+    settings = get_settings()
+    now = int(time.time())
+    claims = {
+        "sub": guest_session_id,
+        "scope": "guest",
+        "share_link_id": share_link_id,
+        "iat": now,
+        "exp": now + settings.guest_token_ttl_days * 24 * 60 * 60,
+    }
+    token: str = jwt.encode(claims, settings.jwt_signing_key, algorithm=ALGORITHM)
+    return token
+
+
+def decode_guest_token(token: str) -> GuestTokenClaims:
+    settings = get_settings()
+    try:
+        payload = jwt.decode(token, settings.jwt_signing_key, algorithms=[ALGORITHM])
+    except JWTError as exc:
+        raise InvalidTokenError(str(exc)) from exc
+    claims = GuestTokenClaims.model_validate(payload)
+    if claims.scope != "guest":
+        raise InvalidTokenError("Not a guest token.")
+    return claims
+
+
 def generate_opaque_token() -> str:
     """High-entropy opaque token for refresh tokens and guest session tokens."""
     return secrets.token_urlsafe(32)
+
+
+def generate_share_token() -> str:
+    """Share-link tokens are the URL-facing identifier (`/review/{share_token}`,
+    07-Review-SDK.md §7.1) - shorter than a refresh token, but still unguessable."""
+    return secrets.token_urlsafe(12)
 
 
 def hash_secret(value: str) -> str:

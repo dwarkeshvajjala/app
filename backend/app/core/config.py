@@ -38,6 +38,10 @@ class Settings(BaseSettings):
 
     cors_allow_origins: list[str] = ["http://localhost:5173"]
 
+    guest_token_ttl_days: int = 30
+    review_resolve_rate_limit_per_minute: int = 30
+    guest_session_rate_limit_per_minute: int = 10
+
 
 @lru_cache
 def get_settings() -> Settings:

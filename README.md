@@ -4,7 +4,7 @@ Collaborative website review platform. Full specification: [`docs/spec/00-README
 
 ## Status
 
-**Milestones 0-1 complete.** Monorepo scaffold + CI skeleton (M0), and Auth & Workspaces (M1): Google OAuth, email OTP, JWT access tokens + httpOnly-cookie refresh tokens with rotation/theft-detection, workspace CRUD, membership + roles, and the full permission matrix enforced server-side (32 backend tests, all green). Frontend has a working login (Google + OTP) → workspace picker/create → members list + invite flow. Projects, share links, and the review SDK start at Milestone 2.
+**Milestones 0-2 complete.** Monorepo scaffold + CI (M0); Auth & Workspaces (M1): Google OAuth, email OTP, JWT + httpOnly-cookie refresh tokens with rotation/theft-detection, workspace CRUD, roles, full permission matrix; Projects & Share Links (M2): project CRUD (soft-archive), share links with optional passcode/expiry, a public `/review/{token}` resolver, and guest session creation - IP-rate-limited via a Redis sliding-window log, with the guest JWT scoped to exactly one share link. 45 backend tests, all green. Frontend covers login → workspace → projects → share links → the guest-facing `/review/:token` entry screen (name + passcode → guest session). The actual pin-drop/comment SDK starts at Milestone 3.
 
 Google OAuth and Resend email need real credentials to fully exercise (see `.env.example`) - without them, OTP codes are logged to the server console instead of emailed, and the Google button will fail at Google's side once clicked (the exchange code itself is fully implemented and tested with mocks).
 

@@ -88,4 +88,4 @@ Single connection per active dashboard session, scoped to a workspace: `wss://ap
 
 ## 12.7 Rate Limiting
 
-Per Rule 6 (Security Is a Feature): `POST /review/{share_token}` and `POST /guest-sessions` are rate-limited per IP (sliding window, Redis-backed) to prevent share-link brute-forcing of passcodes. Member-authenticated endpoints are rate-limited per workspace to prevent one tenant's runaway script from degrading others - see `18-Storage-Deployment.md` for limits by environment.
+Per Rule 6 (Security Is a Feature): `GET /review/{share_token}` and `POST /guest-sessions` are rate-limited per IP (sliding window log via Redis sorted sets, `core/rate_limit.py`) to prevent share-link brute-forcing of passcodes. Passcode verification itself happens at `POST /guest-sessions`, not at `GET /review/{share_token}` (which only reports whether a passcode is required, alongside project name/mode) - a passcode is a secret and never belongs in a GET query string that could be logged. Member-authenticated endpoints are rate-limited per workspace to prevent one tenant's runaway script from degrading others - see `18-Storage-Deployment.md` for limits by environment.
