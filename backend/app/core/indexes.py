@@ -40,3 +40,6 @@ async def ensure_indexes(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
     await db.comments.create_index([("workspace_id", 1), ("assignee_id", 1)])
     await db.comments.create_index("parent_id")
     await db.comments.create_index([("workspace_id", 1), ("layer", 1)])
+
+    await db.revision_diffs.create_index([("page_id", 1), ("to_revision_id", 1)])
+    await db.recovery_logs.create_index([("comment_id", 1), ("created_at", -1)])

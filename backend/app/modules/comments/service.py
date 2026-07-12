@@ -110,6 +110,7 @@ async def create_comment(
         "due_at": None,
         "anchor": anchor.model_dump(),
         "recovery_status": "ok",
+        "consecutive_orphaned_revisions": 0,
         "context_json": context.model_dump(),
         "screenshot_key": screenshot_key,
         "capture_status": capture_status,
@@ -178,6 +179,7 @@ async def create_reply(
         "due_at": None,
         "anchor": parent["anchor"],
         "recovery_status": parent["recovery_status"],
+        "consecutive_orphaned_revisions": 0,
         "context_json": parent["context_json"],
         "screenshot_key": None,
         "capture_status": "ok",
@@ -353,7 +355,14 @@ async def reanchor(
     if existing is None or existing["workspace_id"] != workspace_id:
         raise NotFoundError("Comment not found.")
 
-    await repo.update(comment_id, {"anchor": anchor.model_dump(), "recovery_status": "ok"})
+    await repo.update(
+        comment_id,
+        {
+            "anchor": anchor.model_dump(),
+            "recovery_status": "ok",
+            "consecutive_orphaned_revisions": 0,
+        },
+    )
     await append_event(
         db,
         workspace_id=workspace_id,

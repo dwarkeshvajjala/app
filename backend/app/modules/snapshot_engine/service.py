@@ -5,6 +5,7 @@ from typing import Any
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.actor_access import resolve_actor_project_access
+from app.core.arq_pool import get_arq_pool
 from app.core.errors import NotFoundError
 from app.core.events import append_event
 from app.core.session import Actor, actor_identity
@@ -90,6 +91,15 @@ async def submit_snapshot(
         workspace_id=page["workspace_id"],
         payload={"page_id": page_id, "revision_id": revision_id},
     )
+
+    if current is not None:
+        # Only worth running if there's a previous revision to recover against - the
+        # recovery pipeline itself would no-op on a page's very first snapshot anyway
+        # (10-Revision-Recovery.md §10.4), but there's no reason to queue that no-op.
+        pool = await get_arq_pool()
+        await pool.enqueue_job(
+            "run_recovery_pipeline_job", page_id=page_id, revision_id=revision_id
+        )
 
     new_revision["snapshot_key"] = snapshot_key
     return _revision_out(new_revision, created_new=True)

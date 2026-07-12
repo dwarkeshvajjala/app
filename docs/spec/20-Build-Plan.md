@@ -79,6 +79,17 @@ comment list to reconcile via delta-sync on reconnect, since no milestone has bu
 Full diff engine (`10-Revision-Recovery.md`), recovery orchestration, Tier 2 (text fingerprint) fallback, recovery_logs, dashboard recovery-status indicators (`16-Dashboard.md` §16.2's pin treatments).
 **DoD:** all golden dataset fixtures (§19.2) pass; a real structural change to a test site's page correctly updates affected comments' `recovery_status` end to end, verified via Playwright journey #4.
 
+`docs/tdr/0007-recovery-pipeline-design-decisions.md` covers three decisions worth
+knowing before touching this code: the Diff Engine's output is an independent audit
+artifact, not an input to the actual recovery decision (`match_anchor`'s own tiered scan
+already subsumes it); re-anchoring can't reconstruct a stale anchor's `selector_path`
+(snapshots never store one, and matching never reads it); and `permanently_orphaned`
+comments are excluded from all future automatic retries, not just rate-limited. Wired
+through a real Arq worker (`app/workers/recovery.py`), not an inline call - the
+DoD's real-structural-change proof was run against that actual worker process, twice
+(a live-WebSocket script and a Playwright session watching the dashboard's
+`RecoveryBadge` update with zero manual refresh).
+
 ## Milestone 9 - Proxy Mode + Onboarding Polish (4-5 days)
 Reverse-proxy injection path (`03-System-Architecture.md` §3.3), empty states with seeded sample project (F7), onboarding flow tightened toward the "under 10 minutes unaided" metric.
 **DoD:** a fresh agency signup reaches "first client link sent" in under 10 minutes in an unaided usability test with a real (non-teammate) participant, matching F1/F7's original acceptance criteria.

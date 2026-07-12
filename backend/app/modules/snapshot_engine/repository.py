@@ -16,6 +16,25 @@ class RevisionRepository:
     async def find_current(self, page_id: str) -> dict[str, Any] | None:
         return await self.db.revisions.find_one({"page_id": page_id, "is_current": True})
 
+    async def find_previous(
+        self, page_id: str, *, exclude_revision_id: str
+    ) -> dict[str, Any] | None:
+        """The revision that was current immediately before `exclude_revision_id` (the
+        new one) - used by the recovery pipeline (10-Revision-Recovery.md §10.4) to diff
+        against. Not simply "is_current: False", since a page can have many old
+        revisions; this is the most recent one that isn't the new one itself."""
+        cursor = (
+            self.db.revisions.find(
+                {"page_id": page_id, "_id": {"$ne": to_object_id(exclude_revision_id)}}
+            )
+            .sort("captured_at", -1)
+            .limit(1)
+        )
+        async for doc in cursor:
+            result: dict[str, Any] = doc
+            return result
+        return None
+
     async def create(
         self, *, page_id: str, workspace_id: str, full_page_hash: str
     ) -> dict[str, Any]:

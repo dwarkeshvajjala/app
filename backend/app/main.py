@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.arq_pool import close_arq_pool
 from app.core.config import get_settings
 from app.core.db import close_client, get_client, get_db
 from app.core.errors import register_exception_handlers
@@ -35,6 +36,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await subscriber_task
     await close_client()
     await close_redis()
+    await close_arq_pool()
 
 
 app = FastAPI(title="Backline API", version="0.1.0", lifespan=lifespan)

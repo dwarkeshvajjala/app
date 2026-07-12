@@ -10,6 +10,7 @@ import redis.asyncio as redis
 from httpx import ASGITransport, AsyncClient
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
+import app.core.arq_pool as arq_pool_module
 import app.core.db as db_module
 import app.core.redis_client as redis_module
 from app.core.config import get_settings
@@ -20,12 +21,13 @@ from app.modules.storage.r2_client import ensure_bucket_exists
 
 @pytest.fixture(autouse=True)
 async def _fresh_motor_client_per_test() -> AsyncIterator[None]:
-    # Motor (and redis.asyncio) bind their client to the event loop active at creation
-    # time, but pytest-asyncio gives each test function its own loop - so the app's
-    # cached singletons (app/core/db.py, app/core/redis_client.py) must be reset every
-    # test, not reused across loops.
+    # Motor (and redis.asyncio, and arq's ArqRedis pool) bind their client to the event
+    # loop active at creation time, but pytest-asyncio gives each test function its own
+    # loop - so the app's cached singletons (app/core/db.py, app/core/redis_client.py,
+    # app/core/arq_pool.py) must be reset every test, not reused across loops.
     db_module._client = None
     redis_module._client = None
+    arq_pool_module._pool = None
     yield
     if db_module._client is not None:
         db_module._client.close()
@@ -33,6 +35,9 @@ async def _fresh_motor_client_per_test() -> AsyncIterator[None]:
     if redis_module._client is not None:
         await redis_module._client.aclose()
         redis_module._client = None
+    if arq_pool_module._pool is not None:
+        await arq_pool_module._pool.aclose(close_connection_pool=True)
+        arq_pool_module._pool = None
 
 
 @pytest.fixture
@@ -45,13 +50,22 @@ async def db() -> AsyncIterator[AsyncIOMotorDatabase[dict[str, Any]]]:
     for name in await database.list_collection_names():
         await database[name].delete_many({})
 
-    # Unlike Mongo, Redis state (rate-limit counters) isn't scoped to a per-test
-    # database - it's the same real Redis instance across the whole run, so without
-    # this, one test's rate-limit hits count against every test after it.
-    redis_client: redis.Redis = redis.from_url(settings.redis_url)  # type: ignore[no-untyped-call]
-    async for key in redis_client.scan_iter(match="rate-limit:*"):
-        await redis_client.delete(key)
-    await redis_client.aclose()
+    # Unlike Mongo, Redis state (rate-limit counters, and - since submit_snapshot
+    # enqueues for real via Arq - queued recovery jobs) isn't scoped to a per-test
+    # database - it's the same real Redis instance across the whole run. Without this,
+    # one test's rate-limit hits count against every test after it, and every test that
+    # submits a second snapshot leaves a real Arq job in local Redis referencing a
+    # database this fixture is about to wipe - harmless (the job just no-ops on a
+    # missing page) but it'd pile up indefinitely for anyone running the worker locally.
+    async def _clear_redis_test_residue() -> None:
+        redis_client: redis.Redis = redis.from_url(settings.redis_url)  # type: ignore[no-untyped-call]
+        async for key in redis_client.scan_iter(match="rate-limit:*"):
+            await redis_client.delete(key)
+        async for key in redis_client.scan_iter(match="arq:*"):
+            await redis_client.delete(key)
+        await redis_client.aclose()
+
+    await _clear_redis_test_residue()
 
     # httpx's ASGITransport does not run the app's lifespan (startup/shutdown), so
     # index/bucket creation - normally done once at process startup - has to happen
@@ -61,6 +75,7 @@ async def db() -> AsyncIterator[AsyncIOMotorDatabase[dict[str, Any]]]:
     await ensure_bucket_exists()
     yield database
     client.close()
+    await _clear_redis_test_residue()
 
 
 @pytest.fixture

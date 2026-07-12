@@ -67,3 +67,39 @@ class CommentRepository:
     async def update(self, comment_id: str, patch: dict[str, Any]) -> None:
         patch["edited_at"] = datetime.now(UTC)
         await self.db.comments.update_one({"_id": to_object_id(comment_id)}, {"$set": patch})
+
+    async def list_recoverable_for_page(
+        self, workspace_id: str, page_id: str
+    ) -> list[dict[str, Any]]:
+        """Every comment the recovery pipeline should re-attempt on a new revision
+        (10-Revision-Recovery.md §10.4/§10.5) - everything except `permanently_orphaned`,
+        which means the system has explicitly given up (two consecutive misses) until a
+        human manually reanchors it (`PATCH /comments/{id}/reanchor`)."""
+        query = {
+            "workspace_id": workspace_id,
+            "page_id": page_id,
+            "recovery_status": {"$ne": "permanently_orphaned"},
+        }
+        cursor = self.db.comments.find(query)
+        return [doc async for doc in cursor]
+
+    async def update_recovery(
+        self,
+        comment_id: str,
+        *,
+        anchor: dict[str, Any] | None,
+        recovery_status: str,
+        consecutive_orphaned_revisions: int,
+    ) -> None:
+        """Deliberately doesn't touch `edited_at` - unlike `update()`, this is a
+        system-driven recovery outcome, not a human edit to the comment's own content
+        (10-Revision-Recovery.md §10.4 step 5: "do not delete or move the comment's
+        stored anchor" when no match is found, so `anchor` is None on that path and
+        left untouched)."""
+        patch: dict[str, Any] = {
+            "recovery_status": recovery_status,
+            "consecutive_orphaned_revisions": consecutive_orphaned_revisions,
+        }
+        if anchor is not None:
+            patch["anchor"] = anchor
+        await self.db.comments.update_one({"_id": to_object_id(comment_id)}, {"$set": patch})

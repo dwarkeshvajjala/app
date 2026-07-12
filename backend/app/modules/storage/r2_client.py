@@ -83,3 +83,18 @@ async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
         )
 
     await asyncio.to_thread(_upload)
+
+
+async def download_bytes(key: str) -> bytes:
+    """Server-side read-back, used by the recovery pipeline (10-Revision-Recovery.md) to
+    load a previous revision's snapshot payload for diffing/matching - the only other
+    reader of snapshot JSON is the SDK itself, which never reads its own uploads back."""
+    settings = get_settings()
+
+    def _download() -> bytes:
+        client = _make_client()
+        response = client.get_object(Bucket=settings.r2_bucket_name, Key=key)
+        body: bytes = response["Body"].read()
+        return body
+
+    return await asyncio.to_thread(_download)

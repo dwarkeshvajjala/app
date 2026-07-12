@@ -117,6 +117,26 @@ export function BoardPage() {
   useWSEvent("comment.created", upsertComment);
   useWSEvent("comment.updated", upsertComment);
 
+  // comment.recovery_updated (10-Revision-Recovery.md §10.4) carries just
+  // {comment_id, recovery_status, confidence} - no project_id, unlike
+  // comment.created/updated - so instead of a project match, this patches by id and
+  // silently no-ops if the id isn't in the currently-viewed project's cache (i.e. the
+  // event was for a different project in the same workspace).
+  const patchRecoveryStatus = useCallback(
+    (payload: { comment_id: string; recovery_status: CommentOut["recovery_status"] }) => {
+      queryClient.setQueryData<CommentOut[]>(qk.projectComments(projectId ?? ""), (old) => {
+        if (!old) return old;
+        const index = old.findIndex((c) => c.id === payload.comment_id);
+        if (index === -1) return old;
+        const next = [...old];
+        next[index] = { ...next[index], recovery_status: payload.recovery_status };
+        return next;
+      });
+    },
+    [projectId, queryClient],
+  );
+  useWSEvent("comment.recovery_updated", patchRecoveryStatus);
+
   useWSEvent(
     "presence.updated",
     useCallback((payload: { page_id: string; active_sessions: string[] }) => {
