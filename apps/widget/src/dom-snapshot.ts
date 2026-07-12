@@ -1,28 +1,9 @@
 import { sha256 } from "./hash";
+import { computeNodeHash, getDirectText, getStableAttributes } from "./node-identity";
+import { computeSimhash } from "./simhash";
 import type { NodeRecord, NodeTreeEntry, NormalizedSnapshot } from "./types";
 
 const STYLE_SUBSET_PROPERTIES = ["display", "font-size", "color", "background-color"] as const;
-
-function getDirectText(el: Element): string {
-  let text = "";
-  for (const child of el.childNodes) {
-    if (child.nodeType === Node.TEXT_NODE) {
-      text += child.textContent ?? "";
-    }
-  }
-  return text.replace(/\s+/g, " ").trim();
-}
-
-function getStableAttributes(el: Element): Record<string, string> {
-  const attrs: Record<string, string> = {};
-  const id = el.getAttribute("id");
-  if (id) attrs.id = id;
-  const testId = el.getAttribute("data-testid");
-  if (testId) attrs["data-testid"] = testId;
-  const className = el.getAttribute("class");
-  if (className) attrs.class = className;
-  return attrs;
-}
 
 function getStyleSubset(el: Element): Record<string, string> {
   const computed = window.getComputedStyle(el);
@@ -59,8 +40,9 @@ async function buildNode(
   const text = getDirectText(el);
   const rect = el.getBoundingClientRect();
 
-  // Per-node / ancestor-path hashing (09-Snapshot-Engine.md §9.6).
-  const nodeHash = await sha256(`${tag}|${JSON.stringify(attributes)}|${text.toLowerCase()}`);
+  // Per-node / ancestor-path hashing (09-Snapshot-Engine.md §9.6) - shared with
+  // anchor.ts's single-element computation (docs/tdr/0004).
+  const nodeHash = await computeNodeHash(el);
   const ancestorPathHash = await sha256(`${parentAncestorHash}|${nodeHash}`);
 
   const children: NodeTreeEntry[] = [];
@@ -79,6 +61,7 @@ async function buildNode(
     accessible_name: el.getAttribute("aria-label") ?? (text || null),
     node_hash: nodeHash,
     ancestor_path_hash: ancestorPathHash,
+    text_similarity_hash: computeSimhash(text),
   };
 
   return { node_id: nodeId, tag, children };

@@ -23,8 +23,31 @@ Comment CRUD, threaded replies, `layer` field with server-enforced visibility (`
 **DoD:** F3's acceptance criterion is demonstrably true via an automated test (Playwright journey #3, `19-Testing-CI.md` §19.3) - not just "the UI hides it," the raw API response to a guest session excludes team-only content.
 
 ## Milestone 5 - Anchor Engine v1 (DOM fingerprint only) (1 week)
-Tier 1 fingerprinting (`08-Anchor-Engine.md`), stored alongside each comment, no recovery/diffing yet - just capture and storage.
-**DoD:** every comment created in Milestone 4's flow now carries a well-formed anchor payload, verified against the golden dataset's "identical page" fixture (§19.2).
+Tier 1 fingerprint *capture* (`08-Anchor-Engine.md`) landed in Milestones 3-4 already
+(anchors are computed client-side and stored alongside each comment). What Milestone 5
+actually adds is the *matching* side: `modules/anchor_engine`'s pure matching/confidence-
+scoring function (§8.3's tiered order, §8.4's formula), operating on an anchor and a
+target snapshot's `nodes_index`. This is scoped deliberately narrowly - the function is
+real and fully tested against the golden dataset (all fixtures in §19.2, not just
+"identical page"), but *wiring it to run automatically whenever a page's revision
+changes* (the diff engine, `recovery_logs` persistence, background-job orchestration) is
+Milestone 8 (`10-Revision-Recovery.md`) - "no recovery/diffing yet" means no automatic
+pipeline, not "don't build or test the algorithm."
+
+Discovered during implementation and fixed as part of this milestone
+(`docs/tdr/0004-anchor-snapshot-shared-hash-scheme.md`): Milestone 3's anchor capture and
+snapshot capture used *different, non-comparable* hashing schemes - an anchor's hashes
+could never have matched a snapshot's `nodes_index`, not even for an unchanged page. Also
+added: a real SimHash (`text_similarity_hash`, character-trigram based) for the text
+fingerprint - exact-string matching can't satisfy the "text edited" golden fixture by
+definition, since the text itself changed; `08-Anchor-Engine.md` §8.1 already specified
+this field, Milestone 3 had just left it unimplemented.
+
+**DoD:** every comment created in Milestone 4's flow carries a well-formed anchor payload
+(done in M3/M4); the matcher correctly classifies all five golden dataset fixtures
+(§19.2) - identical page (`ok`, confidence 1.0), moved element (`ok` via stable-attribute
+match), text-edited element (`low_confidence` via SimHash), removed element
+(`orphaned`), and ambiguous duplicates (`low_confidence`, not a silent wrong match).
 
 ## Milestone 6 - Dashboard: Board (Kanban + List) (1 week)
 Full dashboard shell (`05-Frontend-Architecture.md`), Kanban + List views (`16-Dashboard.md` §16.1), React Query + Zustand wiring (`14-State-Management.md`), filters, bulk status change.

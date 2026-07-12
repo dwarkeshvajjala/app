@@ -1,9 +1,11 @@
-import { sha256 } from "./hash";
+import { computeIdentity, getDirectText, getStableAttributes } from "./node-identity";
+import { computeSimhash } from "./simhash";
 import type { AnchorPayload, DomFingerprint } from "./types";
 
 // Tier 1 only (08-Anchor-Engine.md §8.2) - Tier 2 text-similarity fallback and Tier 3
-// visual fingerprint are the Recovery Engine's concern (Milestone 5), not capture time.
-// This must stay fast (< 50ms, 07-Review-SDK.md §7.7) since it runs synchronously on tap.
+// visual fingerprint are the Recovery Engine's concern (Milestone 8's diff pipeline),
+// not capture time. This must stay fast (< 50ms, 07-Review-SDK.md §7.7) since it runs
+// synchronously on tap.
 
 function nthOfTypeIndex(el: Element): number {
   let index = 1;
@@ -31,41 +33,35 @@ function buildSelectorPath(el: Element): string {
   return `body > ${segments.join(" > ")}`;
 }
 
-function ancestorChain(el: Element): Element[] {
-  const chain: Element[] = [];
-  let current = el.parentElement;
-  while (current) {
-    chain.push(current);
-    current = current.parentElement;
-  }
-  return chain;
-}
-
 export async function computeAnchor(el: Element): Promise<AnchorPayload> {
   const tag = el.tagName.toLowerCase();
-  const attributes: Record<string, string> = {};
-  if (el.getAttribute("class")) attributes.class = el.getAttribute("class")!;
-  if (el.getAttribute("data-testid")) attributes["data-testid"] = el.getAttribute("data-testid")!;
+  const attributes = getStableAttributes(el);
 
-  const normalizedText = (el.textContent ?? "").replace(/\s+/g, " ").trim().toLowerCase();
-  const textHash = await sha256(normalizedText);
+  // node_hash/ancestor_path_hash use the exact same scheme captureSnapshot() uses
+  // (docs/tdr/0004-anchor-snapshot-shared-hash-scheme.md) - without this, the Anchor
+  // Engine's matcher could never find this element in a later snapshot, even
+  // unchanged, since the hashes wouldn't be computed the same way.
+  const { nodeHash, ancestorPathHash } = await computeIdentity(el);
 
-  const ancestors = ancestorChain(el);
-  const ancestorHashes = await Promise.all(
-    ancestors.map((ancestor) => sha256(selectorSegment(ancestor))),
-  );
+  // Direct text only, matching what a snapshot node's own `text` field holds - not
+  // el.textContent, which would include descendant elements' text and so wouldn't
+  // match the snapshot's per-node text for anything with nested markup.
+  const normalizedText = getDirectText(el).toLowerCase();
 
   const domFingerprint: DomFingerprint = {
     selector_path: buildSelectorPath(el),
     tag,
     attributes,
-    text_hash: textHash,
-    ancestor_hashes: ancestorHashes,
+    node_hash: nodeHash,
+    ancestor_path_hash: ancestorPathHash,
   };
 
   return {
     tier: 1,
     dom_fingerprint: domFingerprint,
-    text_fingerprint: { normalized_text: normalizedText },
+    text_fingerprint: {
+      normalized_text: normalizedText,
+      text_similarity_hash: computeSimhash(normalizedText),
+    },
   };
 }

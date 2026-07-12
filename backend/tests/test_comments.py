@@ -11,10 +11,13 @@ SAMPLE_ANCHOR = {
         "selector_path": "body > button:nth-of-type(1)",
         "tag": "button",
         "attributes": {"class": "btn btn-primary", "data-testid": "upgrade-cta"},
-        "text_hash": "sha256:9f2a",
-        "ancestor_hashes": ["sha256:aa11", "sha256:bb22"],
+        "node_hash": "sha256:9f2a",
+        "ancestor_path_hash": "sha256:aa11",
     },
-    "text_fingerprint": {"normalized_text": "upgrade to pro"},
+    "text_fingerprint": {
+        "normalized_text": "upgrade to pro",
+        "text_similarity_hash": "0" * 16,
+    },
 }
 
 SAMPLE_CONTEXT = {
@@ -307,7 +310,10 @@ async def test_reanchor_updates_anchor_and_recovery_status(
     )
     comment_id = created.json()["id"]
 
-    new_anchor = {**SAMPLE_ANCHOR, "text_fingerprint": {"normalized_text": "a new label"}}
+    new_anchor = {
+        **SAMPLE_ANCHOR,
+        "text_fingerprint": {"normalized_text": "a new label", "text_similarity_hash": "0" * 16},
+    }
     resp = await client.patch(
         f"/api/v1/comments/{comment_id}/reanchor",
         json={"anchor": new_anchor},

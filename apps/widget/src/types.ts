@@ -17,6 +17,9 @@ export interface NodeRecord {
   accessible_name: string | null;
   node_hash: string;
   ancestor_path_hash: string;
+  // SimHash of `text`, for approximate matching when a node's text changes slightly
+  // between revisions (08-Anchor-Engine.md §8.1, Milestone 5's anchor_engine matcher).
+  text_similarity_hash: string;
 }
 
 export interface NodeTreeEntry {
@@ -36,8 +39,10 @@ export interface DomFingerprint {
   selector_path: string;
   tag: string;
   attributes: Record<string, string>;
-  text_hash: string;
-  ancestor_hashes: string[];
+  // Same hash scheme as NodeRecord above (docs/tdr/0004-anchor-snapshot-shared-hash-scheme.md) -
+  // required for the Anchor Engine to compare an anchor against a snapshot's nodes_index at all.
+  node_hash: string;
+  ancestor_path_hash: string;
 }
 
 export interface AnchorPayload {
@@ -45,5 +50,6 @@ export interface AnchorPayload {
   dom_fingerprint: DomFingerprint;
   text_fingerprint: {
     normalized_text: string;
+    text_similarity_hash: string;
   };
 }

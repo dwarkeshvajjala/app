@@ -9,15 +9,24 @@ RecoveryStatus = Literal["ok", "low_confidence", "orphaned", "permanently_orphan
 
 
 class DomFingerprintIn(BaseModel):
+    """node_hash/ancestor_path_hash use the same hash scheme as a snapshot's NodeRecord
+    (09-Snapshot-Engine.md §9.6) - required for modules/anchor_engine to compare an
+    anchor against a snapshot's nodes_index at all
+    (docs/tdr/0004-anchor-snapshot-shared-hash-scheme.md)."""
+
     selector_path: str
     tag: str
     attributes: dict[str, str]
-    text_hash: str
-    ancestor_hashes: list[str]
+    node_hash: str
+    ancestor_path_hash: str
 
 
 class TextFingerprintIn(BaseModel):
     normalized_text: str
+    # 64-bit SimHash (hex), for approximate matching when text changes slightly between
+    # revisions - exact-string equality can't satisfy the "text edited" recovery case by
+    # definition (08-Anchor-Engine.md §8.1, modules/anchor_engine).
+    text_similarity_hash: str
 
 
 class AnchorIn(BaseModel):
