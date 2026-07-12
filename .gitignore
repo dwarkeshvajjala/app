@@ -1,0 +1,33 @@
+# Node
+node_modules/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+pnpm-debug.log*
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Local dev data (Mongo/Redis/MinIO data dirs, PID/log files)
+infra/local/data/
+infra/local/logs/
+infra/local/*.pid
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Claude
+.claude/

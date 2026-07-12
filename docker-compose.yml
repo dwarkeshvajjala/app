@@ -1,0 +1,35 @@
+version: "3.9"
+
+# Used on machines with Docker available. On machines without Docker, use the
+# equivalent native-binary scripts in infra/local/ instead (see docs/tdr/0001).
+services:
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: backline-local
+      MINIO_ROOT_PASSWORD: backline-local-secret
+    volumes:
+      - minio-data:/data
+
+volumes:
+  mongo-data:
+  redis-data:
+  minio-data:
