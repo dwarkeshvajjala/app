@@ -53,6 +53,15 @@ match), text-edited element (`low_confidence` via SimHash), removed element
 Full dashboard shell (`05-Frontend-Architecture.md`), Kanban + List views (`16-Dashboard.md` §16.1), React Query + Zustand wiring (`14-State-Management.md`), filters, bulk status change.
 **DoD:** PM triage acceptance criterion tested directly - 50 comments across 3 pages triaged in under 10 minutes without leaving the board (measured in a usability pass, not just "the feature exists").
 
+Implemented against a new `GET /projects/{id}/comments` endpoint (`12-API-WebSocket.md`
+§12.4), not explicitly enumerated in the original endpoint table but following the same
+cross-page aggregation `11-Database.md` §11.14 already assumes for kanban counts.
+Filter/view state uses `useSearchParams` directly rather than a Zustand store synced to
+the URL - see `docs/tdr/0005-board-filters-in-url-params-not-zustand.md`, which also notes
+that the DoD's human usability-pass criterion is still outstanding (mechanics verified
+end-to-end via Playwright against a live backend; a timed session with a real PM tester
+was not performed and can't be by construction).
+
 ## Milestone 7 - Realtime Layer (4-5 days)
 WebSocket gateway, Redis pub/sub fan-out, all event types in `12-API-WebSocket.md` §12.6, targeted React Query cache updates (no blind invalidation).
 **DoD:** two browser sessions (one dashboard, one guest reviewer) see each other's actions live, without a manual refresh, including presence.

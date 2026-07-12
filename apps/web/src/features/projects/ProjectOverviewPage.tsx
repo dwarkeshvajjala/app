@@ -32,16 +32,18 @@ export function ProjectOverviewPage() {
 
       <div className="mt-6 flex flex-col gap-2">
         <Link
+          to={`/w/${workspace.slug}/p/${project.id}/board`}
+          className="hover:bg-bg-canvas rounded-md border border-black/10 px-4 py-3 text-sm font-medium dark:border-white/10"
+        >
+          Board
+        </Link>
+        <Link
           to={`/w/${workspace.slug}/p/${project.id}/share-links`}
           className="hover:bg-bg-canvas rounded-md border border-black/10 px-4 py-3 text-sm font-medium dark:border-white/10"
         >
           Share links
         </Link>
       </div>
-
-      <p className="text-text-muted mt-8 text-sm">
-        The review SDK snippet, pages, and comment board land in Milestones 3-6.
-      </p>
     </main>
   );
 }

@@ -27,6 +27,16 @@ async def list_comments(
     return await comment_service.list_comments(get_db(), page_id=page_id, actor=actor, since=since)
 
 
+@router.get("/projects/{project_id}/comments", response_model=list[CommentOut])
+async def list_comments_for_project(
+    project_id: str,
+    session: Session = Depends(require_permission("comment:view_team")),
+) -> list[CommentOut]:
+    return await comment_service.list_comments_for_project(
+        get_db(), project_id=project_id, workspace_id=require_workspace_context(session)
+    )
+
+
 @router.post("/pages/{page_id}/comments", response_model=CommentOut, status_code=201)
 async def create_comment(
     page_id: str, body: CommentCreate, actor: Actor = Depends(get_current_actor)

@@ -1,11 +1,13 @@
 import { Button } from "@backline/ui";
 import { type FormEvent, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "./AuthContext";
 import { buildGoogleAuthUrl } from "./google-oauth-url";
 
 export function LoginPage() {
   const { requestOtp, verifyOtp } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -32,6 +34,7 @@ export function LoginPage() {
     setIsSubmitting(true);
     try {
       await verifyOtp(email, code);
+      navigate("/", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Incorrect code.");
     } finally {

@@ -12,6 +12,7 @@ from app.modules.comments import events as comment_events
 from app.modules.comments.repository import CommentRepository
 from app.modules.comments.schemas import AnchorIn, CommentOut, ContextIn
 from app.modules.pages.repository import PageRepository
+from app.modules.projects.repository import ProjectRepository
 from app.modules.storage.r2_client import generate_presigned_get
 
 
@@ -183,6 +184,24 @@ async def list_comments(
     else:
         docs = await repo.list_for_member(page["workspace_id"], page_id, since=since)
 
+    return await asyncio.gather(*(_comment_out(doc) for doc in docs))
+
+
+async def list_comments_for_project(
+    db: AsyncIOMotorDatabase[dict[str, Any]], *, project_id: str, workspace_id: str
+) -> list[CommentOut]:
+    """The Board's data source (16-Dashboard.md §16.1) - every comment, every layer,
+    across every page in the project. Member-only; guests never reach this."""
+    project = await ProjectRepository(db).find_by_id(project_id)
+    if project is None or project["workspace_id"] != workspace_id:
+        raise NotFoundError("Project not found.")
+
+    pages = await PageRepository(db).list_for_project(project_id)
+    page_ids = [str(page["_id"]) for page in pages]
+    if not page_ids:
+        return []
+
+    docs = await CommentRepository(db).list_for_project(workspace_id, page_ids)
     return await asyncio.gather(*(_comment_out(doc) for doc in docs))
 
 

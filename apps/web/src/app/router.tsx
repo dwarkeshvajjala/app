@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-rou
 import { AuthCallbackPage } from "../features/auth/AuthCallbackPage";
 import { useAuth } from "../features/auth/AuthContext";
 import { LoginPage } from "../features/auth/LoginPage";
+import { BoardPage } from "../features/board/BoardPage";
 import { ProjectOverviewPage } from "../features/projects/ProjectOverviewPage";
 import { ReviewEntryPage } from "../features/review/ReviewEntryPage";
 import { ShareLinksPage } from "../features/share-links/ShareLinksPage";
@@ -41,6 +42,7 @@ const router = createBrowserRouter([
           { index: true, element: <WorkspaceHomePage /> },
           { path: "members", element: <MembersPage /> },
           { path: "p/:projectId", element: <ProjectOverviewPage /> },
+          { path: "p/:projectId/board", element: <BoardPage /> },
           { path: "p/:projectId/share-links", element: <ShareLinksPage /> },
         ],
       },

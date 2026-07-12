@@ -45,6 +45,7 @@ Base path: `/api/v1`. All responses JSON. All mutating endpoints require either 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | GET | `/pages/{page_id}/comments` | member or guest (guest sees `layer=client` only, enforced server-side per `11-Database.md` §11.10) | List comments, supports `?since=<event_id>` delta sync |
+| GET | `/projects/{id}/comments` | member | List every comment across every page in the project (both layers) - the Board's data source (`16-Dashboard.md` §16.1). Not enumerated in the original endpoint table - added per the no-silent-drift rule; §11.14's own "kanban board counts" aggregation example already implies querying comments by `page_id: {"$in": page_ids}` for a project, this just exposes that as an endpoint. Member-only: guests never see the board. No filter query params - Milestone 6 fetches the full list once and filters/sorts client-side (dozens-to-low-hundreds of comments per project at MVP scale), consistent with 14-State-Management.md's React-Query-owns-server-state / everything-else-is-view-state split. |
 | POST | `/pages/{page_id}/comments` | member or guest | Create a comment (guest-authored defaults `layer=client`, cannot be overridden by guest) |
 | POST | `/comments/{id}/replies` | member or guest | Threaded reply |
 | PATCH | `/comments/{id}` | member | Edit body, status, assignee, due date |
