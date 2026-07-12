@@ -30,3 +30,8 @@ async def ensure_indexes(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
 
     await db.guest_sessions.create_index("share_link_id")
     await db.guest_sessions.create_index("last_seen_at", expireAfterSeconds=180 * 24 * 60 * 60)
+
+    await db.pages.create_index([("project_id", 1), ("url_normalized", 1)], unique=True)
+
+    await db.revisions.create_index([("page_id", 1), ("captured_at", -1)])
+    await db.revisions.create_index([("page_id", 1), ("is_current", 1)])

@@ -37,6 +37,8 @@ Base path: `/api/v1`. All responses JSON. All mutating endpoints require either 
 | POST | `/guest-sessions` | share token | Create guest session (display name only) |
 | GET | `/projects/{id}/pages` | member | List registered pages |
 | POST | `/pages` | guest session or member | Register a page (idempotent on `url_normalized`) |
+| POST | `/pages/{page_id}/snapshots` | guest session or member | Submit a captured Normalized DOM Snapshot (`09-Snapshot-Engine.md`) - creates a new `revision` only if `full_page_hash` differs from the page's current one, otherwise a no-op that returns the existing revision. Not enumerated in the original endpoint table - added per the no-silent-drift rule (`00-README.md`); `09-Snapshot-Engine.md` describes the snapshot shape and storage strategy but never named the submission endpoint. |
+| POST | `/uploads` | member or guest | Get a pre-signed R2 PUT URL for a screenshot. Body: `{ project_id, content_type }` - the caller's access to `project_id` is checked (workspace match for members, share-link's project match for guests) before a key is issued. Key shape: see `docs/tdr/0002-snippet-mode-shares-the-share-link-model.md` (does not contain a `comment_id` - the upload happens before the comment exists). |
 
 ## 12.4 Comments
 
@@ -48,7 +50,6 @@ Base path: `/api/v1`. All responses JSON. All mutating endpoints require either 
 | PATCH | `/comments/{id}` | member | Edit body, status, assignee, due date |
 | PATCH | `/comments/{id}/layer` | member (`member`+), requires explicit `confirm: true` in body | Toggle client/team visibility |
 | PATCH | `/comments/{id}/reanchor` | member | Manually reassign an orphaned comment's anchor |
-| POST | `/uploads` | member or guest | Get a pre-signed R2 PUT URL for a screenshot |
 
 **Standard error shape** (all 4xx/5xx, per `06-Backend-Architecture.md` §6.7):
 ```json

@@ -4,9 +4,22 @@ Collaborative website review platform. Full specification: [`docs/spec/00-README
 
 ## Status
 
-**Milestones 0-2 complete.** Monorepo scaffold + CI (M0); Auth & Workspaces (M1): Google OAuth, email OTP, JWT + httpOnly-cookie refresh tokens with rotation/theft-detection, workspace CRUD, roles, full permission matrix; Projects & Share Links (M2): project CRUD (soft-archive), share links with optional passcode/expiry, a public `/review/{token}` resolver, and guest session creation - IP-rate-limited via a Redis sliding-window log, with the guest JWT scoped to exactly one share link. 45 backend tests, all green. Frontend covers login → workspace → projects → share links → the guest-facing `/review/:token` entry screen (name + passcode → guest session). The actual pin-drop/comment SDK starts at Milestone 3.
+**Milestones 0-3 complete.** Monorepo + CI (M0); Auth & Workspaces (M1); Projects & Share Links (M2); Review SDK v1 + Snapshot Engine v1 (M3): the actual injectable widget (`apps/widget`, vanilla TS, 9.6KB / 3.97KB gzipped - well under the 40KB budget), a guest-session bootstrap flow, a real Normalized DOM Snapshot capture (walks the live DOM, hashes it, gzips it, stores it in R2/MinIO), a real viewport screenshot capture (SVG-`foreignObject`-to-canvas rasterization, uploaded via a presigned URL), a Tier-1 anchor computation, and a pin-drop/composer UI in a Shadow DOM root. 60 backend tests, all green.
+
+The whole capture pipeline (name prompt → guest session → page registration → DOM snapshot → pin drop → screenshot → upload) is verified working end to end in a real headless-Chromium run against the built widget (`apps/widget/test-site/`) - not just type-checked. That pass caught and fixed two real bugs: Shadow DOM event retargeting was breaking the composer's outside-click detection, and Chrome unconditionally taints the canvas for `foreignObject`-based SVGs loaded via a `blob:` URL (fixed by switching to a `data:` URI - see `docs/tdr/0003`).
+
+Comment posting itself (persisting the captured anchor/screenshot/body as a real comment) is Milestone 4 - M3 proves the capture and storage pipeline, which M4 will attach to.
 
 Google OAuth and Resend email need real credentials to fully exercise (see `.env.example`) - without them, OTP codes are logged to the server console instead of emailed, and the Google button will fail at Google's side once clicked (the exchange code itself is fully implemented and tested with mocks).
+
+### Trying the widget yourself
+
+```bash
+# with the backend + local services running (see below), and a share link's token in hand:
+cd apps/widget && pnpm build
+python3 -m http.server 4173   # serves apps/widget/ so test-site/index.html can reach ../dist/sdk.js
+# open http://localhost:4173/test-site/index.html?shareToken=<your token>
+```
 
 ## Repository Layout
 

@@ -1,0 +1,42 @@
+from datetime import UTC, datetime
+from typing import Any
+
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
+from app.core.mongo_utils import to_object_id
+
+
+class RevisionRepository:
+    """`revisions` - 11-Database.md §11.8. Only the create-a-new-revision-on-hash-change
+    path lands in Milestone 3; the diff engine (10-Revision-Recovery.md) is Milestone 8."""
+
+    def __init__(self, db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
+        self.db = db
+
+    async def find_current(self, page_id: str) -> dict[str, Any] | None:
+        return await self.db.revisions.find_one({"page_id": page_id, "is_current": True})
+
+    async def create(
+        self, *, page_id: str, workspace_id: str, full_page_hash: str
+    ) -> dict[str, Any]:
+        doc = {
+            "page_id": page_id,
+            "workspace_id": workspace_id,
+            "snapshot_key": None,
+            "full_page_hash": full_page_hash,
+            "captured_at": datetime.now(UTC),
+            "is_current": True,
+        }
+        result = await self.db.revisions.insert_one(doc)
+        doc["_id"] = result.inserted_id
+        return doc
+
+    async def set_snapshot_key(self, revision_id: str, snapshot_key: str) -> None:
+        await self.db.revisions.update_one(
+            {"_id": to_object_id(revision_id)}, {"$set": {"snapshot_key": snapshot_key}}
+        )
+
+    async def mark_not_current(self, revision_id: str) -> None:
+        await self.db.revisions.update_one(
+            {"_id": to_object_id(revision_id)}, {"$set": {"is_current": False}}
+        )

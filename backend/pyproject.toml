@@ -28,6 +28,7 @@ dev = [
   "pytest-asyncio==0.24.0",
   "httpx==0.28.1",
   "types-python-jose==3.3.4.20240106",
+  "boto3-stubs[s3]==1.35.74",
 ]
 
 [tool.ruff]

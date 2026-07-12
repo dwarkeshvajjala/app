@@ -32,11 +32,21 @@ jobs:
       - name: Typecheck (mypy --strict)
         working-directory: backend
         run: uv run mypy app/
+      # GitHub Actions' `services:` block only supports image/env/ports - not a custom
+      # command - and MinIO's image requires one (`server /data`), so it's started as a
+      # plain background container instead of a service.
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=backline-local -e MINIO_ROOT_PASSWORD=backline-local-secret \
+            minio/minio server /data
+          until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done
       - name: Test
         working-directory: backend
         env:
           MONGO_URI: mongodb://localhost:27017
           REDIS_URL: redis://localhost:6379
+          R2_ENDPOINT_URL: http://localhost:9000
         run: uv run pytest -v
 
   frontend:
@@ -57,3 +67,14 @@ jobs:
         run: pnpm turbo run typecheck
       - name: Build
         run: pnpm turbo run build
+      # 07-Review-SDK.md §7.7 / 19-Testing-CI.md §19.5: SDK bundle must stay under 40KB
+      # gzipped - the widget is injected into third-party pages, size directly affects
+      # the "comment posted in under 30 seconds" acceptance criterion.
+      - name: Check SDK bundle size budget (< 40KB gzipped)
+        run: |
+          size=$(gzip -c apps/widget/dist/sdk.js | wc -c)
+          echo "SDK bundle gzipped size: $size bytes (budget: 40960)"
+          if [ "$size" -gt 40960 ]; then
+            echo "::error::SDK bundle exceeds the 40KB gzipped budget"
+            exit 1
+          fi

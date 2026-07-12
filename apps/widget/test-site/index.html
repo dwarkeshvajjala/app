@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Backline SDK Test Site</title>
+    <style>
+      body { font-family: sans-serif; margin: 0; padding: 40px; background: #f7f7f9; }
+      h1 { color: #14141a; }
+      .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+      button.cta { background: #4f46e5; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <h1>Acme Marketing Site</h1>
+    <div class="card">
+      <h2>Pricing</h2>
+      <p>This is a staging test page for manually verifying the Backline Review SDK end to end.</p>
+      <button class="cta" data-testid="upgrade-cta">Upgrade to Pro</button>
+    </div>
+    <div class="card">
+      <h2>Testimonials</h2>
+      <p>"This product changed how we ship." - A happy customer</p>
+    </div>
+
+    <script src="../dist/sdk.js"></script>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const shareToken = params.get("shareToken");
+      if (!shareToken) {
+        document.body.insertAdjacentHTML(
+          "afterbegin",
+          '<p style="color:red">Missing ?shareToken= query param.</p>',
+        );
+      } else {
+        window.Backline.init({ shareToken, apiBaseUrl: "http://localhost:8000" });
+      }
+    </script>
+  </body>
+</html>
