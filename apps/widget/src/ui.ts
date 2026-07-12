@@ -78,8 +78,8 @@ export function promptForName(shadow: ShadowRoot): Promise<string> {
     const form = document.createElement("form");
     form.className = "bl-name-form";
     form.innerHTML = `
-      <label style="font-size:13px;font-weight:600;">Your name</label>
-      <input type="text" required placeholder="Jamie" />
+      <label for="bl-name-input" style="font-size:13px;font-weight:600;">Your name</label>
+      <input id="bl-name-input" type="text" required placeholder="Jamie" />
       <button type="submit">Continue</button>
     `;
     form.addEventListener("submit", (event) => {
@@ -118,7 +118,7 @@ export function openComposer(
   composer.style.left = `${Math.min(x + 16, window.innerWidth - 280)}px`;
   composer.style.top = `${Math.min(y + 16, window.innerHeight - 220)}px`;
   composer.innerHTML = `
-    <textarea rows="3" placeholder="What's the issue here?" required></textarea>
+    <textarea rows="3" placeholder="What's the issue here?" required aria-label="Comment"></textarea>
     <button type="button">Capture &amp; prepare comment</button>
     <div class="bl-status"></div>
   `;

@@ -39,19 +39,30 @@ class ShareLinkRepository:
         return doc
 
     async def find_by_token(self, token: str) -> dict[str, Any] | None:
+        # workspace-scope-exempt: tokens are cryptographically random and globally
+        # unique by design - this is the public, unauthenticated share-link resolution
+        # path (GET /review/{token}); the workspace is *derived from* the token here,
+        # not known in advance.
         return await self.db.share_links.find_one({"token": token})
 
     async def find_by_id(self, share_link_id: str) -> dict[str, Any] | None:
         oid = to_object_id(share_link_id)
         if oid is None:
             return None
+        # workspace-scope-exempt: single-document lookup by its own unique _id; every
+        # caller checks doc["workspace_id"] against the caller's workspace immediately
+        # after (e.g. revoke_share_link in share_links/service.py).
         return await self.db.share_links.find_one({"_id": oid})
 
     async def list_for_project(self, project_id: str) -> list[dict[str, Any]]:
+        # workspace-scope-exempt: project_id is verified against the caller's workspace
+        # in list_share_links (share_links/service.py) before this is called.
         cursor = self.db.share_links.find({"project_id": project_id}).sort("created_at", -1)
         return [doc async for doc in cursor]
 
     async def revoke(self, share_link_id: str) -> None:
+        # workspace-scope-exempt: revoke_share_link already verified
+        # doc["workspace_id"] == workspace_id via find_by_id before calling this.
         await self.db.share_links.update_one(
             {"_id": to_object_id(share_link_id)}, {"$set": {"revoked_at": datetime.now(UTC)}}
         )
@@ -90,12 +101,7 @@ class GuestSessionRepository:
         oid = to_object_id(guest_session_id)
         if oid is None:
             return None
+        # workspace-scope-exempt: single-document lookup by its own unique _id, resolved
+        # from a guest token whose claims are cryptographically verified before this is
+        # ever called (get_guest_session in core/session.py).
         return await self.db.guest_sessions.find_one({"_id": oid})
-
-    async def touch_last_seen(self, guest_session_id: str) -> None:
-        oid = to_object_id(guest_session_id)
-        if oid is None:
-            return
-        await self.db.guest_sessions.update_one(
-            {"_id": oid}, {"$set": {"last_seen_at": datetime.now(UTC)}}
-        )

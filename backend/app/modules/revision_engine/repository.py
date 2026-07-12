@@ -35,6 +35,3 @@ class RevisionDiffRepository:
         result = await self.db.revision_diffs.insert_one(doc)
         doc["_id"] = result.inserted_id
         return doc
-
-    async def find_by_to_revision(self, to_revision_id: str) -> dict[str, Any] | None:
-        return await self.db.revision_diffs.find_one({"to_revision_id": to_revision_id})

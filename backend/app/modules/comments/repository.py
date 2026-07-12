@@ -21,6 +21,9 @@ class CommentRepository:
         oid = to_object_id(comment_id)
         if oid is None:
             return None
+        # workspace-scope-exempt: single-document lookup by its own unique _id; every
+        # caller checks doc["workspace_id"] against the caller's workspace immediately
+        # after (e.g. comments/service.py's update_comment) before acting on it.
         return await self.db.comments.find_one({"_id": oid})
 
     async def list_for_member(
@@ -66,6 +69,10 @@ class CommentRepository:
 
     async def update(self, comment_id: str, patch: dict[str, Any]) -> None:
         patch["edited_at"] = datetime.now(UTC)
+        # workspace-scope-exempt: every caller (update_comment/toggle_layer/reanchor in
+        # comments/service.py) already fetched and verified this comment's workspace_id
+        # via find_by_id before calling update() - the mutation itself doesn't need to
+        # re-filter by it.
         await self.db.comments.update_one({"_id": to_object_id(comment_id)}, {"$set": patch})
 
     async def list_recoverable_for_page(
@@ -102,4 +109,6 @@ class CommentRepository:
         }
         if anchor is not None:
             patch["anchor"] = anchor
+        # workspace-scope-exempt: comment_id came from list_recoverable_for_page, which
+        # is itself workspace_id-filtered - already scoped before this mutation runs.
         await self.db.comments.update_one({"_id": to_object_id(comment_id)}, {"$set": patch})

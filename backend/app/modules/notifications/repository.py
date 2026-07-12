@@ -9,7 +9,7 @@ from app.core.mongo_utils import to_object_id
 class NotificationRepository:
     """`notifications` - not given an explicit shape in 11-Database.md (§17.8 names the
     collection but never its fields); shape and indexes documented in
-    docs/tdr/0009-notification-center-and-webhook-retry-design.md."""
+    docs/tdr/0009-notifications-integrations-scope-and-design.md."""
 
     def __init__(self, db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
         self.db = db
@@ -43,9 +43,13 @@ class NotificationRepository:
             {"workspace_id": workspace_id, "user_id": user_id, "read_at": None}
         )
 
-    async def mark_read(self, notification_id: str, *, user_id: str) -> None:
+    async def mark_read(self, notification_id: str, *, workspace_id: str, user_id: str) -> None:
         await self.db.notifications.update_one(
-            {"_id": to_object_id(notification_id), "user_id": user_id},
+            {
+                "_id": to_object_id(notification_id),
+                "workspace_id": workspace_id,
+                "user_id": user_id,
+            },
             {"$set": {"read_at": datetime.now(UTC)}},
         )
 

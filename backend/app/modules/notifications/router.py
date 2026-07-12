@@ -41,7 +41,10 @@ async def mark_read(
     session: Session = Depends(require_permission("notification:manage")),
 ) -> None:
     await notification_service.mark_read(
-        get_db(), notification_id=notification_id, user_id=session.user_id
+        get_db(),
+        notification_id=notification_id,
+        workspace_id=require_workspace_context(session),
+        user_id=session.user_id,
     )
 
 

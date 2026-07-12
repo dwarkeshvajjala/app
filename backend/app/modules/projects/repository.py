@@ -31,6 +31,9 @@ class ProjectRepository:
         oid = to_object_id(project_id)
         if oid is None:
             return None
+        # workspace-scope-exempt: single-document lookup by its own unique _id; every
+        # caller checks doc["workspace_id"] against the caller's workspace immediately
+        # after (e.g. get_project in projects/service.py).
         return await self.db.projects.find_one({"_id": oid})
 
     async def list_for_workspace(
@@ -48,9 +51,13 @@ class ProjectRepository:
             patch["name"] = name
         if target_origin is not None:
             patch["target_origin"] = target_origin
+        # workspace-scope-exempt: update_project (projects/service.py) already verified
+        # doc["workspace_id"] == workspace_id via find_by_id before calling this.
         await self.db.projects.update_one({"_id": to_object_id(project_id)}, {"$set": patch})
 
     async def archive(self, project_id: str) -> None:
+        # workspace-scope-exempt: archive_project already verified ownership via
+        # find_by_id before calling this, same as update() above.
         await self.db.projects.update_one(
             {"_id": to_object_id(project_id)},
             {"$set": {"archived_at": datetime.now(UTC), "updated_at": datetime.now(UTC)}},

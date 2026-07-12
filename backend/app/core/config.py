@@ -48,6 +48,16 @@ class Settings(BaseSettings):
     guest_session_rate_limit_per_minute: int = 10
     proxy_rate_limit_per_minute: int = 300
 
+    # Milestone 11 rate-limiting audit (docs/tdr/0010): every write endpoint reachable
+    # by an unauthenticated guest session needs its own budget, not just the
+    # session-creation/resolve endpoints already covered - otherwise a guest token is a
+    # free pass to spam comments, pages, snapshots, or presigned upload URLs.
+    otp_request_rate_limit_per_minute: int = 5
+    page_register_rate_limit_per_minute: int = 30
+    snapshot_submit_rate_limit_per_minute: int = 30
+    comment_create_rate_limit_per_minute: int = 20
+    upload_rate_limit_per_minute: int = 20
+
     # Where a reviewer's browser can reach this API from - used to build the absolute
     # widget script src/apiBaseUrl injected server-side in proxy mode
     # (03-System-Architecture.md §3.3), since there's no agency-authored <script> tag to

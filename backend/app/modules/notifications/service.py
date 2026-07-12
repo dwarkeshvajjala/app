@@ -102,9 +102,15 @@ async def count_unread(
 
 
 async def mark_read(
-    db: AsyncIOMotorDatabase[dict[str, Any]], *, notification_id: str, user_id: str
+    db: AsyncIOMotorDatabase[dict[str, Any]],
+    *,
+    notification_id: str,
+    workspace_id: str,
+    user_id: str,
 ) -> None:
-    await NotificationRepository(db).mark_read(notification_id, user_id=user_id)
+    await NotificationRepository(db).mark_read(
+        notification_id, workspace_id=workspace_id, user_id=user_id
+    )
 
 
 async def mark_all_read(

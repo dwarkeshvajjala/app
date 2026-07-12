@@ -1,9 +1,12 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
+from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.permissions import require_permission
+from app.core.rate_limit import actor_rate_limit_key, check_rate_limit
+from app.core.redis_client import get_redis
 from app.core.session import Actor, Session, get_current_actor, require_workspace_context
 from app.modules.comments import service as comment_service
 from app.modules.comments.schemas import (
@@ -39,8 +42,15 @@ async def list_comments_for_project(
 
 @router.post("/pages/{page_id}/comments", response_model=CommentOut, status_code=201)
 async def create_comment(
-    page_id: str, body: CommentCreate, actor: Actor = Depends(get_current_actor)
+    page_id: str, body: CommentCreate, request: Request, actor: Actor = Depends(get_current_actor)
 ) -> CommentOut:
+    settings = get_settings()
+    await check_rate_limit(
+        get_redis(),
+        key=actor_rate_limit_key("comment-create", request, actor),
+        limit=settings.comment_create_rate_limit_per_minute,
+        window_seconds=60,
+    )
     return await comment_service.create_comment(
         get_db(),
         page_id=page_id,
@@ -56,8 +66,15 @@ async def create_comment(
 
 @router.post("/comments/{comment_id}/replies", response_model=CommentOut, status_code=201)
 async def create_reply(
-    comment_id: str, body: ReplyCreate, actor: Actor = Depends(get_current_actor)
+    comment_id: str, body: ReplyCreate, request: Request, actor: Actor = Depends(get_current_actor)
 ) -> CommentOut:
+    settings = get_settings()
+    await check_rate_limit(
+        get_redis(),
+        key=actor_rate_limit_key("comment-create", request, actor),
+        limit=settings.comment_create_rate_limit_per_minute,
+        window_seconds=60,
+    )
     return await comment_service.create_reply(
         get_db(), parent_id=comment_id, actor=actor, body=body.body, layer=body.layer
     )

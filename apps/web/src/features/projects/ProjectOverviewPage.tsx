@@ -62,6 +62,7 @@ export function ProjectOverviewPage() {
             <input
               readOnly
               value={reviewUrl(activeLink.token)}
+              aria-label="Share link"
               className="text-text-muted flex-1 truncate rounded-md border border-black/10 bg-transparent px-3 py-2 text-xs dark:border-white/10"
               onFocus={(event) => event.target.select()}
             />

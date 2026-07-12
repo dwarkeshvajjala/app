@@ -126,6 +126,22 @@ dispatch, and why only the daily digest (not per-member instant mode) shipped.
 Rate limiting audit, workspace-scoping lint rule enforced in CI (`06-Backend-Architecture.md` §6.4), signed URL expiry review, axe-core accessibility pass on all dashboard screens and the widget, Lighthouse budget verification, dependency security audit.
 **DoD:** no critical/high findings from a security review pass; WCAG AA automated checks pass on every screen; all performance budgets in `19-Testing-CI.md` §19.5 are green.
 
+A full manual workspace-scoping audit found zero cross-tenant leaks (just one
+defense-in-depth gap and three dead methods, fixed/removed); six guest-writable
+endpoints had no rate limiting and now do; a presigned-GET `Cache-Control` header was
+missing per §18.3. `pip-audit` was clean; `pnpm audit` found one high-severity Vite
+advisory with no 5.x backport, resolved by upgrading to vite 6.4.3. The new
+`apps/e2e` Playwright + axe-core suite found and fixed real WCAG AA violations (several
+unlabeled form controls, one app-wide color-contrast failure, two widget shadow-DOM
+labeling gaps) across every dashboard screen and the widget's own UI - all now pass.
+Lighthouse's Time-to-Interactive budget is verified against the production build
+(`vite preview`, not the dev server - auditing the dev server measures bundling
+overhead, not the shipped app) via `playwright-lighthouse`, driving a real Lighthouse
+run over an already-authenticated session. `docs/tdr/0010-security-performance-accessibility-hardening.md`
+covers every finding and fix in full, including two real tooling bugs hit along the way
+(the workspace-scoping lint script's own multi-line-comment detection, and a
+`playwright-lighthouse@4.0.0` crash on its default "no thresholds" path).
+
 ## Milestone 12 - Launch Readiness (3-5 days)
 Full regression pass across all Playwright journeys, staging soak test, production environment provisioning double-checked against `18-Storage-Deployment.md`, rollback plan documented, on-call/monitoring wired (error tracking + uptime checks - tool choice is a TDR at this point, not pre-specified here).
 **DoD:** every acceptance criterion listed anywhere in this spec has a corresponding passing automated test or a documented manual verification; production deploy succeeds with a clean smoke test.

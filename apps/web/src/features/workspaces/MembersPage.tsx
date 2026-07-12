@@ -89,6 +89,7 @@ export function MembersPage() {
                         role: event.target.value as "admin" | "member",
                       })
                     }
+                    aria-label={`Change role for ${member.name}`}
                     className="rounded border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
                   >
                     <option value="admin">Admin</option>
@@ -129,6 +130,7 @@ export function MembersPage() {
             <select
               value={inviteRole}
               onChange={(event) => setInviteRole(event.target.value as "admin" | "member")}
+              aria-label="Role for invited teammate"
               className="rounded-md border border-black/10 px-2 py-2 text-sm dark:border-white/10 dark:bg-transparent"
             >
               <option value="member">Member</option>

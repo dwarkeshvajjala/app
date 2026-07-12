@@ -5,6 +5,7 @@ import redis.asyncio as redis
 from fastapi import Request, status
 
 from app.core.errors import BacklineError
+from app.core.session import Actor, Session
 
 
 class RateLimitedError(BacklineError):
@@ -19,6 +20,16 @@ def get_client_ip(request: Request) -> str:
     if forwarded_for:
         return forwarded_for.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
+
+
+def actor_rate_limit_key(prefix: str, request: Request, actor: Actor) -> str:
+    """12-API-WebSocket.md §12.7: "Member-authenticated endpoints are rate-limited per
+    workspace [so] one tenant's runaway script [can't] degrade others" - guests (who
+    have no workspace membership) fall back to per-IP, the same bucket already used for
+    the wholly-unauthenticated endpoints (`/review/{token}`, `/guest-sessions`)."""
+    if isinstance(actor, Session) and actor.workspace_id:
+        return f"rate-limit:{prefix}:workspace:{actor.workspace_id}"
+    return f"rate-limit:{prefix}:ip:{get_client_ip(request)}"
 
 
 async def check_rate_limit(

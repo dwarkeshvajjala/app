@@ -6,6 +6,11 @@ build/
 *.tsbuildinfo
 pnpm-debug.log*
 
+# Playwright (apps/e2e)
+test-results/
+playwright-report/
+blob-report/
+
 # Python
 .venv/
 __pycache__/

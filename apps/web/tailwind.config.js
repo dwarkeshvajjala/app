@@ -17,7 +17,10 @@ export default {
         "status-resolved": "#22C55E",
         "status-wont-fix": "#64748B",
         "recovery-low-confidence": "#F59E0B",
-        "recovery-orphaned": "#EF4444",
+        // #EF4444 (red-500) only hit 3.51:1 against bg-canvas - short of WCAG AA's 4.5:1
+        // for normal text (Milestone 11 axe-core audit, docs/tdr/0010). #B91C1C (red-700)
+        // clears 6:1.
+        "recovery-orphaned": "#B91C1C",
       },
     },
   },

@@ -86,6 +86,9 @@ class MembershipRepository:
         return [doc async for doc in cursor]
 
     async def list_for_user(self, user_id: str) -> list[dict[str, Any]]:
+        # workspace-scope-exempt: intentionally cross-workspace - "list every workspace
+        # this user belongs to" (the workspace picker) is the whole point of this query,
+        # not a leak. user_id itself comes from the caller's own verified session.
         cursor = self.db.memberships.find({"user_id": user_id})
         return [doc async for doc in cursor]
 

@@ -279,6 +279,7 @@ export function BoardPage() {
         <select
           value={filters.status}
           onChange={(e) => setFilter("status", e.target.value)}
+          aria-label="Filter by status"
           className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
         >
           <option value="">All statuses</option>
@@ -291,6 +292,7 @@ export function BoardPage() {
         <select
           value={filters.layer}
           onChange={(e) => setFilter("layer", e.target.value)}
+          aria-label="Filter by layer"
           className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
         >
           <option value="">All layers</option>
@@ -300,6 +302,7 @@ export function BoardPage() {
         <select
           value={filters.assignee}
           onChange={(e) => setFilter("assignee", e.target.value)}
+          aria-label="Filter by assignee"
           className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
         >
           <option value="">All assignees</option>
@@ -312,6 +315,7 @@ export function BoardPage() {
         <select
           value={filters.device}
           onChange={(e) => setFilter("device", e.target.value)}
+          aria-label="Filter by device"
           className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
         >
           <option value="">All devices</option>
@@ -322,6 +326,7 @@ export function BoardPage() {
         <select
           value={filters.page}
           onChange={(e) => setFilter("page", e.target.value)}
+          aria-label="Filter by page"
           className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
         >
           <option value="">All pages</option>
@@ -376,6 +381,7 @@ export function BoardPage() {
                             patch: { status: e.target.value as CommentStatus },
                           })
                         }
+                        aria-label="Change comment status"
                         className="rounded border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
                       >
                         {STATUSES.map((s) => (
@@ -431,6 +437,7 @@ export function BoardPage() {
                   if (e.target.value) bulkUpdateMutation.mutate(e.target.value as CommentStatus);
                   e.target.value = "";
                 }}
+                aria-label="Change status for selected comments"
                 className="rounded border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
               >
                 <option value="">Change status to...</option>
@@ -452,6 +459,7 @@ export function BoardPage() {
                     onChange={(e) =>
                       setSelected(e.target.checked ? new Set(filtered.map((c) => c.id)) : new Set())
                     }
+                    aria-label="Select all comments"
                   />
                 </th>
                 <th className="py-2">Comment</th>
@@ -469,6 +477,7 @@ export function BoardPage() {
                       type="checkbox"
                       checked={selected.has(comment.id)}
                       onChange={() => toggleSelected(comment.id)}
+                      aria-label={`Select comment: ${comment.body.slice(0, 60)}`}
                     />
                   </td>
                   <td className="max-w-xs truncate py-2">{comment.body}</td>

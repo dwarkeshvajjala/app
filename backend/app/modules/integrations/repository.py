@@ -37,6 +37,8 @@ class IntegrationRepository:
         oid = to_object_id(integration_id)
         if oid is None:
             return None
+        # workspace-scope-exempt: single-document lookup by its own unique _id; every
+        # caller (integrations/service.py) checks doc["workspace_id"] before acting.
         return await self.db.integrations.find_one({"_id": oid})
 
     async def list_for_workspace(self, workspace_id: str) -> list[dict[str, Any]]:
@@ -49,10 +51,7 @@ class IntegrationRepository:
         cursor = self.db.integrations.find({"workspace_id": workspace_id, "type": type})
         return [doc async for doc in cursor]
 
-    async def update_config(self, integration_id: str, config_json: dict[str, Any]) -> None:
-        await self.db.integrations.update_one(
-            {"_id": to_object_id(integration_id)}, {"$set": {"config_json": config_json}}
-        )
-
     async def delete(self, integration_id: str) -> None:
+        # workspace-scope-exempt: disconnect_integration already verified
+        # doc["workspace_id"] == workspace_id via find_by_id before calling this.
         await self.db.integrations.delete_one({"_id": to_object_id(integration_id)})

@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Cookie, Depends, Response
+from fastapi import APIRouter, Cookie, Depends, Request, Response
 
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.errors import AuthenticationError
+from app.core.rate_limit import check_rate_limit, get_client_ip
+from app.core.redis_client import get_redis
 from app.core.session import Session, get_current_session
 from app.modules.auth import service as auth_service
 from app.modules.auth.schemas import (
@@ -41,7 +43,16 @@ async def google_callback(body: GoogleCallbackRequest, response: Response) -> To
 
 
 @router.post("/otp/request", status_code=204)
-async def otp_request(body: OtpRequestRequest) -> None:
+async def otp_request(body: OtpRequestRequest, request: Request) -> None:
+    # Milestone 11 rate-limiting audit: unauthenticated, and triggers a real email send
+    # in production - without a limit, anyone can spam arbitrary inboxes for free.
+    settings = get_settings()
+    await check_rate_limit(
+        get_redis(),
+        key=f"rate-limit:otp-request:ip:{get_client_ip(request)}",
+        limit=settings.otp_request_rate_limit_per_minute,
+        window_seconds=60,
+    )
     await auth_service.request_otp(get_db(), body.email)
 
 
