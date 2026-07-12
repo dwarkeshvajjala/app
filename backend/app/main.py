@@ -2,9 +2,11 @@ import asyncio
 import contextlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.arq_pool import close_arq_pool
 from app.core.config import get_settings
@@ -16,6 +18,7 @@ from app.modules.auth.router import router as auth_router
 from app.modules.comments.router import router as comments_router
 from app.modules.pages.router import router as pages_router
 from app.modules.projects.router import router as projects_router
+from app.modules.proxy.router import router as proxy_router
 from app.modules.realtime.pubsub import run_subscriber
 from app.modules.realtime.router import router as realtime_router
 from app.modules.share_links.router import router as share_links_router
@@ -23,6 +26,8 @@ from app.modules.snapshot_engine.router import router as snapshots_router
 from app.modules.storage.r2_client import ensure_bucket_exists
 from app.modules.storage.router import router as storage_router
 from app.modules.workspaces.router import router as workspaces_router
+
+WIDGET_DIST_DIR = Path(__file__).resolve().parents[2] / "apps" / "widget" / "dist"
 
 
 @asynccontextmanager
@@ -71,6 +76,12 @@ app.include_router(comments_router, prefix="/api/v1")
 # Deliberately not under /api/v1 - 12-API-WebSocket.md §12.6 specifies the connection URL
 # as `wss://api.backline.app/ws?...`, not `/api/v1/ws`.
 app.include_router(realtime_router)
+# Also not under /api/v1 - these are raw content routes (a browser navigates to them
+# directly, or loads them as a <script src>), not JSON API calls
+# (03-System-Architecture.md §3.3, Milestone 9).
+app.include_router(proxy_router)
+if WIDGET_DIST_DIR.exists():
+    app.mount("/widget", StaticFiles(directory=WIDGET_DIST_DIR), name="widget")
 
 
 @app.get("/health")

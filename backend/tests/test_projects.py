@@ -25,7 +25,11 @@ async def test_create_and_list_projects(
 
     listing = await client.get(f"/api/v1/workspaces/{workspace_id}/projects", headers=headers)
     assert listing.status_code == 200
-    assert len(listing.json()) == 1
+    # 2, not 1: every workspace is seeded with an "Example Project" on creation
+    # (F7, Milestone 9's onboarding empty state) - this asserts the newly-created one
+    # is present alongside it, not that it's the only project.
+    names = {p["name"] for p in listing.json()}
+    assert names == {"Marketing Site", "Example Project"}
 
 
 async def test_archived_projects_excluded_from_default_list(
@@ -47,7 +51,9 @@ async def test_archived_projects_excluded_from_default_list(
     assert archive_resp.status_code == 204
 
     listing = await client.get(f"/api/v1/workspaces/{workspace_id}/projects", headers=headers)
-    assert listing.json() == []
+    # Only the seeded "Example Project" remains (F7) - "Old Site" is archived out.
+    names = {p["name"] for p in listing.json()}
+    assert names == {"Example Project"}
 
     # Still individually fetchable (soft archive, not a hard delete).
     detail = await client.get(f"/api/v1/projects/{project_id}", headers=headers)

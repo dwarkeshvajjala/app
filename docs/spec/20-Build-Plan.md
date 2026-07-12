@@ -94,6 +94,18 @@ DoD's real-structural-change proof was run against that actual worker process, t
 Reverse-proxy injection path (`03-System-Architecture.md` §3.3), empty states with seeded sample project (F7), onboarding flow tightened toward the "under 10 minutes unaided" metric.
 **DoD:** a fresh agency signup reaches "first client link sent" in under 10 minutes in an unaided usability test with a real (non-teammate) participant, matching F1/F7's original acceptance criteria.
 
+`docs/tdr/0008-proxy-mode-scope-and-onboarding-decisions.md` covers what the reverse
+proxy deliberately doesn't handle (JS-driven navigation, CSS `url()` rewriting, cookies,
+pre-content passcode gating - a general-purpose reverse proxy is explicitly not the
+goal), how `ReviewEntryPage` became the single guest handoff point for both modes
+(redirecting to the real site or the proxy with the guest session already attached, so
+the widget never double-prompts for a name), and the two onboarding defaults added
+(every workspace seeded with an example project on creation, every project born with a
+default proxy-mode share link). As with M6's human-usability-test DoD criterion, the
+"under 10 minutes, unaided, real participant" measurement itself requires an actual
+person and wasn't performed - verified instead via a real external site
+(`https://example.com`) proxied end-to-end and a full Playwright guest journey.
+
 ## Milestone 10 - Notifications & Integrations (1 week)
 Slack (`17-Notifications-Integrations.md` §17.2), ClickUp (§17.3), Trello (§17.4), email digests (§17.6), webhook retry engine (§17.7), in-app notification center.
 **DoD:** comment -> ClickUp round trip preserves screenshot/metadata/backlink on 100% of a 20-run test batch; Slack notifications deliver and retry correctly under a simulated webhook failure.

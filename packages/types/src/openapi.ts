@@ -471,6 +471,40 @@ export interface paths {
         patch: operations["reanchor_api_v1_comments__comment_id__reanchor_patch"];
         trace?: never;
     };
+    "/proxy/{share_token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Proxy Root */
+        get: operations["proxy_root_proxy__share_token__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/proxy/{share_token}/{path}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Proxy Path */
+        get: operations["proxy_path_proxy__share_token___path__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -832,6 +866,8 @@ export interface components {
             mode: "snippet" | "proxy";
             /** Requires Passcode */
             requires_passcode: boolean;
+            /** Target Origin */
+            target_origin: string;
         };
         /** RevisionOut */
         RevisionOut: {
@@ -2124,6 +2160,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CommentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    proxy_root_proxy__share_token__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                share_token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    proxy_path_proxy__share_token___path__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                share_token: string;
+                path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

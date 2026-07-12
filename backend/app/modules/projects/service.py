@@ -30,6 +30,12 @@ async def create_project(
     name: str,
     target_origin: str,
 ) -> ProjectOut:
+    # Deferred import: share_links.service itself imports this module (to check a
+    # project exists before creating/listing links for it), so importing it at module
+    # scope here would be a circular import. Breaking it this way, rather than
+    # duplicating share-link creation logic, keeps "one way to create a share link."
+    from app.modules.share_links import service as share_link_service
+
     repo = ProjectRepository(db)
     doc = await repo.create(workspace_id=workspace_id, name=name, target_origin=target_origin)
     await append_event(
@@ -40,6 +46,22 @@ async def create_project(
         actor_id=actor_user_id,
         payload={"name": name, "target_origin": target_origin},
     )
+
+    # Onboarding tightening (20-Build-Plan.md Milestone 9): "install-free path first"
+    # (F7/03-System-Architecture.md §3.3) means a brand-new project is shareable the
+    # instant it exists, in proxy mode by default - no separate trip to the Share Links
+    # screen before a PM can send something to a client.
+    project_id = str(doc["_id"])
+    await share_link_service.create_share_link(
+        db,
+        project_id=project_id,
+        workspace_id=workspace_id,
+        actor_user_id=actor_user_id,
+        mode="proxy",
+        passcode=None,
+        expires_at=None,
+    )
+
     return _project_out(doc)
 
 

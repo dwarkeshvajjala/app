@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     guest_token_ttl_days: int = 30
     review_resolve_rate_limit_per_minute: int = 30
     guest_session_rate_limit_per_minute: int = 10
+    proxy_rate_limit_per_minute: int = 300
+
+    # Where a reviewer's browser can reach this API from - used to build the absolute
+    # widget script src/apiBaseUrl injected server-side in proxy mode
+    # (03-System-Architecture.md §3.3), since there's no agency-authored <script> tag to
+    # carry that information the way there is in snippet mode.
+    public_api_base_url: str = "http://localhost:8000"
 
 
 @lru_cache

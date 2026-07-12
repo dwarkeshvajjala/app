@@ -123,6 +123,7 @@ async def resolve_share_link(
         project_name=project["name"],
         mode=link["mode"],
         requires_passcode=link["passcode_hash"] is not None,
+        target_origin=project["target_origin"],
     )
 
 

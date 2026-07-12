@@ -8,6 +8,7 @@ from app.core.errors import ConflictError, NotFoundError, PermissionDeniedError,
 from app.core.events import append_event
 from app.modules.auth.repository import UserRepository
 from app.modules.workspaces import events as workspace_events
+from app.modules.workspaces.onboarding import seed_sample_project
 from app.modules.workspaces.repository import MembershipRepository, WorkspaceRepository
 from app.modules.workspaces.schemas import MemberOut, WorkspaceOut
 
@@ -68,6 +69,7 @@ async def create_workspace(
         actor_id=user_id,
         payload={"name": name},
     )
+    await seed_sample_project(db, workspace_id=workspace_id, owner_user_id=user_id)
 
     return _workspace_out(workspace_doc, role="owner")
 

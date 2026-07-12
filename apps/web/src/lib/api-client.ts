@@ -1,6 +1,6 @@
 import { getAccessToken, setAccessToken } from "./auth-token";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 const REFRESH_PATH = "/api/v1/auth/refresh";
 
 export class ApiError extends Error {

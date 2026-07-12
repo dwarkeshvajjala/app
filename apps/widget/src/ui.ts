@@ -47,12 +47,22 @@ export function createShadowRoot(): ShadowRoot {
   return shadow;
 }
 
-export function showTooltip(shadow: ShadowRoot): void {
+// F7 (01-Product-Vision.md, 07-Review-SDK.md §7.2): "single tooltip, dismissed after
+// first successful comment" - the timeout is just a fallback for a reviewer who never
+// comments at all; `dismiss()` is what the empty-state requirement actually describes,
+// called the moment a comment successfully posts (index.ts).
+export function showTooltip(shadow: ShadowRoot): { dismiss: () => void } {
   const tooltip = document.createElement("div");
   tooltip.className = "bl-tooltip";
   tooltip.textContent = "Tap anywhere on the page to leave feedback.";
   shadow.appendChild(tooltip);
-  setTimeout(() => tooltip.remove(), 6000);
+  const timer = setTimeout(() => tooltip.remove(), 6000);
+  return {
+    dismiss: () => {
+      clearTimeout(timer);
+      tooltip.remove();
+    },
+  };
 }
 
 export function showToast(shadow: ShadowRoot, text: string): void {

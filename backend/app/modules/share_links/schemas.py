@@ -28,6 +28,10 @@ class ReviewResolveOut(BaseModel):
     project_name: str
     mode: ShareLinkMode
     requires_passcode: bool
+    # Milestone 9: the dashboard's ReviewEntryPage redirects a guest to the real site
+    # (snippet mode) or Backline's own proxy route (proxy mode) after creating their
+    # guest session - it needs the target site's origin to build either destination.
+    target_origin: str
 
 
 class GuestSessionCreate(BaseModel):

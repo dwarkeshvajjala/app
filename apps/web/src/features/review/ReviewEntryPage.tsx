@@ -3,22 +3,23 @@ import { useQuery } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { ApiError } from "../../lib/api-client";
-import { getStoredGuestSession, setStoredGuestSession } from "../../lib/guest-session-storage";
+import { API_BASE_URL, ApiError } from "../../lib/api-client";
 import * as reviewApi from "./api";
 
 // Guest reviewer entry (05-Frontend-Architecture.md §5.2) - outside the dashboard shell
-// entirely. The actual pin-drop/comment overlay is the Review SDK, built in Milestone 3;
-// this page only proves the share-link resolution + guest-session creation flow end to end.
+// entirely. Resolves the share link, collects a name (+ passcode if required), creates
+// the guest session, then hands off to the actual reviewed page: the agency's own site
+// in snippet mode, or Backline's own proxy route in proxy mode
+// (03-System-Architecture.md §3.3) - either way, the already-created session rides
+// along as a query param so the injected/embedded widget doesn't prompt for a name
+// again (apps/widget/src/guest-session.ts reads it).
 export function ReviewEntryPage() {
   const { shareToken } = useParams<{ shareToken: string }>();
   const [displayName, setDisplayName] = useState("");
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [session, setSession] = useState(() =>
-    shareToken ? getStoredGuestSession(shareToken) : null,
-  );
+  const [handoffUrl, setHandoffUrl] = useState<string | null>(null);
 
   const {
     data: resolved,
@@ -27,13 +28,13 @@ export function ReviewEntryPage() {
   } = useQuery({
     queryKey: ["review", shareToken],
     queryFn: () => reviewApi.resolveShareLink(shareToken!),
-    enabled: !!shareToken && !session,
+    enabled: !!shareToken && !handoffUrl,
     retry: false,
   });
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!shareToken) return;
+    if (!shareToken || !resolved) return;
     setError(null);
     setIsSubmitting(true);
     try {
@@ -42,9 +43,16 @@ export function ReviewEntryPage() {
         displayName,
         passcode || undefined,
       );
-      const stored = { guestSessionToken: result.guest_session_token, displayName };
-      setStoredGuestSession(shareToken, stored);
-      setSession(stored);
+      const handoff = new URLSearchParams({
+        backline_guest: result.guest_session_token,
+        backline_name: result.display_name,
+      });
+      const destination =
+        resolved.mode === "proxy"
+          ? `${API_BASE_URL}/proxy/${shareToken}/?${handoff.toString()}`
+          : `${resolved.target_origin}${resolved.target_origin.includes("?") ? "&" : "?"}${handoff.toString()}`;
+      setHandoffUrl(destination);
+      window.location.href = destination;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not join this review.");
     } finally {
@@ -56,13 +64,16 @@ export function ReviewEntryPage() {
     return <ErrorScreen message="Missing share link." />;
   }
 
-  if (session) {
+  if (handoffUrl) {
     return (
       <main className="mx-auto flex min-h-screen max-w-sm flex-col items-center justify-center gap-3 px-6 text-center">
-        <h1 className="text-xl font-semibold">You're in, {session.displayName}</h1>
+        <h1 className="text-xl font-semibold">Taking you to the site...</h1>
         <p className="text-text-muted text-sm">
-          Commenting on the live page lands in Milestone 3 - this confirms your guest session
-          resolved correctly.
+          If nothing happens,{" "}
+          <a href={handoffUrl} className="underline">
+            click here
+          </a>
+          .
         </p>
       </main>
     );

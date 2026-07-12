@@ -108,7 +108,7 @@ async function init(config: BacklineConfig): Promise<void> {
   const pageId = await registerCurrentPage(api, guest.guestSessionToken, projectId);
   await submitPageSnapshot(api, guest.guestSessionToken, pageId);
 
-  showTooltip(shadow);
+  const tooltip = showTooltip(shadow);
 
   // Realtime signal (12-API-WebSocket.md §12.6): presence is announced just by
   // connecting with this page's id. The only event this session reacts to is
@@ -179,6 +179,7 @@ async function init(config: BacklineConfig): Promise<void> {
           },
         );
         ownCommentIds.add(created.id);
+        tooltip.dismiss();
         controls.setStatus("Comment posted.");
       } catch {
         controls.setStatus("Could not post your comment. Please try again.");
