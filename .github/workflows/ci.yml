@@ -31,7 +31,7 @@ jobs:
           uv run ruff format --check .
       - name: Typecheck (mypy --strict)
         working-directory: backend
-        run: uv run mypy app/
+        run: uv run mypy app/ scripts/
       # 06-Backend-Architecture.md §6.4 / Milestone 11: every repository query must be
       # workspace-scoped, or carry a reviewed exemption comment explaining why not. Also
       # covered by tests/test_workspace_scoping_lint.py in the Test step below, but a
@@ -158,3 +158,40 @@ jobs:
           name: playwright-report
           path: apps/e2e/playwright-report/
           retention-days: 7
+
+  # 18-Storage-Deployment.md §18.8 / 19-Testing-CI.md §19.4: "on pass, Vercel
+  # auto-deploys frontend, Railway auto-deploys backend (via GitHub integration, not a
+  # custom deploy script) -> smoke test hits /health and a read-only API endpoint
+  # post-deploy before marking the deploy healthy." Vercel/Railway's own GitHub App
+  # integrations are what actually deploy on a push to main - nothing in this workflow
+  # triggers that. This job's only real job is the smoke test gate.
+  #
+  # Not exercised against real infrastructure: no Vercel/Railway/production account
+  # exists for this build (docs/tdr/0011), so PRODUCTION_API_URL is unset and this job
+  # currently no-ops rather than failing every merge to main over a secret that can't
+  # exist yet - the smoke test script itself (backend/scripts/smoke_test.py) is real
+  # and has been run against a live local backend.
+  deploy:
+    needs: [backend, frontend, test-e2e]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        if: ${{ secrets.PRODUCTION_API_URL != '' }}
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.11.28"
+      - name: Install dependencies
+        if: ${{ secrets.PRODUCTION_API_URL != '' }}
+        working-directory: backend
+        run: uv sync
+      - name: Wait for Vercel/Railway auto-deploy to finish
+        if: ${{ secrets.PRODUCTION_API_URL != '' }}
+        run: sleep 60
+      - name: Post-deploy smoke test
+        if: ${{ secrets.PRODUCTION_API_URL != '' }}
+        working-directory: backend
+        env:
+          SMOKE_TEST_BASE_URL: ${{ secrets.PRODUCTION_API_URL }}
+        run: uv run python scripts/smoke_test.py

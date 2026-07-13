@@ -3,6 +3,7 @@ from fastapi import APIRouter, Cookie, Depends, Request, Response
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.errors import AuthenticationError
+from app.core.feature_flags import load_feature_flags
 from app.core.rate_limit import check_rate_limit, get_client_ip
 from app.core.redis_client import get_redis
 from app.core.session import Session, get_current_session
@@ -91,4 +92,5 @@ async def switch_workspace(
     body: SwitchWorkspaceRequest, session: Session = Depends(get_current_session)
 ) -> AccessTokenOut:
     access_token = await auth_service.switch_workspace(get_db(), session.user_id, body.workspace_id)
-    return AccessTokenOut(access_token=access_token)
+    flags = await load_feature_flags(get_db(), body.workspace_id)
+    return AccessTokenOut(access_token=access_token, feature_flags=flags)

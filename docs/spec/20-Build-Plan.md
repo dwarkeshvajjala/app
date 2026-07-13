@@ -146,6 +146,26 @@ covers every finding and fix in full, including two real tooling bugs hit along 
 Full regression pass across all Playwright journeys, staging soak test, production environment provisioning double-checked against `18-Storage-Deployment.md`, rollback plan documented, on-call/monitoring wired (error tracking + uptime checks - tool choice is a TDR at this point, not pre-specified here).
 **DoD:** every acceptance criterion listed anywhere in this spec has a corresponding passing automated test or a documented manual verification; production deploy succeeds with a clean smoke test.
 
+Auditing every acceptance criterion (`docs/launch-readiness.md`) surfaced that the
+dashboard Board had no reply UI at all - F3's "discuss issues" half of the product had
+no way to happen through the actual product, only raw API calls, despite the backend
+supporting it since M4. Built the missing `CommentThreadPanel` rather than defer it
+(user call). Same audit found the onboarding seed's demo "team-only reply" was never
+actually threaded (`parent_id` hardcoded `None`), and two more real WCAG AA contrast
+failures on the layer badges - all fixed. All 5 critical Playwright journeys
+(`19-Testing-CI.md` §19.3) are now real, committed, passing tests against a live stack
+(ClickUp's round-trip stays covered by M10's mocked-boundary test - needs real
+credentials, same as Google OAuth). Feature flags (§18.7), `backend/Dockerfile`, a
+post-deploy smoke test script, and Sentry error tracking (no-op without a DSN, tree-
+shaken out of the frontend bundle entirely when disabled) are implemented and tested.
+A 90-second/8-worker local load test substituted for a staging soak (no staging
+environment exists): 38,165 requests, 0 failures, flat memory, queue keeping up.
+**Not done, and can't be from this environment**: an actual Vercel/Railway/Atlas
+production deploy - no cloud credentials exist in this session, same category of gap
+as Google/ClickUp OAuth throughout the build. Every other DoD criterion is met, or is a
+documented, TDR-recorded gap needing real external credentials or a real human
+participant. Full detail in `docs/tdr/0011-launch-readiness-decisions.md`.
+
 ## Definition of Done - Template (apply per milestone above)
 
 - [ ] All listed functionality implemented, no `TODO`s or mocked logic (Rule 2)

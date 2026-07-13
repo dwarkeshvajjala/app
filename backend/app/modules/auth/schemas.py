@@ -35,3 +35,7 @@ class TokenPairOut(BaseModel):
 
 class AccessTokenOut(BaseModel):
     access_token: str
+    # 18-Storage-Deployment.md §18.7: "backed by a value returned in the auth/bootstrap
+    # response, not a separate polled endpoint" - empty for a not-yet-workspace-scoped
+    # token (flags are meaningless before a workspace is chosen).
+    feature_flags: dict[str, bool] = {}

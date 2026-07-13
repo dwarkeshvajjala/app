@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -46,9 +47,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await close_arq_pool()
 
 
-app = FastAPI(title="Backline API", version="0.1.0", lifespan=lifespan)
-
 settings = get_settings()
+
+# Milestone 12 (docs/tdr/0011): a no-op with no DSN configured (no real Sentry project
+# exists for this build), same pattern as every other credential-gated integration -
+# calling sentry_sdk.capture_*/init still works with an empty DSN, it just discards.
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn, environment=settings.environment, traces_sample_rate=0.1
+    )
+
+app = FastAPI(title="Backline API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allow_origins,

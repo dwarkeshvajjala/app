@@ -51,12 +51,13 @@ def _sample_comment(
     status: str,
     author_type: str,
     author_member_id: str | None,
+    parent_id: str | None = None,
 ) -> dict[str, Any]:
     now = datetime.now(UTC)
     return {
         "page_id": page_id,
         "workspace_id": workspace_id,
-        "parent_id": None,
+        "parent_id": parent_id,
         "author_type": author_type,
         "author_member_id": author_member_id,
         "author_guest_id": None if author_member_id else _SAMPLE_GUEST_ID,
@@ -96,7 +97,7 @@ async def seed_sample_project(
     page_id = str(page_doc["_id"])
 
     comment_repo = CommentRepository(db)
-    await comment_repo.create(
+    original = await comment_repo.create(
         _sample_comment(
             page_id=page_id,
             workspace_id=workspace_id,
@@ -111,6 +112,7 @@ async def seed_sample_project(
         _sample_comment(
             page_id=page_id,
             workspace_id=workspace_id,
+            parent_id=str(original["_id"]),
             body="Good catch - I'll draft three options and flag the client's favorite here.",
             layer="team",
             status="in_progress",

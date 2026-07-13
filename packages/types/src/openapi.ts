@@ -667,6 +667,13 @@ export interface components {
         AccessTokenOut: {
             /** Access Token */
             access_token: string;
+            /**
+             * Feature Flags
+             * @default {}
+             */
+            feature_flags: {
+                [key: string]: boolean;
+            };
         };
         /**
          * AnchorIn

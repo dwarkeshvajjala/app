@@ -31,6 +31,17 @@ async def test_new_workspace_is_seeded_with_an_example_project(
     statuses = {c["status"] for c in seeded}
     assert statuses == {"todo", "in_progress", "resolved"}
 
+    # The team-only comment is a *reply* to the client-visible one (Milestone 12 fix -
+    # previously seeded with parent_id: None regardless, so the dashboard's new thread
+    # view showed it as an unrelated top-level card instead of demonstrating a thread).
+    top_level = [c for c in seeded if c["parent_id"] is None]
+    replies = [c for c in seeded if c["parent_id"] is not None]
+    assert len(top_level) == 2
+    assert len(replies) == 1
+    assert replies[0]["layer"] == "team"
+    original = next(c for c in top_level if "punchier headline" in c["body"])
+    assert replies[0]["parent_id"] == original["id"]
+
 
 async def test_second_workspace_from_the_same_user_is_also_seeded(
     client: AsyncClient, monkeypatch: pytest.MonkeyPatch

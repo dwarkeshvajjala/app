@@ -1,7 +1,19 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 
 const BACKEND_LOG_PATH = process.env.BACKEND_LOG_PATH;
+
+// otp/request is IP-rate-limited to 5/min (Milestone 11, core/config.py) - every test in
+// this suite runs against one shared backend from one machine, so without this every
+// login past the 5th in any given minute would 429. A fake IP per email (mirroring
+// backend/tests/helpers.py's _fake_ip_for) puts each test in its own bucket, the same
+// way distinct real guests would have distinct IPs.
+function fakeIpFor(seed: string): string {
+  const digest = createHash("sha256").update(seed).digest("hex");
+  const octets = [0, 2, 4, 6].map((i) => parseInt(digest.slice(i, i + 2), 16));
+  return octets.join(".");
+}
 
 // Without a configured RESEND_API_KEY, app/core/email.py logs the OTP code instead of
 // emailing it (same local-dev convention every milestone's real-browser verification
@@ -32,6 +44,7 @@ async function waitForUrlMatch(page: Page, pattern: RegExp, timeout = 20_000): P
 
 /** Logs in via the real OTP flow and lands on the workspace picker. */
 export async function loginViaOtp(page: Page, email: string): Promise<void> {
+  await page.context().setExtraHTTPHeaders({ "X-Forwarded-For": fakeIpFor(email) });
   await page.goto("/login");
   await page.fill('input[type="email"]', email);
   await page.click('button:has-text("Send sign-in code")');
@@ -69,4 +82,38 @@ export async function createProject(
   const match = href?.match(/\/p\/([^/]+)/);
   if (!match) throw new Error(`Could not parse project id from href ${href}`);
   return match[1];
+}
+
+/**
+ * The dashboard's access token lives in memory only (13-Authentication.md §13.6) - not
+ * a cookie, not localStorage - so a Playwright `request` context can't inherit it the
+ * way it would inherit cookies. This watches every authenticated API call the page
+ * itself makes and tracks the *latest* `Authorization` header, for reuse in direct API
+ * calls a test needs to make outside the browser's own JS (e.g. driving the recovery
+ * pipeline with a specific snapshot payload no UI form exists for). Latest, not first:
+ * the token right after login is workspace-less (`switch-workspace` swaps it for a
+ * workspace-scoped one once a workspace exists), and a workspace-scoped endpoint like
+ * page registration would 403 against the pre-switch token.
+ */
+export function trackAuthHeader(page: Page): () => string {
+  let latest = "";
+  page.on("request", (request) => {
+    const auth = request.headers()["authorization"];
+    if (auth) latest = auth;
+  });
+  return () => latest;
+}
+
+/** From a project's Share Links page, creates a link and returns its token. */
+export async function createShareLink(
+  page: Page,
+  workspaceSlug: string,
+  projectId: string,
+): Promise<string> {
+  await page.goto(`/w/${workspaceSlug}/p/${projectId}/share-links`);
+  await page.click('button:has-text("Create share link")');
+  await page.waitForSelector(".font-mono", { timeout: 10_000 });
+  const token = (await page.textContent(".font-mono"))?.trim();
+  if (!token) throw new Error("Could not read the created share link's token");
+  return token;
 }

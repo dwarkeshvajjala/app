@@ -49,3 +49,6 @@ async def ensure_indexes(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
     # notifications: shape/indexes documented in docs/tdr/0009 (11-Database.md never
     # gave this collection an explicit schema, unlike every other one).
     await db.notifications.create_index([("workspace_id", 1), ("user_id", 1), ("created_at", -1)])
+
+    # feature_flags: one row per (key, workspace_id) - 18-Storage-Deployment.md §18.7.
+    await db.feature_flags.create_index([("key", 1), ("workspace_id", 1)], unique=True)

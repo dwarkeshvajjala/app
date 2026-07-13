@@ -10,8 +10,12 @@ export default {
         "text-primary": { DEFAULT: "#14141A", dark: "#F2F2F5" },
         "text-muted": { DEFAULT: "#6B6B76", dark: "#9A9AA6" },
         "accent-primary": { DEFAULT: "#4F46E5", dark: "#818CF8" },
-        "layer-client": "#0EA5E9",
-        "layer-team": "#7C3AED",
+        // #0EA5E9/#7C3AED (sky-500/violet-600) only reached 2.39:1 / ~4.5:1 as
+        // `text-layer-*` against their own `bg-layer-*/15` badge background - short of
+        // (or too close to trust against) WCAG AA's 4.5:1 (Milestone 12 axe-core audit,
+        // apps/e2e/tests/journeys/journey-3). sky-800/violet-700 clear ~6:1 / ~5.5:1.
+        "layer-client": "#075985",
+        "layer-team": "#6D28D9",
         "status-todo": "#94A3B8",
         "status-in-progress": "#F59E0B",
         "status-resolved": "#22C55E",

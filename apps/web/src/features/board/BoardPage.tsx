@@ -12,6 +12,7 @@ import { useConnectionStore } from "../../stores/connectionStore";
 import { usePresenceStore } from "../../stores/presenceStore";
 import * as boardApi from "./api";
 import type { CommentOut, CommentStatus } from "./api";
+import { CommentThreadPanel } from "./CommentThreadPanel";
 
 const CONNECTION_LABEL: Record<string, string> = {
   connected: "Live",
@@ -63,6 +64,7 @@ export function BoardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [openThreadId, setOpenThreadId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const filters = filtersFromParams(searchParams);
@@ -215,8 +217,28 @@ export function BoardPage() {
     return [...urls];
   }, [comments]);
 
+  // Replies (parent_id set) share the same flat list as top-level comments
+  // (`GET /projects/{id}/comments`) - grouped here rather than rendered as their own
+  // board cards, which is what a top-level-only filter below guards against.
+  const repliesByParent = useMemo(() => {
+    const map = new Map<string, CommentOut[]>();
+    for (const comment of comments ?? []) {
+      if (!comment.parent_id) continue;
+      const list = map.get(comment.parent_id) ?? [];
+      list.push(comment);
+      map.set(comment.parent_id, list);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.created_at.localeCompare(b.created_at));
+    }
+    return map;
+  }, [comments]);
+
+  const openThreadComment = (comments ?? []).find((c) => c.id === openThreadId) ?? null;
+
   const filtered = useMemo(() => {
     return (comments ?? []).filter((comment) => {
+      if (comment.parent_id) return false;
       if (filters.status && comment.status !== filters.status) return false;
       if (filters.layer && comment.layer !== filters.layer) return false;
       if (filters.assignee && comment.assignee_id !== filters.assignee) return false;
@@ -373,6 +395,14 @@ export function BoardPage() {
                         <span>{memberName(comment.assignee_id) ?? "Unassigned"}</span>
                         <span>{commentContext(comment).device_type ?? ""}</span>
                       </div>
+                      <button
+                        onClick={() => setOpenThreadId(comment.id)}
+                        className="text-accent-primary self-start text-xs underline"
+                      >
+                        {(repliesByParent.get(comment.id)?.length ?? 0) > 0
+                          ? `View thread (${repliesByParent.get(comment.id)?.length})`
+                          : "Reply"}
+                      </button>
                       <select
                         value={comment.status}
                         onChange={(e) =>
@@ -480,7 +510,19 @@ export function BoardPage() {
                       aria-label={`Select comment: ${comment.body.slice(0, 60)}`}
                     />
                   </td>
-                  <td className="max-w-xs truncate py-2">{comment.body}</td>
+                  <td className="max-w-xs truncate py-2">
+                    <button
+                      onClick={() => setOpenThreadId(comment.id)}
+                      className="hover:underline"
+                    >
+                      {comment.body}
+                      {(repliesByParent.get(comment.id)?.length ?? 0) > 0 && (
+                        <span className="text-text-muted ml-1 text-xs">
+                          ({repliesByParent.get(comment.id)?.length})
+                        </span>
+                      )}
+                    </button>
+                  </td>
                   <td className="py-2">
                     <LayerBadge layer={comment.layer} />
                   </td>
@@ -496,6 +538,15 @@ export function BoardPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {openThreadComment && (
+        <CommentThreadPanel
+          comment={openThreadComment}
+          replies={repliesByParent.get(openThreadComment.id) ?? []}
+          projectId={projectId}
+          onClose={() => setOpenThreadId(null)}
+        />
       )}
 
       {filtered.length === 0 && (

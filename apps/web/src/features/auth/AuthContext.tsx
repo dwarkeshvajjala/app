@@ -13,6 +13,7 @@ interface AuthContextValue {
   user: UserOut | null;
   workspaceId: string | null;
   role: string | null;
+  featureFlags: Record<string, boolean>;
   requestOtp: (email: string) => Promise<void>;
   verifyOtp: (email: string, code: string) => Promise<void>;
   loginWithGoogleCode: (code: string) => Promise<void>;
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [user, setUser] = useState<UserOut | null>(null);
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
   // Bumped on every access-token change purely to force a re-render; decoding a JWT
   // payload is cheap enough that it doesn't need useMemo, so there's no dependency
   // array to keep in sync with it.
@@ -60,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     workspaceId: payload?.workspace_id ?? null,
     role: payload?.role ?? null,
+    featureFlags,
     async requestOtp(email) {
       await authApi.requestOtp(email);
     },
@@ -78,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async switchWorkspace(workspaceId) {
       const result = await authApi.switchWorkspace(workspaceId);
       setAccessToken(result.access_token);
+      setFeatureFlags(result.feature_flags ?? {});
     },
     async logout() {
       await authApi.logout().catch(() => undefined);
@@ -97,4 +101,12 @@ export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
+}
+
+// 18-Storage-Deployment.md §18.7: "backed by a value returned in the auth/bootstrap
+// response, not a separate polled endpoint" - reads the flags switchWorkspace already
+// fetched, no request of its own.
+// eslint-disable-next-line react-refresh/only-export-components
+export function useFeatureFlag(key: string): boolean {
+  return useAuth().featureFlags[key] ?? false;
 }

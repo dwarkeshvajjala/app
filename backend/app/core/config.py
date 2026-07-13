@@ -67,6 +67,12 @@ class Settings(BaseSettings):
     # card back to the comment's Board (17.3's "deep link back to the comment's pin").
     public_dashboard_base_url: str = "http://localhost:5173"
 
+    # Milestone 12 (docs/tdr/0011): error tracking. Empty means disabled - same
+    # credential-gated-no-op pattern as every other optional integration in this file
+    # (RESEND_API_KEY, GOOGLE_OAUTH_CLIENT_ID, ...), since no real Sentry project exists
+    # for this build.
+    sentry_dsn: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:
