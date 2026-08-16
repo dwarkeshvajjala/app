@@ -1,5 +1,6 @@
 COMMENT_CREATED = "comment.created"
 COMMENT_UPDATED = "comment.updated"
+COMMENT_DELETED = "comment.deleted"
 COMMENT_LAYER_CHANGED = "comment.layer_changed"
 COMMENT_REANCHORED = "anchor.manually_reassigned"
 COMMENT_RECOVERY_UPDATED = "comment.recovery_updated"

@@ -43,6 +43,15 @@ export interface DomFingerprint {
   // required for the Anchor Engine to compare an anchor against a snapshot's nodes_index at all.
   node_hash: string;
   ancestor_path_hash: string;
+  // Where within the anchored element the reviewer actually clicked, as a 0-1 fraction
+  // of its box. selector_path resolves no finer than a whole element, so a click on one
+  // word partway through a paragraph anchors to that entire <p> - without this, a reload
+  // re-rendered every such pin at the paragraph's top-left corner instead of the clicked
+  // word. Stored as a fraction rather than pixels so it still lands proportionally
+  // inside the element after a reflow (different viewport, late-loading font).
+  // Optional: comments created before this field existed have no value, and fall back to
+  // the corner - the same (honest) behavior they were created with.
+  click_offset_pct?: { x: number; y: number };
 }
 
 export interface AnchorPayload {
@@ -52,4 +61,24 @@ export interface AnchorPayload {
     normalized_text: string;
     text_similarity_hash: string;
   };
+}
+
+export interface AttachmentRecord {
+  filename: string;
+  url: string;
+  content_type: string;
+}
+
+// Subset of the backend's CommentOut (packages/types/src/openapi.ts) - just the fields
+// the widget needs to render an existing thread and decide who may edit/delete what.
+export interface CommentRecord {
+  id: string;
+  page_id: string;
+  parent_id: string | null;
+  author_type: "member" | "guest";
+  author_id: string;
+  body: string;
+  created_at: string;
+  anchor: AnchorPayload;
+  attachments: AttachmentRecord[];
 }

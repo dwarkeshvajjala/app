@@ -1,14 +1,10 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 import { createProject, createWorkspace, loginViaOtp } from "../helpers/login";
+import { openWidgetTestSite } from "../helpers/widget";
 
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TEST_SITE_PATH = path.resolve(__dirname, "../../widget/test-site/index.html");
 
 // The widget renders into a shadow root injected on a *third-party* page
 // (07-Review-SDK.md) - a real dashboard flow generates the share token, then a second
@@ -27,7 +23,7 @@ test("widget (name prompt + composer) has no WCAG AA violations", async ({ page,
   if (!shareToken) throw new Error("Could not read the created share link's token");
 
   const widgetPage = await context.newPage();
-  await widgetPage.goto(`file://${TEST_SITE_PATH}?shareToken=${shareToken}`);
+  await openWidgetTestSite(widgetPage, shareToken);
 
   await test.step("name prompt (guest session not yet established)", async () => {
     await widgetPage.waitForSelector('input[placeholder="Jamie"]', { timeout: 10_000 });

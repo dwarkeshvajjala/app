@@ -161,6 +161,21 @@ export function BoardPage() {
   );
   useWSEvent("comment.recovery_updated", patchRecoveryStatus);
 
+  // Widget-only feature (comment delete/reply are not exposed from this dashboard board
+  // in this pass) - this just keeps the Board's own cache honest when a guest deletes a
+  // comment or a whole thread from the widget canvas, so it doesn't linger here stale.
+  const removeComment = useCallback(
+    (payload: { comment_id: string; parent_id: string | null; project_id: string }) => {
+      if (payload.project_id !== projectId) return;
+      queryClient.setQueryData<CommentOut[]>(qk.projectComments(projectId ?? ""), (old) =>
+        old ? old.filter((c) => c.id !== payload.comment_id) : old,
+      );
+      setOpenThreadId((current) => (current === payload.comment_id ? null : current));
+    },
+    [projectId, queryClient],
+  );
+  useWSEvent("comment.deleted", removeComment);
+
   useWSEvent(
     "presence.updated",
     useCallback((payload: { page_id: string; active_sessions: string[] }) => {

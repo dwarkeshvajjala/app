@@ -4,7 +4,7 @@ import { expect, request, test } from "@playwright/test";
 import { createProject, createShareLink, createWorkspace, loginViaOtp } from "../../helpers/login";
 import { openWidgetTestSite, postCommentViaWidget } from "../../helpers/widget";
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8000";
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 
 // 19-Testing-CI.md §19.3 journey #3: "Team member posts a team-only reply -> guest

@@ -19,7 +19,7 @@ async def test_member_can_request_and_use_an_upload_url(
     )
     assert resp.status_code == 201
     body = resp.json()
-    assert body["key"].startswith(f"screenshots/{ctx['workspace_id']}/{ctx['project_id']}/")
+    assert body["key"].startswith(f"uploads/{ctx['workspace_id']}/{ctx['project_id']}/")
     assert body["key"].endswith(".jpg")
 
     # The presigned URL is real - actually PUT a small "image" to it against local MinIO.
@@ -84,9 +84,40 @@ async def test_upload_rejects_disallowed_content_type(
     ctx = await create_project_with_guest_session(
         client, monkeypatch, email="storage4@example.com", code="400005", workspace_name="S4"
     )
+    # application/zip is intentionally outside the comment-attachment allowlist
+    # (images, PDF, Word/Excel docs, Markdown) - unlike PDF, this one still is.
     resp = await client.post(
         "/api/v1/uploads",
-        json={"project_id": ctx["project_id"], "content_type": "application/pdf"},
+        json={"project_id": ctx["project_id"], "content_type": "application/zip"},
         headers=ctx["owner_headers"],
     )
     assert resp.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "content_type",
+    [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "text/markdown",
+    ],
+)
+async def test_upload_allows_comment_attachment_content_types(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch, content_type: str
+) -> None:
+    ctx = await create_project_with_guest_session(
+        client,
+        monkeypatch,
+        email=f"storage-{abs(hash(content_type))}@example.com",
+        code="400006",
+        workspace_name="S5",
+    )
+    resp = await client.post(
+        "/api/v1/uploads",
+        json={"project_id": ctx["project_id"], "content_type": content_type},
+        headers=ctx["owner_headers"],
+    )
+    assert resp.status_code == 201

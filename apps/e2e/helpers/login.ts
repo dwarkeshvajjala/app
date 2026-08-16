@@ -67,16 +67,18 @@ export async function createWorkspace(page: Page, name: string): Promise<string>
   return slug;
 }
 
-/** Creates a project from the workspace home page's "New project" form and returns its id. */
+/** Creates a project via the "+ New Project" modal on the workspace dashboard, returns its id. */
 export async function createProject(
   page: Page,
   name: string,
   targetOrigin: string,
 ): Promise<string> {
-  await page.waitForSelector("text=New project", { timeout: 10_000 });
-  await page.fill('label:has-text("Name") input', name);
-  await page.fill('label:has-text("Site URL") input', targetOrigin);
-  await page.click('button:has-text("Create project")');
+  await page.waitForSelector('button:has-text("+ New Project")', { timeout: 10_000 });
+  await page.click('button:has-text("+ New Project")');
+  await page.waitForSelector('[role="dialog"][aria-label="New project"]');
+  await page.fill('[role="dialog"] label:has-text("Name") input', name);
+  await page.fill('[role="dialog"] label:has-text("Site URL") input', targetOrigin);
+  await page.click('[role="dialog"] button:has-text("Create project")');
   await page.waitForSelector(`a:has-text("${name}")`, { timeout: 10_000 });
   const href = await page.getAttribute(`a:has-text("${name}")`, "href");
   const match = href?.match(/\/p\/([^/]+)/);

@@ -33,7 +33,59 @@ function buildSelectorPath(el: Element): string {
   return `body > ${segments.join(" > ")}`;
 }
 
-export async function computeAnchor(el: Element): Promise<AnchorPayload> {
+/**
+ * The reverse of computeAnchor's dom_fingerprint.selector_path: finds the live element
+ * an existing, previously-stored anchor refers to, so its pin can be rendered on this
+ * page load. Best-effort only, by design - this is not the Anchor/Recovery Engine's
+ * multi-tier matching (08-Anchor-Engine.md), just "does this exact selector still
+ * resolve to exactly one element." A missing/stale match simply means that comment's
+ * pin doesn't render this load; the comment itself is untouched, still visible on the
+ * dashboard Board, and can still be recovered/re-anchored there.
+ */
+export function resolveAnchorElement(anchor: AnchorPayload): Element | null {
+  try {
+    return document.querySelector(anchor.dom_fingerprint.selector_path);
+  } catch {
+    return null;
+  }
+}
+
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+/**
+ * Fraction of `el`'s own box that the click landed at. Page (document) coordinates in,
+ * matching pageX/pageY - the same convention renderPin/openComposer use.
+ */
+export function clickOffsetPct(
+  el: Element,
+  clickX: number,
+  clickY: number,
+): { x: number; y: number } {
+  const rect = el.getBoundingClientRect();
+  return {
+    x: rect.width > 0 ? clamp01((clickX - (rect.left + window.scrollX)) / rect.width) : 0,
+    y: rect.height > 0 ? clamp01((clickY - (rect.top + window.scrollY)) / rect.height) : 0,
+  };
+}
+
+/** The reverse of clickOffsetPct: the stored fraction back into a live page position. */
+export function anchorPointFor(el: Element, anchor: AnchorPayload): { x: number; y: number } {
+  const rect = el.getBoundingClientRect();
+  const pct = anchor.dom_fingerprint.click_offset_pct ?? { x: 0, y: 0 };
+  return {
+    x: rect.left + window.scrollX + rect.width * pct.x,
+    y: rect.top + window.scrollY + rect.height * pct.y,
+  };
+}
+
+/** clickX/clickY are page (document) coordinates - pageX/pageY, not clientX/clientY. */
+export async function computeAnchor(
+  el: Element,
+  clickX: number,
+  clickY: number,
+): Promise<AnchorPayload> {
   const tag = el.tagName.toLowerCase();
   const attributes = getStableAttributes(el);
 
@@ -54,6 +106,7 @@ export async function computeAnchor(el: Element): Promise<AnchorPayload> {
     attributes,
     node_hash: nodeHash,
     ancestor_path_hash: ancestorPathHash,
+    click_offset_pct: clickOffsetPct(el, clickX, clickY),
   };
 
   return {

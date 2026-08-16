@@ -5,6 +5,7 @@ created alongside every new project (03-System-Architecture.md §3.3)."""
 import pytest
 from httpx import AsyncClient
 
+from app.core.security import decode_access_token
 from tests.helpers import create_workspace_and_get_owner_token, login_via_otp, switch_workspace
 
 
@@ -21,6 +22,7 @@ async def test_new_workspace_is_seeded_with_an_example_project(
     names = [p["name"] for p in projects.json()]
     assert names == ["Example Project"]
     project_id = projects.json()[0]["id"]
+    assert projects.json()[0]["created_by"] == decode_access_token(owner_token).sub
 
     comments = await client.get(f"/api/v1/projects/{project_id}/comments", headers=headers)
     assert comments.status_code == 200
@@ -38,6 +40,17 @@ async def test_new_workspace_is_seeded_with_an_example_project(
     replies = [c for c in seeded if c["parent_id"] is not None]
     assert len(top_level) == 2
     assert len(replies) == 1
+
+    # The seeded project also needs a default share link (dashboard "open the live
+    # site" canvas) - seed_sample_project builds the project directly via
+    # ProjectRepository rather than going through projects.service.create_project, so
+    # it never got the same "shareable the instant it exists" default link every
+    # normally-created project gets (Milestone 9) until this was fixed.
+    links = await client.get(f"/api/v1/projects/{project_id}/share-links", headers=headers)
+    assert links.status_code == 200
+    assert len(links.json()) == 1
+    assert links.json()[0]["mode"] == "proxy"
+    assert links.json()[0]["revoked_at"] is None
     assert replies[0]["layer"] == "team"
     original = next(c for c in top_level if "punchier headline" in c["body"])
     assert replies[0]["parent_id"] == original["id"]

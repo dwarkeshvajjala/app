@@ -1,76 +1,38 @@
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { Link, Navigate, Outlet, useParams } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 
 import { useAuth } from "../../features/auth/AuthContext";
-import { NotificationBell } from "../../features/notifications/NotificationBell";
-import * as workspacesApi from "../../features/workspaces/api";
-import { qk } from "../../lib/query-keys";
+import { useWorkspaceContext } from "./useWorkspaceContext";
+import { WorkspaceSidebar } from "./WorkspaceSidebar";
 
-// Resolves :workspaceSlug into a workspace context, and switches the active access
-// token into that workspace (13-Authentication.md §13.3) before rendering children -
-// nothing under here ever renders with a token scoped to the wrong workspace.
+// The dashboard chrome (sidebar + everything under it: project grid, members, billing,
+// settings, usage, mcp) - deliberately NOT used for an open project's own routes
+// (ProjectLayout), which need the full viewport for the canvas and have their own,
+// much lighter header instead (see ProjectLayout.tsx's docblock for why).
 export function WorkspaceLayout() {
-  const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
-  const { workspaceId: activeWorkspaceId, switchWorkspace, logout } = useAuth();
-  const [switchError, setSwitchError] = useState<string | null>(null);
+  const { logout } = useAuth();
+  const result = useWorkspaceContext();
 
-  const { data: workspaces, isLoading } = useQuery({
-    queryKey: qk.workspaces(),
-    queryFn: workspacesApi.listWorkspaces,
-  });
-
-  const targetWorkspace = workspaces?.find((w) => w.slug === workspaceSlug);
-  const needsSwitch = targetWorkspace && targetWorkspace.id !== activeWorkspaceId;
-
-  useEffect(() => {
-    if (!targetWorkspace || !needsSwitch) return;
-    switchWorkspace(targetWorkspace.id).catch((err: unknown) => {
-      setSwitchError(err instanceof Error ? err.message : "Could not open this workspace.");
-    });
-  }, [targetWorkspace, needsSwitch, switchWorkspace]);
-
-  if (isLoading) {
+  if (result.status === "loading") {
     return <p className="text-text-muted p-6 text-sm">Loading workspace...</p>;
   }
-
-  if (!targetWorkspace) {
+  if (result.status === "not-found") {
     return <Navigate to="/" replace />;
   }
-
-  if (switchError) {
-    return <p className="text-recovery-orphaned p-6 text-sm">{switchError}</p>;
+  if (result.status === "error") {
+    return <p className="text-recovery-orphaned p-6 text-sm">{result.message}</p>;
+  }
+  if (result.status === "switching") {
+    return <p className="text-text-muted p-6 text-sm">Opening {result.workspace.name}...</p>;
   }
 
-  if (needsSwitch) {
-    return <p className="text-text-muted p-6 text-sm">Opening {targetWorkspace.name}...</p>;
-  }
+  const { workspace } = result;
 
   return (
-    <div className="min-h-screen">
-      <header className="flex items-center justify-between border-b border-black/10 px-6 py-4 dark:border-white/10">
-        <div className="flex items-center gap-6">
-          <Link to={`/w/${workspaceSlug}`} className="font-semibold">
-            {targetWorkspace.name}
-          </Link>
-          <Link to={`/w/${workspaceSlug}/members`} className="text-text-muted text-sm">
-            Members
-          </Link>
-          <Link to={`/w/${workspaceSlug}/integrations`} className="text-text-muted text-sm">
-            Integrations
-          </Link>
-        </div>
-        <div className="flex items-center gap-4">
-          <NotificationBell />
-          <Link to="/" className="text-text-muted text-xs underline">
-            Switch workspace
-          </Link>
-          <button className="text-text-muted text-xs underline" onClick={() => logout()}>
-            Sign out
-          </button>
-        </div>
-      </header>
-      <Outlet context={{ workspace: targetWorkspace }} />
+    <div className="flex min-h-screen">
+      <WorkspaceSidebar workspace={workspace} onSignOut={() => logout()} />
+      <div className="min-w-0 flex-1 overflow-y-auto">
+        <Outlet context={{ workspace }} />
+      </div>
     </div>
   );
 }

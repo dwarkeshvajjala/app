@@ -12,12 +12,15 @@ class ProjectRepository:
     def __init__(self, db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
         self.db = db
 
-    async def create(self, *, workspace_id: str, name: str, target_origin: str) -> dict[str, Any]:
+    async def create(
+        self, *, workspace_id: str, name: str, target_origin: str, created_by: str
+    ) -> dict[str, Any]:
         now = datetime.now(UTC)
         doc = {
             "workspace_id": workspace_id,
             "name": name,
             "target_origin": target_origin,
+            "created_by": created_by,
             "settings_json": {"proxy_mode": False, "snippet_installed": False},
             "archived_at": None,
             "created_at": now,

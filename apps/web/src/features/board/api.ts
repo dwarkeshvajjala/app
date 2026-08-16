@@ -30,3 +30,14 @@ export function createReply(
     body: JSON.stringify({ body, layer }),
   });
 }
+
+// Moderation delete (any comment in the caller's workspace, regardless of authorship) -
+// distinct from the widget's own-author-only guest self-service delete, which this
+// dashboard never calls.
+export function deleteComment(commentId: string): Promise<void> {
+  return apiFetch<void>(`/api/v1/comments/${commentId}/moderate`, { method: "DELETE" });
+}
+
+export function deleteThread(commentId: string): Promise<void> {
+  return apiFetch<void>(`/api/v1/comments/${commentId}/thread/moderate`, { method: "DELETE" });
+}

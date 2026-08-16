@@ -8,7 +8,12 @@ const TEST_SITE_PATH = path.resolve(__dirname, "../../widget/test-site/index.htm
 
 /** Opens the widget test-site under a real share token, as a third-party page would. */
 export async function openWidgetTestSite(page: Page, shareToken: string): Promise<void> {
-  await page.goto(`file://${TEST_SITE_PATH}?shareToken=${shareToken}`);
+  // API_BASE_URL, not WEB_BASE_URL (playwright.config.ts's baseURL) - the widget talks
+  // to the backend directly, never through the dashboard's own origin.
+  const apiBaseUrl = process.env.API_BASE_URL ?? "http://localhost:8000";
+  await page.goto(
+    `file://${TEST_SITE_PATH}?shareToken=${shareToken}&apiBaseUrl=${encodeURIComponent(apiBaseUrl)}`,
+  );
 }
 
 /**

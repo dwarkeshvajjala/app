@@ -32,7 +32,11 @@ class CommentRepository:
         """A member sees every layer - the layer filter here is a no-op, present only
         so both list methods have the same shape and a reviewer of this file sees the
         asymmetry explicitly rather than having to infer it."""
-        query: dict[str, Any] = {"workspace_id": workspace_id, "page_id": page_id}
+        query: dict[str, Any] = {
+            "workspace_id": workspace_id,
+            "page_id": page_id,
+            "deleted_at": None,
+        }
         if since is not None:
             query["created_at"] = {"$gt": since}
         cursor = self.db.comments.find(query).sort("created_at", 1)
@@ -50,6 +54,7 @@ class CommentRepository:
             "workspace_id": workspace_id,
             "page_id": page_id,
             "layer": "client",
+            "deleted_at": None,
         }
         if since is not None:
             query["created_at"] = {"$gt": since}
@@ -63,9 +68,38 @@ class CommentRepository:
         Board's data source, 16-Dashboard.md §16.1). Every layer, across every page in
         the project - matches the `page_id: {"$in": page_ids}` query 11-Database.md
         §11.14's kanban-counts aggregation already assumes."""
-        query: dict[str, Any] = {"workspace_id": workspace_id, "page_id": {"$in": page_ids}}
+        query: dict[str, Any] = {
+            "workspace_id": workspace_id,
+            "page_id": {"$in": page_ids},
+            "deleted_at": None,
+        }
         cursor = self.db.comments.find(query).sort("created_at", 1)
         return [doc async for doc in cursor]
+
+    async def list_replies(self, parent_id: str) -> list[dict[str, Any]]:
+        """Every non-deleted reply to one comment - used by delete_thread
+        (comments/service.py) to find what a "delete this whole thread" cascades to."""
+        # workspace-scope-exempt: parent_id was already found-and-ownership-checked by
+        # the caller before this runs; replies are looked up via that already-scoped
+        # parent, not independently.
+        cursor = self.db.comments.find({"parent_id": parent_id, "deleted_at": None})
+        return [doc async for doc in cursor]
+
+    async def soft_delete(self, comment_id: str) -> None:
+        # workspace-scope-exempt: delete_comment (comments/service.py) already verified
+        # both workspace ownership and authorship via find_by_id before calling this.
+        await self.db.comments.update_one(
+            {"_id": to_object_id(comment_id)}, {"$set": {"deleted_at": datetime.now(UTC)}}
+        )
+
+    async def soft_delete_many(self, comment_ids: list[str]) -> None:
+        oids = [to_object_id(cid) for cid in comment_ids]
+        # workspace-scope-exempt: delete_thread (comments/service.py) already verified
+        # ownership of the top-level comment; every id here came from that comment's own
+        # id or list_replies(parent_id=that comment), not from caller-supplied input.
+        await self.db.comments.update_many(
+            {"_id": {"$in": oids}}, {"$set": {"deleted_at": datetime.now(UTC)}}
+        )
 
     async def update(self, comment_id: str, patch: dict[str, Any]) -> None:
         patch["edited_at"] = datetime.now(UTC)
@@ -86,6 +120,7 @@ class CommentRepository:
             "workspace_id": workspace_id,
             "page_id": page_id,
             "recovery_status": {"$ne": "permanently_orphaned"},
+            "deleted_at": None,
         }
         cursor = self.db.comments.find(query)
         return [doc async for doc in cursor]

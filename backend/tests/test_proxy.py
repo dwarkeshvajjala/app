@@ -94,6 +94,10 @@ async def test_proxy_injects_widget_script_and_rewrites_links(
     body = resp.text
     assert f'href="/proxy/{token}/pricing"' in body
     assert "window.Backline" in body
+    # Cache-busted (proxy/service.py's _widget_sdk_version) - otherwise a guest whose
+    # browser already cached an older bundle from this same static URL would keep
+    # running stale widget code indefinitely, even past a real fix landing.
+    assert 'src="http://localhost:8000/widget/sdk.js?v=' in body
     assert token in body
 
 
@@ -182,3 +186,28 @@ async def test_proxy_is_rate_limited_per_ip(
 
     assert statuses[:2] == [200, 200]
     assert statuses[2] == 429
+
+
+async def test_unmatched_path_with_proxy_referer_redirects_back_through_the_proxy(
+    client: AsyncClient,
+) -> None:
+    """docs/tdr/0008's documented gap: a target site's own client-side JS (e.g. a
+    search box doing `location.href = "/search?q=foo"` on Enter) can navigate straight
+    to this API's own root instead of through `/proxy/{token}/...`, since the rewriter
+    only touches markup, not JS. app/modules/proxy/fallback_router.py's stopgap: when
+    the browser's Referer still carries the proxy URL the navigation started from,
+    redirect back through that same token rather than surfacing a bare 404."""
+    resp = await client.get(
+        "/search?q=foo",
+        headers={"referer": "http://test/proxy/some-token/landing-page"},
+    )
+    assert resp.status_code == 307
+    assert resp.headers["location"] == "/proxy/some-token/search?q=foo"
+
+
+async def test_unmatched_path_without_proxy_referer_is_a_normal_404(
+    client: AsyncClient,
+) -> None:
+    resp = await client.get("/this-route-does-not-exist")
+    assert resp.status_code == 404
+    assert resp.json()["error"]["code"] == "NOT_FOUND"

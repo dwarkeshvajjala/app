@@ -9,9 +9,16 @@ import { IntegrationsPage } from "../features/integrations/IntegrationsPage";
 import { ProjectOverviewPage } from "../features/projects/ProjectOverviewPage";
 import { ReviewEntryPage } from "../features/review/ReviewEntryPage";
 import { ShareLinksPage } from "../features/share-links/ShareLinksPage";
+import { BillingPage } from "../features/workspaces/BillingPage";
+import { McpServerPage } from "../features/workspaces/McpServerPage";
 import { MembersPage } from "../features/workspaces/MembersPage";
+import { ProjectTypePlaceholderPage } from "../features/workspaces/ProjectTypePlaceholderPage";
+import { SettingsPage } from "../features/workspaces/SettingsPage";
+import { UsagePage } from "../features/workspaces/UsagePage";
 import { WorkspaceHomePage } from "../features/workspaces/WorkspaceHomePage";
 import { WorkspacePickerPage } from "../features/workspaces/WorkspacePickerPage";
+import { ImagePdfIcon, MobileIcon, WebAppIcon } from "./layout/sidebar-icons";
+import { ProjectLayout } from "./layout/ProjectLayout";
 import { WorkspaceLayout } from "./layout/WorkspaceLayout";
 
 function RequireAuth() {
@@ -43,11 +50,51 @@ const router = createBrowserRouter([
         element: <WorkspaceLayout />,
         children: [
           { index: true, element: <WorkspaceHomePage /> },
+          {
+            path: "apps",
+            element: (
+              <ProjectTypePlaceholderPage
+                label="Web App"
+                tagline="Add comments to your web applications."
+                icon={WebAppIcon}
+              />
+            ),
+          },
+          {
+            path: "mobile",
+            element: (
+              <ProjectTypePlaceholderPage
+                label="Mobile"
+                tagline="Add comments to your mobile applications."
+                icon={MobileIcon}
+              />
+            ),
+          },
+          {
+            path: "image-pdf",
+            element: (
+              <ProjectTypePlaceholderPage
+                label="Image & PDF"
+                tagline="Add comments to your PDF & image files."
+                icon={ImagePdfIcon}
+              />
+            ),
+          },
+          { path: "usage", element: <UsagePage /> },
+          { path: "mcp", element: <McpServerPage /> },
           { path: "members", element: <MembersPage /> },
+          { path: "billing", element: <BillingPage /> },
+          { path: "settings", element: <SettingsPage /> },
           { path: "integrations", element: <IntegrationsPage /> },
-          { path: "p/:projectId", element: <ProjectOverviewPage /> },
-          { path: "p/:projectId/board", element: <BoardPage /> },
-          { path: "p/:projectId/share-links", element: <ShareLinksPage /> },
+        ],
+      },
+      {
+        path: "/w/:workspaceSlug/p/:projectId",
+        element: <ProjectLayout />,
+        children: [
+          { index: true, element: <ProjectOverviewPage /> },
+          { path: "board", element: <BoardPage /> },
+          { path: "share-links", element: <ShareLinksPage /> },
         ],
       },
     ],

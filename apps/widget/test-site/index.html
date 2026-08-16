@@ -8,6 +8,17 @@
       h1 { color: #14141a; }
       .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
       button.cta { background: #4f46e5; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-size: 14px; }
+      /* Simulates a carousel/marquee card whose position changes continuously via CSS
+         transform, with no page scroll involved and the element never leaving the DOM -
+         apps/e2e's widget-pin-follows-moving-element regression test needs exactly this
+         shape of movement to prove a pin re-syncs to it instead of staying put. */
+      @keyframes drift { from { transform: translateX(0); } to { transform: translateX(240px); } }
+      /* Paused until the test explicitly starts it (window.__startDrift()) - Playwright's
+         click() refuses to act on an element mid-animation ("element is not stable"),
+         so the regression test needs to comment on it while stationary, then set it
+         moving - which is also a closer match to the real bug anyway (a card that keeps
+         moving *after* a reviewer already left a comment on it). */
+      #moving-card { animation: drift 3s linear infinite alternate; animation-play-state: paused; }
     </style>
   </head>
   <body>
@@ -21,18 +32,34 @@
       <h2>Testimonials</h2>
       <p>"This product changed how we ship." - A happy customer</p>
     </div>
+    <div class="card" id="moving-card">
+      <h2>Auto-scrolling Promo</h2>
+      <p>This card drifts sideways continuously, simulating a carousel/marquee.</p>
+    </div>
+    <!-- Tall enough that the page genuinely scrolls - apps/e2e's pin-scroll regression
+         test needs real overflow, not just a viewport-size trick. -->
+    <div style="height: 1500px;"></div>
 
+    <script>
+      window.__startDrift = () => {
+        document.getElementById("moving-card").style.animationPlayState = "running";
+      };
+    </script>
     <script src="../dist/sdk.js"></script>
     <script>
       const params = new URLSearchParams(window.location.search);
       const shareToken = params.get("shareToken");
+      // Overridable so this test site can point at any backend (e.g. an isolated
+      // verification instance on a non-default port), not just the conventional local
+      // dev one.
+      const apiBaseUrl = params.get("apiBaseUrl") || "http://localhost:8000";
       if (!shareToken) {
         document.body.insertAdjacentHTML(
           "afterbegin",
           '<p style="color:red">Missing ?shareToken= query param.</p>',
         );
       } else {
-        window.Backline.init({ shareToken, apiBaseUrl: "http://localhost:8000" });
+        window.Backline.init({ shareToken, apiBaseUrl });
       }
     </script>
   </body>

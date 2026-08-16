@@ -52,7 +52,7 @@ infra/         Local dev service scripts + Docker Compose
 
 ## Local Development
 
-Requires Node 20, pnpm, Python 3.12, and either Docker or the native `mongod`/`redis-server`/`minio` binaries on `PATH` (see `docs/tdr/0001-local-toolchain-without-docker.md` if you don't have Docker).
+Requires Node 20, pnpm, Python 3.12, and either Docker or the native `mongod`/`redis-server`/`minio` binaries on `PATH` (see `docs/tdr/0001-local-toolchain-without-docker.md` if you don't have Docker). Non-developer, click-by-click version of everything below (including Google sign-in setup): [`RUNNING_LOCALLY.md`](RUNNING_LOCALLY.md).
 
 ```bash
 # 1. Start Mongo/Redis/MinIO

@@ -70,6 +70,7 @@ def _sample_comment(**overrides: Any) -> CommentOut:
         parent_id=None,
         author_type="guest",
         author_id="g1",
+        author_name="Jamie Reviewer",
         layer="client",
         body="The pricing table looks off on mobile",
         status="todo",
@@ -85,6 +86,7 @@ def _sample_comment(**overrides: Any) -> CommentOut:
         },
         screenshot_url=None,
         capture_status="ok",
+        attachments=[],
         created_at="2026-01-01T00:00:00Z",
         edited_at=None,
     )

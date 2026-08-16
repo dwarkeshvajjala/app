@@ -10,6 +10,7 @@ from app.core.redis_client import get_redis
 from app.core.session import Actor, Session, get_current_actor, require_workspace_context
 from app.modules.comments import service as comment_service
 from app.modules.comments.schemas import (
+    CommentBodyEdit,
     CommentCreate,
     CommentOut,
     CommentUpdate,
@@ -61,6 +62,7 @@ async def create_comment(
         context=body.context,
         screenshot_key=body.screenshot_key,
         capture_status=body.capture_status,
+        attachments=body.attachments,
     )
 
 
@@ -76,7 +78,94 @@ async def create_reply(
         window_seconds=60,
     )
     return await comment_service.create_reply(
-        get_db(), parent_id=comment_id, actor=actor, body=body.body, layer=body.layer
+        get_db(),
+        parent_id=comment_id,
+        actor=actor,
+        body=body.body,
+        layer=body.layer,
+        attachments=body.attachments,
+    )
+
+
+# Deliberately not member-only like PATCH /comments/{id} above - a guest reviewer needs
+# to be able to delete their own accidental/abandoned comments too (docs/tdr's
+# "only the comment's own author" scope decision). comment_service enforces authorship,
+# not this dependency.
+@router.delete("/comments/{comment_id}", status_code=204)
+async def delete_comment(
+    comment_id: str, request: Request, actor: Actor = Depends(get_current_actor)
+) -> None:
+    settings = get_settings()
+    await check_rate_limit(
+        get_redis(),
+        key=actor_rate_limit_key("comment-create", request, actor),
+        limit=settings.comment_create_rate_limit_per_minute,
+        window_seconds=60,
+    )
+    await comment_service.delete_comment(get_db(), comment_id=comment_id, actor=actor)
+
+
+# Same "own author only" scope as delete above - distinct from the member-only
+# PATCH /comments/{comment_id} below, which is a moderation action over any comment
+# regardless of authorship.
+@router.patch("/comments/{comment_id}/body", response_model=CommentOut)
+async def edit_comment_body(
+    comment_id: str,
+    body: CommentBodyEdit,
+    request: Request,
+    actor: Actor = Depends(get_current_actor),
+) -> CommentOut:
+    settings = get_settings()
+    await check_rate_limit(
+        get_redis(),
+        key=actor_rate_limit_key("comment-create", request, actor),
+        limit=settings.comment_create_rate_limit_per_minute,
+        window_seconds=60,
+    )
+    return await comment_service.edit_comment(
+        get_db(), comment_id=comment_id, actor=actor, body=body.body
+    )
+
+
+@router.delete("/comments/{comment_id}/thread", status_code=204)
+async def delete_thread(
+    comment_id: str, request: Request, actor: Actor = Depends(get_current_actor)
+) -> None:
+    settings = get_settings()
+    await check_rate_limit(
+        get_redis(),
+        key=actor_rate_limit_key("comment-create", request, actor),
+        limit=settings.comment_create_rate_limit_per_minute,
+        window_seconds=60,
+    )
+    await comment_service.delete_thread(get_db(), comment_id=comment_id, actor=actor)
+
+
+# Dashboard moderation - any comment in the caller's workspace, regardless of
+# authorship (same trust level as PATCH /comments/{id} below already grants). Distinct
+# routes from DELETE /comments/{id} and /thread above, which are the widget's
+# own-author-only guest self-service surface with no role gate at all.
+@router.delete("/comments/{comment_id}/moderate", status_code=204)
+async def delete_comment_moderated(
+    comment_id: str, session: Session = Depends(require_permission("comment:delete"))
+) -> None:
+    await comment_service.delete_comment_moderated(
+        get_db(),
+        comment_id=comment_id,
+        workspace_id=require_workspace_context(session),
+        actor_user_id=session.user_id,
+    )
+
+
+@router.delete("/comments/{comment_id}/thread/moderate", status_code=204)
+async def delete_thread_moderated(
+    comment_id: str, session: Session = Depends(require_permission("comment:delete"))
+) -> None:
+    await comment_service.delete_thread_moderated(
+        get_db(),
+        comment_id=comment_id,
+        workspace_id=require_workspace_context(session),
+        actor_user_id=session.user_id,
     )
 
 

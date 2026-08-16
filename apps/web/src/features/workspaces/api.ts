@@ -20,6 +20,13 @@ export function getWorkspace(workspaceId: string): Promise<WorkspaceOut> {
   return apiFetch<WorkspaceOut>(`/api/v1/workspaces/${workspaceId}`);
 }
 
+export function updateWorkspace(workspaceId: string, name: string): Promise<WorkspaceOut> {
+  return apiFetch<WorkspaceOut>(`/api/v1/workspaces/${workspaceId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
+  });
+}
+
 export function listMembers(workspaceId: string): Promise<MemberOut[]> {
   return apiFetch<MemberOut[]>(`/api/v1/workspaces/${workspaceId}/members`);
 }

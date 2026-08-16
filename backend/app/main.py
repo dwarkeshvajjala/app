@@ -21,6 +21,7 @@ from app.modules.integrations.router import router as integrations_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.pages.router import router as pages_router
 from app.modules.projects.router import router as projects_router
+from app.modules.proxy.fallback_router import router as proxy_fallback_router
 from app.modules.proxy.router import router as proxy_router
 from app.modules.realtime.pubsub import run_subscriber
 from app.modules.realtime.router import router as realtime_router
@@ -112,3 +113,9 @@ async def health() -> dict[str, str]:
         redis_ok = "unreachable"
 
     return {"status": "ok", "mongo": mongo_ok, "redis": redis_ok}
+
+
+# Registered last, deliberately: a true catch-all (`/{full_path:path}`) would swallow
+# every other route's requests if it came first - this only ever gets to run for a
+# request nothing above it matched (app/modules/proxy/fallback_router.py).
+app.include_router(proxy_fallback_router)

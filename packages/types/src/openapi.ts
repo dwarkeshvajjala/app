@@ -430,11 +430,80 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Comment */
+        delete: operations["delete_comment_api_v1_comments__comment_id__delete"];
         options?: never;
         head?: never;
         /** Update Comment */
         patch: operations["update_comment_api_v1_comments__comment_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/comments/{comment_id}/body": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Edit Comment Body */
+        patch: operations["edit_comment_body_api_v1_comments__comment_id__body_patch"];
+        trace?: never;
+    };
+    "/api/v1/comments/{comment_id}/thread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Thread */
+        delete: operations["delete_thread_api_v1_comments__comment_id__thread_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/comments/{comment_id}/moderate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Comment Moderated */
+        delete: operations["delete_comment_moderated_api_v1_comments__comment_id__moderate_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/comments/{comment_id}/thread/moderate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Thread Moderated */
+        delete: operations["delete_thread_moderated_api_v1_comments__comment_id__thread_moderate_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/comments/{comment_id}/layer": {
@@ -659,6 +728,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/{full_path}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unmatched Path Fallback Get */
+        get: operations["unmatched_path_fallback_get__full_path__get"];
+        put?: never;
+        /** Unmatched Path Fallback Post */
+        post: operations["unmatched_path_fallback_post__full_path__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -689,6 +776,45 @@ export interface components {
             dom_fingerprint: components["schemas"]["DomFingerprintIn"];
             text_fingerprint: components["schemas"]["TextFingerprintIn"];
         };
+        /**
+         * AttachmentIn
+         * @description `key` must already exist in the bucket - uploaded client-side via the same
+         *     presigned-PUT flow a screenshot uses (POST /uploads) before the comment/reply is
+         *     created, same pattern as screenshot_key below. `content_type` is carried alongside
+         *     the key rather than re-derived from it (e.g. by extension) since AttachmentOut needs
+         *     it for client-side icon/preview decisions and re-deriving from a file extension is
+         *     one more thing that could drift from what was actually uploaded.
+         */
+        AttachmentIn: {
+            /** Key */
+            key: string;
+            /** Filename */
+            filename: string;
+            /** Content Type */
+            content_type: string;
+        };
+        /** AttachmentOut */
+        AttachmentOut: {
+            /** Filename */
+            filename: string;
+            /** Url */
+            url: string;
+            /** Content Type */
+            content_type: string;
+        };
+        /**
+         * ClickOffsetPct
+         * @description Where within the anchored element the reviewer clicked, as a 0-1 fraction of its
+         *     box. A selector path resolves no finer than a whole element, so a comment left on
+         *     one word partway through a paragraph anchors to that entire <p> - this is what lets
+         *     the SDK put the pin back on the clicked word instead of the paragraph's corner.
+         */
+        ClickOffsetPct: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+        };
         /** ClickUpIntegrationCreate */
         ClickUpIntegrationCreate: {
             /**
@@ -700,6 +826,16 @@ export interface components {
             oauth_code: string;
             /** List Id */
             list_id: string;
+        };
+        /**
+         * CommentBodyEdit
+         * @description Distinct from CommentUpdate below: that's the member-only moderation PATCH (any
+         *     comment, any field); this is just the comment's own author correcting their own
+         *     text via the widget (docs/tdr's "only the comment's own author" scope decision).
+         */
+        CommentBodyEdit: {
+            /** Body */
+            body: string;
         };
         /** CommentCreate */
         CommentCreate: {
@@ -721,6 +857,8 @@ export interface components {
              * @enum {string}
              */
             capture_status: "ok" | "failed";
+            /** Attachments */
+            attachments?: components["schemas"]["AttachmentIn"][];
         };
         /** CommentOut */
         CommentOut: {
@@ -737,6 +875,8 @@ export interface components {
             author_type: "member" | "guest";
             /** Author Id */
             author_id: string;
+            /** Author Name */
+            author_name: string;
             /**
              * Layer
              * @enum {string}
@@ -769,6 +909,8 @@ export interface components {
              * @enum {string}
              */
             capture_status: "ok" | "failed";
+            /** Attachments */
+            attachments: components["schemas"]["AttachmentOut"][];
             /**
              * Created At
              * Format: date-time
@@ -837,6 +979,7 @@ export interface components {
             node_hash: string;
             /** Ancestor Path Hash */
             ancestor_path_hash: string;
+            click_offset_pct?: components["schemas"]["ClickOffsetPct"] | null;
         };
         /** GoogleCallbackRequest */
         GoogleCallbackRequest: {
@@ -1020,6 +1163,8 @@ export interface components {
             name: string;
             /** Target Origin */
             target_origin: string;
+            /** Created By */
+            created_by: string | null;
             settings: components["schemas"]["ProjectSettingsOut"];
             /** Archived At */
             archived_at: string | null;
@@ -1062,6 +1207,8 @@ export interface components {
              * @enum {string}
              */
             layer: "client" | "team";
+            /** Attachments */
+            attachments?: components["schemas"]["AttachmentIn"][];
         };
         /** ReviewResolveOut */
         ReviewResolveOut: {
@@ -2312,6 +2459,37 @@ export interface operations {
             };
         };
     };
+    delete_comment_api_v1_comments__comment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-guest-session"?: string | null;
+            };
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     update_comment_api_v1_comments__comment_id__patch: {
         parameters: {
             query?: never;
@@ -2335,6 +2513,132 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CommentOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_comment_body_api_v1_comments__comment_id__body_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-guest-session"?: string | null;
+            };
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentBodyEdit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_thread_api_v1_comments__comment_id__thread_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-guest-session"?: string | null;
+            };
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_comment_moderated_api_v1_comments__comment_id__moderate_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_thread_moderated_api_v1_comments__comment_id__thread_moderate_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -2758,6 +3062,68 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+        };
+    };
+    unmatched_path_fallback_get__full_path__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                full_path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unmatched_path_fallback_post__full_path__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                full_path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

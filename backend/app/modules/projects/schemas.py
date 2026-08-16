@@ -23,6 +23,7 @@ class ProjectOut(BaseModel):
     workspace_id: str
     name: str
     target_origin: str
+    created_by: str | None
     settings: ProjectSettingsOut
     archived_at: datetime | None
     created_at: datetime

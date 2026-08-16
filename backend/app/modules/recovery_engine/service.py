@@ -27,7 +27,12 @@ def _rebuild_anchor(old_anchor: dict[str, Any], matched_node: dict[str, Any]) ->
     field that can't be reconstructed from a snapshot alone (nodes_index never stores a
     CSS selector, only the widget's live-DOM anchor capture does) - left stale rather than
     invented. It isn't read by match_anchor at all (see matcher.py), so this is inert for
-    matching purposes; documented as a known limitation in docs/tdr/0007."""
+    matching purposes; documented as a known limitation in docs/tdr/0007.
+
+    `click_offset_pct` is carried over unchanged for the same reason as selector_path: a
+    snapshot node has no notion of where someone clicked inside it, so the original
+    capture-time value is the only one that exists. Dropping it would silently move every
+    recovered comment's pin back to its element's corner."""
     old_dom_fp = old_anchor["dom_fingerprint"]
     old_text_fp = old_anchor["text_fingerprint"]
     return {
@@ -38,6 +43,7 @@ def _rebuild_anchor(old_anchor: dict[str, Any], matched_node: dict[str, Any]) ->
             "attributes": matched_node["attributes"],
             "node_hash": matched_node["node_hash"],
             "ancestor_path_hash": matched_node["ancestor_path_hash"],
+            "click_offset_pct": old_dom_fp.get("click_offset_pct"),
         },
         "text_fingerprint": {
             "normalized_text": matched_node.get("text", old_text_fp["normalized_text"]),

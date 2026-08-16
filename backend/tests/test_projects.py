@@ -1,6 +1,7 @@
 import pytest
 from httpx import AsyncClient
 
+from app.core.security import decode_access_token
 from tests.helpers import create_workspace_and_get_owner_token
 
 
@@ -22,6 +23,8 @@ async def test_create_and_list_projects(
     assert project["name"] == "Marketing Site"
     assert project["settings"] == {"proxy_mode": False, "snippet_installed": False}
     assert project["archived_at"] is None
+    # Card attribution on the workspace dashboard needs to know who created it.
+    assert project["created_by"] == decode_access_token(owner_token).sub
 
     listing = await client.get(f"/api/v1/workspaces/{workspace_id}/projects", headers=headers)
     assert listing.status_code == 200

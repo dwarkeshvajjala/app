@@ -32,6 +32,11 @@ PERMISSIONS: dict[str, frozenset[Role]] = {
     "comment:view_team": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER}),
     "comment:toggle_layer": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER}),
     "comment:update_status": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER}),
+    # Dashboard moderation - any comment in the caller's own workspace, regardless of
+    # authorship (same "member can moderate any comment" trust level update_status
+    # already grants). Distinct from the widget's own-author-only guest self-service
+    # delete (comments/service.py's _require_own_comment), which isn't gated by role.
+    "comment:delete": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER}),
     "comment:create": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER, Role.GUEST}),
     "comment:reply": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER, Role.GUEST}),
     "comment:reanchor": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER}),

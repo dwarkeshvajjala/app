@@ -13,8 +13,13 @@ from app.modules.projects.repository import ProjectRepository
 # demonstrating exactly what the product does (a client-visible note, a team-only
 # reply, and a resolved thread) before the owner creates anything themselves.
 SAMPLE_PROJECT_NAME = "Example Project"
-SAMPLE_TARGET_ORIGIN = "https://example-agency-site.com"
-SAMPLE_PAGE_URL = "https://example-agency-site.com/"
+# A real, stable, always-reachable domain (IANA's reserved test domain), not a made-up
+# one - the dashboard's project canvas (apps/web/src/features/projects/
+# ProjectOverviewPage.tsx) embeds this live via the real proxy, so it has to actually
+# resolve. The seeded anchor/comment text below no longer describes example.com's real
+# markup - harmless until pin overlays actually render on the canvas (not built yet).
+SAMPLE_TARGET_ORIGIN = "https://example.com"
+SAMPLE_PAGE_URL = "https://example.com/"
 
 _SAMPLE_ANCHOR = {
     "tier": 1,
@@ -83,10 +88,32 @@ async def seed_sample_project(
     """Runs once, right after a brand-new workspace is created (workspaces/service.py's
     create_workspace) - never on every login, and never for a workspace someone was
     merely invited into (only the creator's very first workspace gets one)."""
+    # Deferred import: same circular-import reason as projects/service.py's
+    # create_project (share_links.service imports projects.service to check a project
+    # exists) - this module sits below both, so the import has to happen at call time.
+    from app.modules.share_links import service as share_link_service
+
     project_doc = await ProjectRepository(db).create(
-        workspace_id=workspace_id, name=SAMPLE_PROJECT_NAME, target_origin=SAMPLE_TARGET_ORIGIN
+        workspace_id=workspace_id,
+        name=SAMPLE_PROJECT_NAME,
+        target_origin=SAMPLE_TARGET_ORIGIN,
+        created_by=owner_user_id,
     )
     project_id = str(project_doc["_id"])
+
+    # Unlike projects.service.create_project, this repository call bypasses that
+    # service entirely (it builds the seed's page/comments directly too), so it never
+    # got the "every project is shareable the instant it exists" default share link
+    # (Milestone 9) - meaning the seeded project's dashboard card had nothing to open.
+    await share_link_service.create_share_link(
+        db,
+        project_id=project_id,
+        workspace_id=workspace_id,
+        actor_user_id=owner_user_id,
+        mode="proxy",
+        passcode=None,
+        expires_at=None,
+    )
 
     page_doc = await PageRepository(db).create(
         project_id=project_id,

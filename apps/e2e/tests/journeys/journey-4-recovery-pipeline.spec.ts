@@ -2,7 +2,7 @@ import { expect, request, test } from "@playwright/test";
 
 import { createProject, createWorkspace, loginViaOtp, trackAuthHeader } from "../../helpers/login";
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8000";
 const STABLE_ATTRS = { "data-testid": "upgrade-cta" };
 
 function node(overrides: Record<string, unknown> = {}) {

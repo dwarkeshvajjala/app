@@ -6,12 +6,19 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.actor_access import resolve_actor_project_access
 from app.core.arq_pool import get_arq_pool
-from app.core.errors import NotFoundError, ValidationError
+from app.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from app.core.events import append_event
 from app.core.session import Actor, GuestSession, Session, actor_identity
+from app.modules.auth.repository import UserRepository
 from app.modules.comments import events as comment_events
 from app.modules.comments.repository import CommentRepository
-from app.modules.comments.schemas import AnchorIn, CommentOut, ContextIn
+from app.modules.comments.schemas import (
+    AnchorIn,
+    AttachmentIn,
+    AttachmentOut,
+    CommentOut,
+    ContextIn,
+)
 from app.modules.notifications import service as notification_service
 from app.modules.pages.repository import PageRepository
 from app.modules.projects.repository import ProjectRepository
@@ -44,6 +51,41 @@ async def _broadcast_comment_event(
         )
 
 
+async def _broadcast_comment_deleted(
+    *, workspace_id: str, project_id: str, comment_id: str, parent_id: str | None, layer: str
+) -> None:
+    """Same channel-fanout rule as _broadcast_comment_event, but a deleted comment has
+    no meaningful "current state" left to send - just enough to let a client remove it
+    from a local list (the widget's own pin list, the dashboard Board's cache). Closes a
+    gap toggle_layer's docstring already flagged: "the spec's event table has no
+    comment.deleted/comment.hidden type... inventing new protocol surface wasn't asked
+    for by this milestone" - this milestone is exactly that ask."""
+    payload = {"comment_id": comment_id, "parent_id": parent_id, "project_id": project_id}
+    await publish_realtime_event(
+        f"workspace:{workspace_id}:all",
+        event_type=comment_events.COMMENT_DELETED,
+        workspace_id=workspace_id,
+        payload=payload,
+    )
+    if layer == "client":
+        await publish_realtime_event(
+            f"project:{project_id}:client",
+            event_type=comment_events.COMMENT_DELETED,
+            workspace_id=workspace_id,
+            payload=payload,
+        )
+
+
+def _require_own_comment(existing: dict[str, Any], actor: Actor) -> None:
+    """Milestone scope: only a comment's own author may edit/delete it via the widget -
+    no moderation-by-others capability here (that stays a dashboard/member action via
+    the existing member-only PATCH /comments/{id})."""
+    actor_type, actor_id = actor_identity(actor)
+    author_id = existing["author_member_id"] or existing["author_guest_id"]
+    if actor_type != existing["author_type"] or actor_id != author_id:
+        raise PermissionDeniedError("Only the comment's own author can do that.")
+
+
 async def _dispatch_integration_event(
     db: AsyncIOMotorDatabase[dict[str, Any]], *, workspace_id: str, event_type: str, comment_id: str
 ) -> None:
@@ -58,10 +100,48 @@ async def _dispatch_integration_event(
     )
 
 
-async def _comment_out(doc: dict[str, Any]) -> CommentOut:
+async def _resolve_author_name(
+    db: AsyncIOMotorDatabase[dict[str, Any]], doc: dict[str, Any]
+) -> str:
+    """CommentOut's author_name - resolved live from the users/guest_sessions
+    collections rather than persisted on the comment doc at creation time, so a later
+    profile name change is reflected retroactively (16-Dashboard.md's Comments panel
+    needs a real display name, not just author_type/author_id - a guest reviewer's
+    name was previously only visible on their own guest_session doc, never surfaced
+    through CommentOut at all)."""
+    if doc["author_type"] == "member":
+        user = await UserRepository(db).find_by_id(doc["author_member_id"])
+        return user["name"] if user else "Unknown"
+
+    # Deferred import: share_links.service already imports from comments in some
+    # paths, so a module-level import here risks the same circularity projects/service.py
+    # documents for share_links elsewhere in this file.
+    from app.modules.share_links.repository import GuestSessionRepository
+
+    guest = await GuestSessionRepository(db).find_by_id(doc["author_guest_id"])
+    return guest["display_name"] if guest else "Guest"
+
+
+async def _resolve_attachments(doc: dict[str, Any]) -> list[AttachmentOut]:
+    # Signed GET per attachment, same as screenshot_url below - attachments are never
+    # served from a public bucket either (18-Storage-Deployment.md §18.2's reasoning
+    # applies just as much to a comment's own uploaded file as to its screenshot).
+    return [
+        AttachmentOut(
+            filename=attachment["filename"],
+            content_type=attachment["content_type"],
+            url=await generate_presigned_get(attachment["key"]),
+        )
+        for attachment in doc.get("attachments", [])
+    ]
+
+
+async def _comment_out(db: AsyncIOMotorDatabase[dict[str, Any]], doc: dict[str, Any]) -> CommentOut:
     screenshot_url = None
     if doc.get("screenshot_key"):
         screenshot_url = await generate_presigned_get(doc["screenshot_key"])
+    attachments = await _resolve_attachments(doc)
+    author_name = await _resolve_author_name(db, doc)
 
     return CommentOut(
         id=str(doc["_id"]),
@@ -69,6 +149,7 @@ async def _comment_out(doc: dict[str, Any]) -> CommentOut:
         parent_id=doc.get("parent_id"),
         author_type=doc["author_type"],
         author_id=doc["author_member_id"] or doc["author_guest_id"],
+        author_name=author_name,
         layer=doc["layer"],
         body=doc["body"],
         status=doc["status"],
@@ -79,6 +160,7 @@ async def _comment_out(doc: dict[str, Any]) -> CommentOut:
         context=doc["context_json"],
         screenshot_url=screenshot_url,
         capture_status=doc["capture_status"],
+        attachments=attachments,
         created_at=doc["created_at"],
         edited_at=doc.get("edited_at"),
     )
@@ -92,7 +174,7 @@ async def get_comment_out(
     doc = await CommentRepository(db).find_by_id(comment_id)
     if doc is None:
         return None
-    return await _comment_out(doc)
+    return await _comment_out(db, doc)
 
 
 async def _resolve_page_and_access(
@@ -116,6 +198,7 @@ async def create_comment(
     context: ContextIn,
     screenshot_key: str | None,
     capture_status: str,
+    attachments: list[AttachmentIn] | None = None,
 ) -> CommentOut:
     page = await _resolve_page_and_access(db, actor, page_id)
 
@@ -139,6 +222,7 @@ async def create_comment(
         "recovery_status": "ok",
         "consecutive_orphaned_revisions": 0,
         "context_json": context.model_dump(),
+        "attachments": [a.model_dump() for a in (attachments or [])],
         "screenshot_key": screenshot_key,
         "capture_status": capture_status,
         "created_at": datetime.now(UTC),
@@ -155,7 +239,7 @@ async def create_comment(
         actor_id=actor_id,
         payload={"comment_id": str(created["_id"]), "page_id": page_id, "layer": effective_layer},
     )
-    comment_out = await _comment_out(created)
+    comment_out = await _comment_out(db, created)
     await _broadcast_comment_event(
         event_type="comment.created",
         workspace_id=page["workspace_id"],
@@ -178,10 +262,11 @@ async def create_reply(
     actor: Actor,
     body: str,
     layer: str,
+    attachments: list[AttachmentIn] | None = None,
 ) -> CommentOut:
     repo = CommentRepository(db)
     parent = await repo.find_by_id(parent_id)
-    if parent is None:
+    if parent is None or parent.get("deleted_at") is not None:
         raise NotFoundError("Comment not found.")
 
     parent_page = await PageRepository(db).find_by_id(parent["page_id"])
@@ -214,6 +299,7 @@ async def create_reply(
         "recovery_status": parent["recovery_status"],
         "consecutive_orphaned_revisions": 0,
         "context_json": parent["context_json"],
+        "attachments": [a.model_dump() for a in (attachments or [])],
         "screenshot_key": None,
         "capture_status": "ok",
         "created_at": datetime.now(UTC),
@@ -234,7 +320,7 @@ async def create_reply(
             "layer": effective_layer,
         },
     )
-    comment_out = await _comment_out(created)
+    comment_out = await _comment_out(db, created)
     await _broadcast_comment_event(
         event_type="comment.created",
         workspace_id=parent["workspace_id"],
@@ -248,6 +334,221 @@ async def create_reply(
         comment_id=comment_out.id,
     )
     return comment_out
+
+
+async def delete_comment(
+    db: AsyncIOMotorDatabase[dict[str, Any]], *, comment_id: str, actor: Actor
+) -> None:
+    """Deletes exactly one message (a top-level comment with no replies, or a single
+    reply) - not the thread it might be part of. Soft delete: comments/repository.py's
+    list_* queries all exclude deleted_at is not None, so it disappears from every
+    listing immediately, but nothing is destroyed (matches this codebase's only other
+    "delete" - projects.service.archive_project - never a hard delete)."""
+    repo = CommentRepository(db)
+    existing = await repo.find_by_id(comment_id)
+    if existing is None or existing.get("deleted_at") is not None:
+        raise NotFoundError("Comment not found.")
+    _require_own_comment(existing, actor)
+
+    await repo.soft_delete(comment_id)
+    actor_type, actor_id = actor_identity(actor)
+    await append_event(
+        db,
+        workspace_id=existing["workspace_id"],
+        type=comment_events.COMMENT_DELETED,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        payload={"comment_id": comment_id},
+    )
+
+    page = await PageRepository(db).find_by_id(existing["page_id"])
+    assert page is not None
+    await _broadcast_comment_deleted(
+        workspace_id=existing["workspace_id"],
+        project_id=page["project_id"],
+        comment_id=comment_id,
+        parent_id=existing.get("parent_id"),
+        layer=existing["layer"],
+    )
+
+
+async def edit_comment(
+    db: AsyncIOMotorDatabase[dict[str, Any]], *, comment_id: str, actor: Actor, body: str
+) -> CommentOut:
+    """Own-author-only body edit via the widget (or a member editing their own comment
+    the same way) - distinct from the member-only update_comment below, which can change
+    ANY comment's body/status/assignee as a moderation action regardless of who wrote
+    it. Mirrors delete_comment's ownership check exactly, and reuses the existing
+    comment.updated broadcast (already handled by both the widget and the dashboard
+    Board's cache) rather than inventing new protocol surface for this."""
+    repo = CommentRepository(db)
+    existing = await repo.find_by_id(comment_id)
+    if existing is None or existing.get("deleted_at") is not None:
+        raise NotFoundError("Comment not found.")
+    _require_own_comment(existing, actor)
+
+    await repo.update(comment_id, {"body": body, "edited_at": datetime.now(UTC)})
+
+    actor_type, actor_id = actor_identity(actor)
+    await append_event(
+        db,
+        workspace_id=existing["workspace_id"],
+        type=comment_events.COMMENT_UPDATED,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        payload={"comment_id": comment_id, "body": body},
+    )
+
+    updated = await repo.find_by_id(comment_id)
+    assert updated is not None
+    comment_out = await _comment_out(db, updated)
+    page = await PageRepository(db).find_by_id(updated["page_id"])
+    assert page is not None
+    await _broadcast_comment_event(
+        event_type="comment.updated",
+        workspace_id=existing["workspace_id"],
+        project_id=page["project_id"],
+        comment=comment_out,
+    )
+    return comment_out
+
+
+async def delete_thread(
+    db: AsyncIOMotorDatabase[dict[str, Any]], *, comment_id: str, actor: Actor
+) -> None:
+    """Deletes a top-level comment *and every reply on it* - only reachable by the
+    thread's own author (the person who started it), regardless of who replied since.
+    A comment with no replies is a thread of one - this still works for it, same as
+    delete_comment would, just via the "delete this whole thread" affordance instead."""
+    repo = CommentRepository(db)
+    existing = await repo.find_by_id(comment_id)
+    if existing is None or existing.get("deleted_at") is not None:
+        raise NotFoundError("Comment not found.")
+    if existing.get("parent_id") is not None:
+        raise ValidationError("Only a top-level comment can be deleted as a thread.")
+    _require_own_comment(existing, actor)
+
+    replies = await repo.list_replies(comment_id)
+    await repo.soft_delete_many([comment_id, *(str(r["_id"]) for r in replies)])
+
+    actor_type, actor_id = actor_identity(actor)
+    await append_event(
+        db,
+        workspace_id=existing["workspace_id"],
+        type=comment_events.COMMENT_DELETED,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        payload={"comment_id": comment_id, "reply_count": len(replies)},
+    )
+
+    page = await PageRepository(db).find_by_id(existing["page_id"])
+    assert page is not None
+    await _broadcast_comment_deleted(
+        workspace_id=existing["workspace_id"],
+        project_id=page["project_id"],
+        comment_id=comment_id,
+        parent_id=None,
+        layer=existing["layer"],
+    )
+    for reply in replies:
+        await _broadcast_comment_deleted(
+            workspace_id=existing["workspace_id"],
+            project_id=page["project_id"],
+            comment_id=str(reply["_id"]),
+            parent_id=comment_id,
+            layer=reply["layer"],
+        )
+
+
+async def delete_comment_moderated(
+    db: AsyncIOMotorDatabase[dict[str, Any]],
+    *,
+    comment_id: str,
+    workspace_id: str,
+    actor_user_id: str,
+) -> None:
+    """Dashboard moderation delete - any comment in the caller's own workspace,
+    regardless of authorship. Same workspace-scoping-only check update_comment/
+    toggle_layer/reanchor above already use for every other member moderation action
+    on a comment; distinct from delete_comment above (own-author-only, the widget's
+    guest self-service surface, which has no role/permission gate at all)."""
+    repo = CommentRepository(db)
+    existing = await repo.find_by_id(comment_id)
+    if (
+        existing is None
+        or existing.get("deleted_at") is not None
+        or existing["workspace_id"] != workspace_id
+    ):
+        raise NotFoundError("Comment not found.")
+
+    await repo.soft_delete(comment_id)
+    await append_event(
+        db,
+        workspace_id=workspace_id,
+        type=comment_events.COMMENT_DELETED,
+        actor_type="member",
+        actor_id=actor_user_id,
+        payload={"comment_id": comment_id},
+    )
+    page = await PageRepository(db).find_by_id(existing["page_id"])
+    assert page is not None
+    await _broadcast_comment_deleted(
+        workspace_id=workspace_id,
+        project_id=page["project_id"],
+        comment_id=comment_id,
+        parent_id=existing.get("parent_id"),
+        layer=existing["layer"],
+    )
+
+
+async def delete_thread_moderated(
+    db: AsyncIOMotorDatabase[dict[str, Any]],
+    *,
+    comment_id: str,
+    workspace_id: str,
+    actor_user_id: str,
+) -> None:
+    """Moderated counterpart to delete_thread above - same workspace-scoping-only
+    authorization as delete_comment_moderated, cascading to every reply the same way."""
+    repo = CommentRepository(db)
+    existing = await repo.find_by_id(comment_id)
+    if (
+        existing is None
+        or existing.get("deleted_at") is not None
+        or existing["workspace_id"] != workspace_id
+    ):
+        raise NotFoundError("Comment not found.")
+    if existing.get("parent_id") is not None:
+        raise ValidationError("Only a top-level comment can be deleted as a thread.")
+
+    replies = await repo.list_replies(comment_id)
+    await repo.soft_delete_many([comment_id, *(str(r["_id"]) for r in replies)])
+    await append_event(
+        db,
+        workspace_id=workspace_id,
+        type=comment_events.COMMENT_DELETED,
+        actor_type="member",
+        actor_id=actor_user_id,
+        payload={"comment_id": comment_id, "reply_count": len(replies)},
+    )
+
+    page = await PageRepository(db).find_by_id(existing["page_id"])
+    assert page is not None
+    await _broadcast_comment_deleted(
+        workspace_id=workspace_id,
+        project_id=page["project_id"],
+        comment_id=comment_id,
+        parent_id=None,
+        layer=existing["layer"],
+    )
+    for reply in replies:
+        await _broadcast_comment_deleted(
+            workspace_id=workspace_id,
+            project_id=page["project_id"],
+            comment_id=str(reply["_id"]),
+            parent_id=comment_id,
+            layer=reply["layer"],
+        )
 
 
 async def list_comments(
@@ -265,7 +566,7 @@ async def list_comments(
     else:
         docs = await repo.list_for_member(page["workspace_id"], page_id, since=since)
 
-    return await asyncio.gather(*(_comment_out(doc) for doc in docs))
+    return await asyncio.gather(*(_comment_out(db, doc) for doc in docs))
 
 
 async def list_comments_for_project(
@@ -283,7 +584,7 @@ async def list_comments_for_project(
         return []
 
     docs = await CommentRepository(db).list_for_project(workspace_id, page_ids)
-    return await asyncio.gather(*(_comment_out(doc) for doc in docs))
+    return await asyncio.gather(*(_comment_out(db, doc) for doc in docs))
 
 
 async def update_comment(
@@ -335,7 +636,7 @@ async def update_comment(
 
     updated = await repo.find_by_id(comment_id)
     assert updated is not None
-    comment_out = await _comment_out(updated)
+    comment_out = await _comment_out(db, updated)
     page = await PageRepository(db).find_by_id(updated["page_id"])
     assert page is not None
     await _broadcast_comment_event(
@@ -406,7 +707,7 @@ async def toggle_layer(
 
     updated = await repo.find_by_id(comment_id)
     assert updated is not None
-    comment_out = await _comment_out(updated)
+    comment_out = await _comment_out(db, updated)
     page = await PageRepository(db).find_by_id(updated["page_id"])
     assert page is not None
     # Note: a client->team toggle has no corresponding "hide this" WS event (the spec's
@@ -455,7 +756,7 @@ async def reanchor(
 
     updated = await repo.find_by_id(comment_id)
     assert updated is not None
-    comment_out = await _comment_out(updated)
+    comment_out = await _comment_out(db, updated)
     page = await PageRepository(db).find_by_id(updated["page_id"])
     assert page is not None
     await _broadcast_comment_event(

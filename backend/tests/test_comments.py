@@ -72,6 +72,148 @@ async def test_guest_can_create_a_comment_defaulting_to_client_layer(
     assert body["recovery_status"] == "ok"
 
 
+async def test_anchor_click_offset_round_trips(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A selector path resolves no finer than a whole element, so the SDK also stores
+    where inside that element the reviewer clicked (as a 0-1 fraction) - that's what
+    puts a pin back on the clicked word rather than the paragraph's corner on reload.
+    Pydantic drops unknown fields silently, so without DomFingerprintIn declaring this
+    explicitly the offset would vanish on the way into the database with no error."""
+    ctx = await create_project_with_guest_session(
+        client, monkeypatch, email="cm-offset@example.com", code="700098", workspace_name="COffset"
+    )
+    page_id = await _register_page(client, ctx)
+
+    payload = _comment_payload()
+    payload["anchor"] = {
+        **SAMPLE_ANCHOR,
+        "dom_fingerprint": {
+            **SAMPLE_ANCHOR["dom_fingerprint"],  # type: ignore[dict-item]
+            "click_offset_pct": {"x": 0.42, "y": 0.75},
+        },
+    }
+    resp = await client.post(
+        f"/api/v1/pages/{page_id}/comments", json=payload, headers=ctx["guest_headers"]
+    )
+    assert resp.status_code == 201
+    assert resp.json()["anchor"]["dom_fingerprint"]["click_offset_pct"] == {"x": 0.42, "y": 0.75}
+
+    # And it's still there when the comment is read back, not just echoed on create.
+    listed = await client.get(
+        f"/api/v1/pages/{page_id}/comments", headers=ctx["guest_headers"]
+    )
+    assert listed.json()[0]["anchor"]["dom_fingerprint"]["click_offset_pct"] == {
+        "x": 0.42,
+        "y": 0.75,
+    }
+
+    # An anchor with no offset at all (every comment created before this field existed)
+    # is still accepted, and reads back as None rather than erroring.
+    plain = await client.post(
+        f"/api/v1/pages/{page_id}/comments", json=_comment_payload(), headers=ctx["guest_headers"]
+    )
+    assert plain.status_code == 201
+    assert plain.json()["anchor"]["dom_fingerprint"]["click_offset_pct"] is None
+
+
+async def test_comment_and_reply_attachments_round_trip(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Attachments (images, PDF, Word/Excel docs, Markdown) are uploaded client-side via
+    the same presigned-PUT flow a screenshot uses, then referenced by key on create -
+    this doesn't re-verify the upload itself (test_storage.py covers that), just that a
+    comment/reply created with attachment keys round-trips them back with resolved,
+    fetchable URLs and the original filename/content_type intact."""
+    ctx = await create_project_with_guest_session(
+        client, monkeypatch, email="cm-attach@example.com", code="700099", workspace_name="CAttach"
+    )
+    page_id = await _register_page(client, ctx)
+
+    payload = _comment_payload()
+    payload["attachments"] = [
+        {
+            "key": "uploads/ws1/p1/brief.pdf",
+            "filename": "brief.pdf",
+            "content_type": "application/pdf",
+        },
+        {
+            "key": "uploads/ws1/p1/notes.md",
+            "filename": "notes.md",
+            "content_type": "text/markdown",
+        },
+    ]
+    resp = await client.post(
+        f"/api/v1/pages/{page_id}/comments", json=payload, headers=ctx["guest_headers"]
+    )
+    assert resp.status_code == 201
+    comment = resp.json()
+    assert len(comment["attachments"]) == 2
+    assert comment["attachments"][0]["filename"] == "brief.pdf"
+    assert comment["attachments"][0]["content_type"] == "application/pdf"
+    assert comment["attachments"][0]["url"]
+    assert comment["attachments"][1]["filename"] == "notes.md"
+
+    reply_resp = await client.post(
+        f"/api/v1/comments/{comment['id']}/replies",
+        json={
+            "body": "Here's the updated version.",
+            "attachments": [
+                {
+                    "key": "uploads/ws1/p1/v2.docx",
+                    "filename": "v2.docx",
+                    "content_type": (
+                        "application/vnd.openxmlformats-officedocument." "wordprocessingml.document"
+                    ),
+                }
+            ],
+        },
+        headers=ctx["guest_headers"],
+    )
+    assert reply_resp.status_code == 201
+    reply = reply_resp.json()
+    assert len(reply["attachments"]) == 1
+    assert reply["attachments"][0]["filename"] == "v2.docx"
+    assert reply["attachments"][0]["url"]
+
+    # A comment/reply created with no attachments still round-trips as an empty list,
+    # not a missing field.
+    plain_resp = await client.post(
+        f"/api/v1/comments/{comment['id']}/replies",
+        json={"body": "No files on this one."},
+        headers=ctx["guest_headers"],
+    )
+    assert plain_resp.status_code == 201
+    assert plain_resp.json()["attachments"] == []
+
+
+async def test_comment_out_resolves_a_real_author_name(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """author_name is resolved live (comments/service.py's _resolve_author_name), not
+    stored on the comment - a guest's display_name (from their guest_session doc) for a
+    guest-authored comment, the signed-in user's own name for a member-authored one.
+    The dashboard's Comments panel needs a real name, not just author_type/author_id."""
+    ctx = await create_project_with_guest_session(
+        client, monkeypatch, email="cm1b@example.com", code="700010", workspace_name="C1B"
+    )
+    page_id = await _register_page(client, ctx)
+
+    guest_comment = await client.post(
+        f"/api/v1/pages/{page_id}/comments",
+        json=_comment_payload(),
+        headers=ctx["guest_headers"],
+    )
+    assert guest_comment.json()["author_name"] == "Test Guest"
+
+    member_comment = await client.post(
+        f"/api/v1/pages/{page_id}/comments",
+        json=_comment_payload(),
+        headers=ctx["owner_headers"],
+    )
+    assert member_comment.json()["author_name"] == "cm1b"
+
+
 async def test_guest_cannot_override_layer_to_team(
     client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:

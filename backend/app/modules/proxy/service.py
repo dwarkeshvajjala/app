@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -15,6 +16,8 @@ from app.modules.share_links.repository import ShareLinkRepository
 # proxy never forwards on future requests - see docs/tdr/0008) - the router builds a
 # fresh Response from just status/content_type/body below.
 
+_WIDGET_SDK_PATH = Path(__file__).resolve().parents[4] / "apps" / "widget" / "dist" / "sdk.js"
+
 
 @dataclass(frozen=True)
 class ProxiedResponse:
@@ -23,10 +26,25 @@ class ProxiedResponse:
     body: bytes
 
 
+def _widget_sdk_version() -> str:
+    """Cache-busting query param for the injected <script src> below - every proxy-mode
+    guest is served the same static /widget/sdk.js URL, so without this, a guest whose
+    browser already cached an older bundle would keep running that stale code
+    indefinitely (even past a real fix landing) until they happened to hard-refresh.
+    Tied to the built file's own mtime rather than a hardcoded version, so a fresh
+    `pnpm build` here is picked up on the very next guest page load, no deploy-time
+    coordination needed. Snippet mode (the agency's own `<script>` tag on their own
+    site) isn't covered by this - that embed is outside anything this proxy serves."""
+    try:
+        return str(int(_WIDGET_SDK_PATH.stat().st_mtime))
+    except OSError:
+        return "0"
+
+
 def _widget_script_tag(share_token: str) -> str:
     base = get_settings().public_api_base_url
     return (
-        f'<script src="{base}/widget/sdk.js"></script>'
+        f'<script src="{base}/widget/sdk.js?v={_widget_sdk_version()}"></script>'
         f"<script>window.Backline && window.Backline.init("
         f'{{shareToken: "{share_token}", apiBaseUrl: "{base}"}});</script>'
     )

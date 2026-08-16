@@ -15,6 +15,10 @@ def _project_out(doc: dict[str, Any]) -> ProjectOut:
         workspace_id=doc["workspace_id"],
         name=doc["name"],
         target_origin=doc["target_origin"],
+        # .get(), not [] - projects created before this field existed have none, and
+        # backfilling every prior row isn't worth it at this scale (no migration tooling
+        # exists yet, per core/indexes.py's own docstring).
+        created_by=doc.get("created_by"),
         settings=ProjectSettingsOut(**doc["settings_json"]),
         archived_at=doc["archived_at"],
         created_at=doc["created_at"],
@@ -37,7 +41,9 @@ async def create_project(
     from app.modules.share_links import service as share_link_service
 
     repo = ProjectRepository(db)
-    doc = await repo.create(workspace_id=workspace_id, name=name, target_origin=target_origin)
+    doc = await repo.create(
+        workspace_id=workspace_id, name=name, target_origin=target_origin, created_by=actor_user_id
+    )
     await append_event(
         db,
         workspace_id=workspace_id,

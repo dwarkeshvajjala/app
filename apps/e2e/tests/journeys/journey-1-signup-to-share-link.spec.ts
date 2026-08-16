@@ -18,7 +18,8 @@ test("agency signs up, creates a workspace, a project, and a share link", async 
   expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
 
   // The share link is real - a guest can resolve it without being logged in as a member.
-  const resolved = await page.request.get(`http://localhost:8000/api/v1/review/${token}`);
+  const apiBaseUrl = process.env.API_BASE_URL ?? "http://localhost:8000";
+  const resolved = await page.request.get(`${apiBaseUrl}/api/v1/review/${token}`);
   expect(resolved.ok()).toBe(true);
   const body = await resolved.json();
   expect(body.project_id).toBe(projectId);
