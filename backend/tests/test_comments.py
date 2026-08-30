@@ -100,9 +100,7 @@ async def test_anchor_click_offset_round_trips(
     assert resp.json()["anchor"]["dom_fingerprint"]["click_offset_pct"] == {"x": 0.42, "y": 0.75}
 
     # And it's still there when the comment is read back, not just echoed on create.
-    listed = await client.get(
-        f"/api/v1/pages/{page_id}/comments", headers=ctx["guest_headers"]
-    )
+    listed = await client.get(f"/api/v1/pages/{page_id}/comments", headers=ctx["guest_headers"])
     assert listed.json()[0]["anchor"]["dom_fingerprint"]["click_offset_pct"] == {
         "x": 0.42,
         "y": 0.75,
