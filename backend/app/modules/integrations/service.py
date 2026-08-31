@@ -147,6 +147,11 @@ async def create_clickup_task(
     if comment is None:
         raise NotFoundError("Comment not found.")
 
+    from app.modules.comments.repository import CommentRepository
+    comment_doc = await CommentRepository(db).find_by_id(comment_id)
+    if comment_doc is None or comment_doc["workspace_id"] != workspace_id:
+        raise NotFoundError("Comment not found.")
+
     integration_doc = await IntegrationRepository(db).find_by_id(integration_id)
     if integration_doc is None or integration_doc["workspace_id"] != workspace_id:
         raise NotFoundError("Integration not found.")
@@ -172,6 +177,11 @@ async def create_trello_card(
 
     comment = await get_comment_out(db, comment_id)
     if comment is None:
+        raise NotFoundError("Comment not found.")
+
+    from app.modules.comments.repository import CommentRepository
+    comment_doc = await CommentRepository(db).find_by_id(comment_id)
+    if comment_doc is None or comment_doc["workspace_id"] != workspace_id:
         raise NotFoundError("Comment not found.")
 
     integration_doc = await IntegrationRepository(db).find_by_id(integration_id)

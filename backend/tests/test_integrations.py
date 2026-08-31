@@ -427,3 +427,62 @@ async def test_create_task_with_wrong_integration_type_is_rejected(
         headers=ctx["owner_headers"],
     )
     assert resp.status_code == 422
+
+
+async def test_clickup_create_task_rejects_comment_from_another_workspace(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ctx_a = await create_project_with_guest_session(
+        client, monkeypatch, email="int10@example.com", code="920011", workspace_name="INT10"
+    )
+    _, comment_id_a = await _register_page_and_comment(client, ctx_a)
+
+    ctx_b = await create_project_with_guest_session(
+        client, monkeypatch, email="int10b@example.com", code="920012", workspace_name="INT10b"
+    )
+    with mock_third_party_http(
+        {
+            "oauth/token": httpx.Response(200, json={"access_token": "cu-token"}),
+            "api.clickup.com/api/v2/user": httpx.Response(200, json={"id": 1}),
+        }
+    ):
+        integration_resp = await client.post(
+            f"/api/v1/workspaces/{ctx_b['workspace_id']}/integrations",
+            json={"type": "clickup", "oauth_code": "abc", "list_id": "901"},
+            headers=ctx_b["owner_headers"],
+        )
+    integration_id = integration_resp.json()["id"]
+
+    resp = await client.post(
+        f"/api/v1/comments/{comment_id_a}/integrations/clickup/create-task"
+        f"?integration_id={integration_id}",
+        headers=ctx_b["owner_headers"],
+    )
+    assert resp.status_code == 404
+
+
+async def test_trello_create_card_rejects_comment_from_another_workspace(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ctx_a = await create_project_with_guest_session(
+        client, monkeypatch, email="int11@example.com", code="920013", workspace_name="INT11"
+    )
+    _, comment_id_a = await _register_page_and_comment(client, ctx_a)
+
+    ctx_b = await create_project_with_guest_session(
+        client, monkeypatch, email="int11b@example.com", code="920014", workspace_name="INT11b"
+    )
+    with mock_third_party_http({"api.trello.com/1/members/me": httpx.Response(200, json={})}):
+        integration_resp = await client.post(
+            f"/api/v1/workspaces/{ctx_b['workspace_id']}/integrations",
+            json={"type": "trello", "api_key": "k", "token": "t", "list_id": "list123"},
+            headers=ctx_b["owner_headers"],
+        )
+    integration_id = integration_resp.json()["id"]
+
+    resp = await client.post(
+        f"/api/v1/comments/{comment_id_a}/integrations/trello/create-card"
+        f"?integration_id={integration_id}",
+        headers=ctx_b["owner_headers"],
+    )
+    assert resp.status_code == 404

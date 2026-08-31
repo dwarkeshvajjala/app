@@ -1,9 +1,12 @@
+import logging
 import re
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.email import send_email
+
+logger = logging.getLogger("backline.workspaces")
 from app.core.errors import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
 from app.core.events import append_event
 from app.modules.auth.repository import UserRepository
@@ -177,12 +180,15 @@ async def invite_member(
         payload={"invited_email": email, "role": role},
     )
 
-    await send_email(
-        to=email,
-        subject="You've been invited to a Backline workspace",
-        html="<p>You've been invited to collaborate on Backline. Sign in with this email "
-        "address to get access.</p>",
-    )
+    try:
+        await send_email(
+            to=email,
+            subject="You've been invited to a Backline workspace",
+            html="<p>You've been invited to collaborate on Backline. Sign in with this email "
+            "address to get access.</p>",
+        )
+    except Exception as exc:
+        logger.exception("Failed to send invitation email to %s: %s", email, exc)
 
     return _member_out(membership, user_doc)
 
