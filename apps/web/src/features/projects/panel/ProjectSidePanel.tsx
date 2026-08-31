@@ -61,7 +61,7 @@ export function ProjectSidePanel({
   return (
     <div className="absolute inset-y-0 right-0 z-20 flex h-full">
       {activeTab && (
-        <div className="bg-bg-canvas flex w-[380px] flex-col border-l border-black/10 shadow-xl dark:border-white/10">
+        <div className="bg-bg-canvas flex w-full sm:w-[380px] flex-col border-l border-black/10 shadow-xl dark:border-white/10">
           <div className="flex items-center justify-between border-b border-black/10 px-4 py-3 dark:border-white/10">
             <h2 className="text-sm font-semibold">{TAB_TITLES[activeTab]}</h2>
             <button

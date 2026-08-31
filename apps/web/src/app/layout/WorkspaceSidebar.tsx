@@ -49,9 +49,11 @@ const WORKSPACE_ITEMS: NavItem[] = [
 interface WorkspaceSidebarProps {
   workspace: WorkspaceOut;
   onSignOut: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export function WorkspaceSidebar({ workspace, onSignOut }: WorkspaceSidebarProps) {
+export function WorkspaceSidebar({ workspace, onSignOut, isOpen, onClose }: WorkspaceSidebarProps) {
   const navigate = useNavigate();
   const base = `/w/${workspace.slug}`;
 
@@ -65,7 +67,7 @@ export function WorkspaceSidebar({ workspace, onSignOut }: WorkspaceSidebarProps
 
   function renderItems(items: NavItem[]) {
     return items.map(({ to, label, icon: ItemIcon, end }) => (
-      <NavLink key={label} to={to ? `${base}/${to}` : base} end={end} className={({ isActive }) => itemClass(isActive)}>
+      <NavLink key={label} to={to ? `${base}/${to}` : base} end={end} onClick={onClose} className={({ isActive }) => itemClass(isActive)}>
         <ItemIcon width={16} height={16} />
         {label}
       </NavLink>
@@ -73,10 +75,25 @@ export function WorkspaceSidebar({ workspace, onSignOut }: WorkspaceSidebarProps
   }
 
   return (
-    <aside className="bg-bg-surface flex h-screen w-64 shrink-0 flex-col border-r border-black/10 dark:border-white/10 dark:bg-[#0F0F14]">
-      <div className="flex items-center justify-between gap-2 px-3 py-4">
-        <button
-          onClick={() => navigate("/")}
+    <>
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={`bg-bg-surface h-screen w-64 shrink-0 flex-col border-r border-black/10 dark:border-white/10 dark:bg-[#0F0F14] md:flex md:static ${
+          isOpen ? "fixed inset-y-0 left-0 z-50 flex" : "hidden"
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2 px-3 py-4">
+          <button
+            onClick={() => {
+              navigate("/");
+              onClose?.();
+            }}
           aria-label="Switch workspace"
           className="hover:bg-bg-canvas flex min-w-0 items-center gap-2 rounded-md px-1.5 py-1"
         >
@@ -116,5 +133,6 @@ export function WorkspaceSidebar({ workspace, onSignOut }: WorkspaceSidebarProps
         </button>
       </div>
     </aside>
+    </>
   );
 }

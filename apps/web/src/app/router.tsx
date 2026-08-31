@@ -20,6 +20,7 @@ import { WorkspacePickerPage } from "../features/workspaces/WorkspacePickerPage"
 import { ImagePdfIcon, MobileIcon, WebAppIcon } from "./layout/sidebar-icons";
 import { ProjectLayout } from "./layout/ProjectLayout";
 import { WorkspaceLayout } from "./layout/WorkspaceLayout";
+import { NotFoundPage } from "../features/pages/NotFoundPage";
 
 function RequireAuth() {
   const { status } = useAuth();
@@ -99,6 +100,7 @@ const router = createBrowserRouter([
       },
     ],
   },
+  { path: "*", element: <NotFoundPage /> },
 ]);
 
 export function AppRouter() {

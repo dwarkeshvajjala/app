@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
+import { GlobalErrorFallback } from "./app/GlobalErrorFallback.tsx";
 
 // Milestone 12 (docs/tdr/0011): no-op with no DSN configured (no real Sentry project
 // exists for this build) - same credential-gated pattern as every optional integration
@@ -14,6 +15,8 @@ if (sentryDsn) {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <Sentry.ErrorBoundary fallback={GlobalErrorFallback}>
+      <App />
+    </Sentry.ErrorBoundary>
   </StrictMode>,
 );
