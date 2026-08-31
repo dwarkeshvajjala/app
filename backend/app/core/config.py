@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     resend_from_address: str = "Backline <onboarding@backline.app>"
 
+    google_apps_script_url: str = ""
+    google_apps_script_secret: str = ""
+
     clickup_oauth_client_id: str = ""
     clickup_oauth_client_secret: str = ""
     clickup_oauth_redirect_uri: str = "http://localhost:5173/integrations/clickup/callback"
