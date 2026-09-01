@@ -7,6 +7,11 @@ import type { WorkspaceOut } from "../workspaces/api";
 import * as integrationsApi from "./api";
 import { buildClickUpAuthUrl } from "./clickup-oauth-url";
 
+import clickupLogo from "../../assets/icons/clickup-svgrepo-com.svg";
+import disconnectLogo from "../../assets/icons/disconnect-2-svgrepo-com.svg";
+import slackLogo from "../../assets/icons/slack-svgrepo-com.svg";
+import trelloLogo from "../../assets/icons/trello-color-svgrepo-com.svg";
+
 const CLICKUP_PENDING_KEY = "backline:clickup-oauth-pending";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -115,9 +120,10 @@ export function IntegrationsPage() {
             >
               <span className="text-sm font-medium">{TYPE_LABELS[integration.type]}</span>
               <button
-                className="text-recovery-orphaned text-xs underline"
+                className="flex items-center gap-1 text-recovery-orphaned text-xs hover:underline"
                 onClick={() => disconnectMutation.mutate(integration.id)}
               >
+                <img src={disconnectLogo} alt="" className="h-4 w-4" />
                 Disconnect
               </button>
             </li>
@@ -129,7 +135,10 @@ export function IntegrationsPage() {
         className="mt-8 flex flex-col gap-3 border-t border-black/10 pt-6 dark:border-white/10"
         onSubmit={handleConnectSlack}
       >
-        <h2 className="text-sm font-medium">Connect Slack</h2>
+        <h2 className="flex items-center gap-2 text-sm font-medium">
+          <img src={slackLogo} alt="" className="h-5 w-5" />
+          Connect Slack
+        </h2>
         <p className="text-text-muted text-xs">
           Paste an Incoming Webhook URL. Team-only comments never post here unless you've
           configured a private channel - double check before enabling that below.
@@ -151,7 +160,10 @@ export function IntegrationsPage() {
         className="mt-8 flex flex-col gap-3 border-t border-black/10 pt-6 dark:border-white/10"
         onSubmit={handleConnectTrello}
       >
-        <h2 className="text-sm font-medium">Connect Trello</h2>
+        <h2 className="flex items-center gap-2 text-sm font-medium">
+          <img src={trelloLogo} alt="" className="h-5 w-5" />
+          Connect Trello
+        </h2>
         <p className="text-text-muted text-xs">
           Paste your personal API key + token from Trello's token generation page, and the
           list ID new cards should be created in.
@@ -186,7 +198,10 @@ export function IntegrationsPage() {
         className="mt-8 flex flex-col gap-3 border-t border-black/10 pt-6 dark:border-white/10"
         onSubmit={handleConnectClickUp}
       >
-        <h2 className="text-sm font-medium">Connect ClickUp</h2>
+        <h2 className="flex items-center gap-2 text-sm font-medium">
+          <img src={clickupLogo} alt="" className="h-5 w-5" />
+          Connect ClickUp
+        </h2>
         <p className="text-text-muted text-xs">
           Enter the List ID new tasks should be created in, then authorize with ClickUp.
         </p>

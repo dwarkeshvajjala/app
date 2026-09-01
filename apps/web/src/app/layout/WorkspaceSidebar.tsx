@@ -2,7 +2,10 @@ import { Avatar } from "@backline/ui";
 import type { ComponentType, SVGProps } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
-import { IntegrationsIcon } from "../../features/projects/panel/icons";
+import integrationsLogo from "../../assets/icons/integrations-svgrepo-com.svg";
+import logoutLogo from "../../assets/icons/logout-bracket-svgrepo-com.svg";
+import projectsLogo from "../../assets/icons/projects-svgrepo-com.svg";
+import settingsLogo from "../../assets/icons/settings-svgrepo-com.svg";
 import { NotificationBell } from "../../features/notifications/NotificationBell";
 import type { WorkspaceOut } from "../../features/workspaces/api";
 import {
@@ -12,8 +15,6 @@ import {
   McpIcon,
   MembersIcon,
   MobileIcon,
-  RecentIcon,
-  SettingsIcon,
   UsageIcon,
   WebAppIcon,
   WebsiteIcon,
@@ -23,7 +24,7 @@ type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 interface NavItem {
   to: string;
   label: string;
-  icon: IconComponent;
+  icon: IconComponent | string;
   end?: boolean;
 }
 
@@ -42,8 +43,8 @@ const AI_ITEMS: NavItem[] = [
 const WORKSPACE_ITEMS: NavItem[] = [
   { to: "members", label: "Members", icon: MembersIcon },
   { to: "billing", label: "Billing", icon: BillingIcon },
-  { to: "settings", label: "Settings", icon: SettingsIcon },
-  { to: "integrations", label: "Integrations", icon: IntegrationsIcon },
+  { to: "settings", label: "Settings", icon: settingsLogo },
+  { to: "integrations", label: "Integrations", icon: integrationsLogo },
 ];
 
 interface WorkspaceSidebarProps {
@@ -66,9 +67,16 @@ export function WorkspaceSidebar({ workspace, onSignOut, isOpen, onClose }: Work
   }
 
   function renderItems(items: NavItem[]) {
-    return items.map(({ to, label, icon: ItemIcon, end }) => (
+    return items.map(({ to, label, icon, end }) => (
       <NavLink key={label} to={to ? `${base}/${to}` : base} end={end} onClick={onClose} className={({ isActive }) => itemClass(isActive)}>
-        <ItemIcon width={16} height={16} />
+        {typeof icon === "string" ? (
+          <img src={icon} alt="" className="h-4 w-4 shrink-0 dark:invert dark:brightness-200 opacity-80" />
+        ) : (
+          (() => {
+            const ItemIcon = icon;
+            return <ItemIcon width={16} height={16} />;
+          })()
+        )}
         {label}
       </NavLink>
     ));
@@ -105,7 +113,7 @@ export function WorkspaceSidebar({ workspace, onSignOut, isOpen, onClose }: Work
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 pb-3">
-        {renderItems([{ to: "", label: "Recent Projects", icon: RecentIcon, end: true }])}
+        {renderItems([{ to: "", label: "Recent Projects", icon: projectsLogo, end: true }])}
 
         <p className="text-text-muted mt-5 mb-1 px-2.5 text-[11px] font-semibold tracking-wide uppercase">
           Project Types
@@ -128,7 +136,11 @@ export function WorkspaceSidebar({ workspace, onSignOut, isOpen, onClose }: Work
 
       <div className="flex items-center justify-between border-t border-black/10 px-4 py-3 text-xs dark:border-white/10">
         <span className="text-text-muted font-semibold">Backline</span>
-        <button onClick={onSignOut} className="text-text-muted underline">
+        <button
+          onClick={onSignOut}
+          className="text-text-muted hover:text-text-primary flex items-center gap-1.5 transition-colors"
+        >
+          <img src={logoutLogo} alt="" className="h-4 w-4 dark:invert opacity-80" />
           Sign out
         </button>
       </div>

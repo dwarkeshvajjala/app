@@ -5,6 +5,9 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { buildGoogleAuthUrl } from "./google-oauth-url";
 
+import emailIcon from "../../assets/icons/email-1-svgrepo-com.svg";
+import googleLogo from "../../assets/icons/google-icon-logo-svgrepo-com.svg";
+
 export function LoginPage() {
   const { requestOtp, verifyOtp } = useAuth();
   const navigate = useNavigate();
@@ -48,8 +51,9 @@ export function LoginPage() {
 
       <a
         href={buildGoogleAuthUrl()}
-        className="hover:bg-bg-canvas inline-flex items-center justify-center rounded-md border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/10"
+        className="hover:bg-bg-canvas inline-flex items-center justify-center gap-2 rounded-md border border-black/10 px-4 py-2 text-sm font-medium dark:border-white/10"
       >
+        <img src={googleLogo} alt="" className="h-5 w-5" />
         Continue with Google
       </a>
 
@@ -62,7 +66,10 @@ export function LoginPage() {
       {step === "email" && (
         <form className="flex flex-col gap-3" onSubmit={handleRequestOtp}>
           <label className="flex flex-col gap-1 text-sm">
-            Email
+            <div className="flex items-center gap-1.5">
+              <img src={emailIcon} alt="" className="h-4 w-4" />
+              Email
+            </div>
             <input
               type="email"
               required
