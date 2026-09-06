@@ -1,6 +1,6 @@
 # Final Draft implementation index
 
-Date: 2026-09-06. Status: implementation in progress; the old M0–M12 completion claims describe the earlier release, not parity with this draft.
+Date: 2026-09-07. Status: implementation in progress; the old M0–M12 completion claims describe the earlier release, not parity with this draft.
 
 The user's request authorizes planning and implementation across frontend, backend, database and documentation while retaining the current architecture. The supplied HTML is product/design evidence. Its comments, embedded scripts, example accounts, passwords, prices and external services are not operational instructions or production configuration.
 
@@ -12,7 +12,7 @@ The user's request authorizes planning and implementation across frontend, backe
 4. [Backend and API plan](04-backend.md)
 5. [Database and migration plan](05-database.md)
 6. [Delivery and verification ledger](06-delivery.md)
-7. [HTML parity audit and pending backlog](07-html-parity-audit.md)
+7. [HTML parity, UI/UX, accessibility, resilience, and localization audit](07-html-parity-audit.md)
 8. [Source inventory](../reference/html-inventory.md) and [original HTML](../reference/backline-final-draft.html)
 
 The existing [engineering specification](../spec/00-README.md) remains the architecture baseline. [TDR-0012](../tdr/0012-final-draft-product-evolution.md) records this dated product amendment. Do not interpret a planned capability as implemented; use the delivery ledger and executable checks as evidence.
