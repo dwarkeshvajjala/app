@@ -231,6 +231,162 @@ export interface paths {
         patch: operations["update_project_api_v1_projects__project_id__patch"];
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore Project */
+        post: operations["restore_project_api_v1_projects__project_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Clients */
+        get: operations["list_clients_api_v1_workspaces__workspace_id__clients_get"];
+        put?: never;
+        /** Create Client */
+        post: operations["create_client_api_v1_workspaces__workspace_id__clients_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/clients/{client_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Archive Client */
+        delete: operations["archive_client_api_v1_workspaces__workspace_id__clients__client_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Client */
+        patch: operations["update_client_api_v1_workspaces__workspace_id__clients__client_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Tickets */
+        get: operations["list_tickets_api_v1_workspaces__workspace_id__tickets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Summary */
+        get: operations["summary_api_v1_workspaces__workspace_id__dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Activity */
+        get: operations["activity_api_v1_workspaces__workspace_id__activity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Ticket */
+        post: operations["create_ticket_api_v1_projects__project_id__tickets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Assets */
+        get: operations["list_assets_api_v1_projects__project_id__assets_get"];
+        put?: never;
+        /** Upload Asset */
+        post: operations["upload_asset_api_v1_projects__project_id__assets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/assets/{asset_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Comment */
+        post: operations["create_comment_api_v1_projects__project_id__assets__asset_id__comments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/share-links": {
         parameters: {
             query?: never;
@@ -762,6 +918,35 @@ export interface components {
                 [key: string]: boolean;
             };
         };
+        /** ActivityListOut */
+        ActivityListOut: {
+            /** Items */
+            items: components["schemas"]["ActivityOut"][];
+            /** Total */
+            total: number;
+        };
+        /** ActivityOut */
+        ActivityOut: {
+            /** Id */
+            id: string;
+            /** Type */
+            type: string;
+            /** Actor Type */
+            actor_type: string;
+            /** Actor Id */
+            actor_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Project Id */
+            project_id?: string | null;
+            /** Comment Id */
+            comment_id?: string | null;
+            /** Name */
+            name?: string | null;
+        };
         /**
          * AnchorIn
          * @description Tier 1 only in Milestone 4/5 (08-Anchor-Engine.md §8.1/§8.2).
@@ -775,6 +960,48 @@ export interface components {
             tier: 1;
             dom_fingerprint: components["schemas"]["DomFingerprintIn"];
             text_fingerprint: components["schemas"]["TextFingerprintIn"];
+        };
+        /** AssetCommentCreate */
+        AssetCommentCreate: {
+            /** Body */
+            body: string;
+            region: components["schemas"]["Region"];
+            /**
+             * Layer
+             * @default client
+             * @enum {string}
+             */
+            layer: "client" | "team";
+            /** Tags */
+            tags?: ("Bug" | "Copy" | "Design" | "Responsive" | "Content" | "Accessibility")[];
+        };
+        /** AssetOut */
+        AssetOut: {
+            /** Id */
+            id: string;
+            /** Project Id */
+            project_id: string;
+            /** Page Id */
+            page_id: string;
+            /** Filename */
+            filename: string;
+            /** Content Type */
+            content_type: string;
+            /** Size */
+            size: number;
+            /** Page Count */
+            page_count: number;
+            /** Width */
+            width: number | null;
+            /** Height */
+            height: number | null;
+            /** Url */
+            url: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /**
          * AttachmentIn
@@ -802,6 +1029,14 @@ export interface components {
             /** Content Type */
             content_type: string;
         };
+        /** Body_upload_asset_api_v1_projects__project_id__assets_post */
+        Body_upload_asset_api_v1_projects__project_id__assets_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
+        };
         /**
          * ClickOffsetPct
          * @description Where within the anchored element the reviewer clicked, as a 0-1 fraction of its
@@ -826,6 +1061,52 @@ export interface components {
             oauth_code: string;
             /** List Id */
             list_id: string;
+        };
+        /** ClientCreate */
+        ClientCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Contact Name
+             * @default
+             */
+            contact_name: string;
+            /** Email */
+            email?: string | null;
+        };
+        /** ClientOut */
+        ClientOut: {
+            /** Id */
+            id: string;
+            /** Workspace Id */
+            workspace_id: string;
+            /** Name */
+            name: string;
+            /** Contact Name */
+            contact_name: string;
+            /** Email */
+            email: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Archived At */
+            archived_at: string | null;
+        };
+        /** ClientUpdate */
+        ClientUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Contact Name */
+            contact_name?: string | null;
+            /** Email */
+            email?: string | null;
         };
         /**
          * CommentBodyEdit
@@ -888,7 +1169,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "todo" | "in_progress" | "resolved" | "wont_fix";
+            status: "todo" | "in_progress" | "in_review" | "blocked" | "resolved" | "wont_fix";
             /** Assignee Id */
             assignee_id: string | null;
             /** Due At */
@@ -918,17 +1199,49 @@ export interface components {
             created_at: string;
             /** Edited At */
             edited_at: string | null;
+            /**
+             * Priority
+             * @default medium
+             * @enum {string}
+             */
+            priority: "low" | "medium" | "high";
+            /** Tags */
+            tags?: ("Bug" | "Copy" | "Design" | "Responsive" | "Content" | "Accessibility")[];
+            /** Assignee Ids */
+            assignee_ids?: string[];
+            /** Waiting On Ids */
+            waiting_on_ids?: string[];
+            /**
+             * Waiting On Client
+             * @default false
+             */
+            waiting_on_client: boolean;
+            /**
+             * Is Standalone
+             * @default false
+             */
+            is_standalone: boolean;
         };
         /** CommentUpdate */
         CommentUpdate: {
             /** Body */
             body?: string | null;
             /** Status */
-            status?: ("todo" | "in_progress" | "resolved" | "wont_fix") | null;
+            status?: ("todo" | "in_progress" | "in_review" | "blocked" | "resolved" | "wont_fix") | null;
             /** Assignee Id */
             assignee_id?: string | null;
             /** Due At */
             due_at?: string | null;
+            /** Priority */
+            priority?: ("low" | "medium" | "high") | null;
+            /** Tags */
+            tags?: ("Bug" | "Copy" | "Design" | "Responsive" | "Content" | "Accessibility")[] | null;
+            /** Assignee Ids */
+            assignee_ids?: string[] | null;
+            /** Waiting On Ids */
+            waiting_on_ids?: string[] | null;
+            /** Waiting On Client */
+            waiting_on_client?: boolean | null;
         };
         /** ContextIn */
         ContextIn: {
@@ -958,6 +1271,29 @@ export interface components {
             card_url: string;
             /** Card Id */
             card_id: string;
+        };
+        /** DashboardOut */
+        DashboardOut: {
+            /** Projects */
+            projects: number;
+            /** Archived Projects */
+            archived_projects: number;
+            /** Tickets */
+            tickets: number;
+            /** Assigned To Me */
+            assigned_to_me: number;
+            /** Needs Reply */
+            needs_reply: number;
+            /** Waiting On Client */
+            waiting_on_client: number;
+            /** Overdue */
+            overdue: number;
+            /** Statuses */
+            statuses: {
+                [key: string]: number;
+            };
+            /** Project Stats */
+            project_stats: components["schemas"]["ProjectStatsOut"][];
         };
         /**
          * DomFingerprintIn
@@ -1150,8 +1486,25 @@ export interface components {
         ProjectCreate: {
             /** Name */
             name: string;
-            /** Target Origin */
+            /**
+             * Target Origin
+             * @default
+             */
             target_origin: string;
+            /**
+             * Project Type
+             * @default website
+             * @enum {string}
+             */
+            project_type: "website" | "image" | "pdf";
+            /**
+             * Environment
+             * @default live
+             * @enum {string}
+             */
+            environment: "live" | "staging";
+            /** Client Id */
+            client_id?: string | null;
         };
         /** ProjectOut */
         ProjectOut: {
@@ -1178,6 +1531,20 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Project Type
+             * @default website
+             * @enum {string}
+             */
+            project_type: "website" | "image" | "pdf";
+            /**
+             * Environment
+             * @default live
+             * @enum {string}
+             */
+            environment: "live" | "staging";
+            /** Client Id */
+            client_id?: string | null;
         };
         /** ProjectSettingsOut */
         ProjectSettingsOut: {
@@ -1186,16 +1553,55 @@ export interface components {
             /** Snippet Installed */
             snippet_installed: boolean;
         };
+        /** ProjectStatsOut */
+        ProjectStatsOut: {
+            /** Project Id */
+            project_id: string;
+            /** Total */
+            total: number;
+            /** Open */
+            open: number;
+            /** Resolved */
+            resolved: number;
+            /** Last Activity At */
+            last_activity_at: string | null;
+        };
         /** ProjectUpdate */
         ProjectUpdate: {
             /** Name */
             name?: string | null;
             /** Target Origin */
             target_origin?: string | null;
+            /** Environment */
+            environment?: ("live" | "staging") | null;
+            /** Client Id */
+            client_id?: string | null;
         };
         /** ReanchorRequest */
         ReanchorRequest: {
             anchor: components["schemas"]["AnchorIn"];
+        };
+        /** Region */
+        Region: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /**
+             * Width
+             * @default 0
+             */
+            width: number;
+            /**
+             * Height
+             * @default 0
+             */
+            height: number;
+            /**
+             * Page Number
+             * @default 1
+             */
+            page_number: number;
         };
         /** ReplyCreate */
         ReplyCreate: {
@@ -1212,6 +1618,11 @@ export interface components {
         };
         /** ReviewResolveOut */
         ReviewResolveOut: {
+            /**
+             * Project Type
+             * @default website
+             */
+            project_type: string;
             /** Project Id */
             project_id: string;
             /** Project Name */
@@ -1326,6 +1737,127 @@ export interface components {
             normalized_text: string;
             /** Text Similarity Hash */
             text_similarity_hash: string;
+        };
+        /** TicketCreate */
+        TicketCreate: {
+            /** Body */
+            body: string;
+            /**
+             * Status
+             * @default todo
+             * @enum {string}
+             */
+            status: "todo" | "in_progress" | "in_review" | "blocked" | "resolved" | "wont_fix";
+            /**
+             * Priority
+             * @default medium
+             * @enum {string}
+             */
+            priority: "low" | "medium" | "high";
+            /** Tags */
+            tags?: ("Bug" | "Copy" | "Design" | "Responsive" | "Content" | "Accessibility")[];
+            /** Assignee Ids */
+            assignee_ids?: string[];
+            /** Due At */
+            due_at?: string | null;
+        };
+        /** TicketListOut */
+        TicketListOut: {
+            /** Items */
+            items: components["schemas"]["TicketOut"][];
+            /** Total */
+            total: number;
+            /** Offset */
+            offset: number;
+            /** Limit */
+            limit: number;
+        };
+        /** TicketOut */
+        TicketOut: {
+            /** Id */
+            id: string;
+            /** Page Id */
+            page_id: string;
+            /** Parent Id */
+            parent_id: string | null;
+            /**
+             * Author Type
+             * @enum {string}
+             */
+            author_type: "member" | "guest";
+            /** Author Id */
+            author_id: string;
+            /** Author Name */
+            author_name: string;
+            /**
+             * Layer
+             * @enum {string}
+             */
+            layer: "client" | "team";
+            /** Body */
+            body: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "todo" | "in_progress" | "in_review" | "blocked" | "resolved" | "wont_fix";
+            /** Assignee Id */
+            assignee_id: string | null;
+            /** Due At */
+            due_at: string | null;
+            /** Anchor */
+            anchor: Record<string, never>;
+            /**
+             * Recovery Status
+             * @enum {string}
+             */
+            recovery_status: "ok" | "low_confidence" | "orphaned" | "permanently_orphaned";
+            /** Context */
+            context: Record<string, never>;
+            /** Screenshot Url */
+            screenshot_url: string | null;
+            /**
+             * Capture Status
+             * @enum {string}
+             */
+            capture_status: "ok" | "failed";
+            /** Attachments */
+            attachments: components["schemas"]["AttachmentOut"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Edited At */
+            edited_at: string | null;
+            /**
+             * Priority
+             * @default medium
+             * @enum {string}
+             */
+            priority: "low" | "medium" | "high";
+            /** Tags */
+            tags?: ("Bug" | "Copy" | "Design" | "Responsive" | "Content" | "Accessibility")[];
+            /** Assignee Ids */
+            assignee_ids?: string[];
+            /** Waiting On Ids */
+            waiting_on_ids?: string[];
+            /**
+             * Waiting On Client
+             * @default false
+             */
+            waiting_on_client: boolean;
+            /**
+             * Is Standalone
+             * @default false
+             */
+            is_standalone: boolean;
+            /** Project Id */
+            project_id: string;
+            /** Project Name */
+            project_name: string;
+            /** Page Title */
+            page_title: string;
         };
         /**
          * TokenPairOut
@@ -1863,7 +2395,9 @@ export interface operations {
     };
     list_projects_api_v1_workspaces__workspace_id__projects_get: {
         parameters: {
-            query?: never;
+            query?: {
+                include_archived?: boolean;
+            };
             header?: never;
             path: {
                 workspace_id: string;
@@ -2009,6 +2543,419 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_project_api_v1_projects__project_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_clients_api_v1_workspaces__workspace_id__clients_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_client_api_v1_workspaces__workspace_id__clients_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_client_api_v1_workspaces__workspace_id__clients__client_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_client_api_v1_workspaces__workspace_id__clients__client_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_tickets_api_v1_workspaces__workspace_id__tickets_get: {
+        parameters: {
+            query?: {
+                comment_id?: string | null;
+                search?: string;
+                status?: ("todo" | "in_progress" | "in_review" | "blocked" | "resolved" | "wont_fix") | null;
+                project_id?: string | null;
+                priority?: ("low" | "medium" | "high") | null;
+                tag?: ("Bug" | "Copy" | "Design" | "Responsive" | "Content" | "Accessibility") | null;
+                assignee?: string | null;
+                view?: "all" | "mine" | "reply" | "client" | "overdue";
+                sort?: "newest" | "oldest" | "due" | "priority" | "status" | "project";
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    summary_api_v1_workspaces__workspace_id__dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activity_api_v1_workspaces__workspace_id__activity_get: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+                event_type?: string;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityListOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_ticket_api_v1_projects__project_id__tickets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_assets_api_v1_projects__project_id__assets_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-guest-session"?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_asset_api_v1_projects__project_id__assets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_asset_api_v1_projects__project_id__assets_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_comment_api_v1_projects__project_id__assets__asset_id__comments_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-guest-session"?: string | null;
+            };
+            path: {
+                project_id: string;
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetCommentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentOut"];
                 };
             };
             /** @description Validation Error */

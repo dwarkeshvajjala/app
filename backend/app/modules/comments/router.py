@@ -184,6 +184,7 @@ async def update_comment(
         status=body.status,
         assignee_id=body.assignee_id,
         due_at=body.due_at,
+        changes=body,
     )
 
 

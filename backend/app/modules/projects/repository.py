@@ -13,12 +13,23 @@ class ProjectRepository:
         self.db = db
 
     async def create(
-        self, *, workspace_id: str, name: str, target_origin: str, created_by: str
+        self,
+        *,
+        workspace_id: str,
+        name: str,
+        target_origin: str,
+        created_by: str,
+        project_type: str = "website",
+        environment: str = "live",
+        client_id: str | None = None,
     ) -> dict[str, Any]:
         now = datetime.now(UTC)
         doc = {
             "workspace_id": workspace_id,
             "name": name,
+            "project_type": project_type,
+            "environment": environment,
+            "client_id": client_id,
             "target_origin": target_origin,
             "created_by": created_by,
             "settings_json": {"proxy_mode": False, "snippet_installed": False},
@@ -47,6 +58,14 @@ class ProjectRepository:
             query["archived_at"] = None
         cursor = self.db.projects.find(query).sort("created_at", -1)
         return [doc async for doc in cursor]
+
+    async def update_metadata(
+        self, workspace_id: str, project_id: str, patch: dict[str, Any]
+    ) -> None:
+        await self.db.projects.update_one(
+            {"workspace_id": workspace_id, "_id": to_object_id(project_id)},
+            {"$set": {**patch, "updated_at": datetime.now(UTC)}},
+        )
 
     async def update(self, project_id: str, *, name: str | None, target_origin: str | None) -> None:
         patch: dict[str, Any] = {"updated_at": datetime.now(UTC)}

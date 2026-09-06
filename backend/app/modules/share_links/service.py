@@ -115,12 +115,13 @@ async def resolve_share_link(
     _ensure_active(link)
 
     project = await ProjectRepository(db).find_by_id(link["project_id"])
-    if project is None:
+    if project is None or project.get("archived_at"):
         raise NotFoundError("Project not found.")
 
     return ReviewResolveOut(
         project_id=str(project["_id"]),
         project_name=project["name"],
+        project_type=project.get("project_type", "website"),
         mode=link["mode"],
         requires_passcode=link["passcode_hash"] is not None,
         target_origin=project["target_origin"],
@@ -146,6 +147,10 @@ async def create_guest_session(
         supplied = hash_secret(passcode) if passcode else ""
         if not hmac.compare_digest(supplied, link["passcode_hash"]):
             raise PermissionDeniedError("Incorrect passcode.")
+
+    project = await ProjectRepository(db).find_by_id(link["project_id"])
+    if project is None or project.get("archived_at"):
+        raise NotFoundError("Project not found or archived.")
 
     guest_repo = GuestSessionRepository(db)
     guest_doc = await guest_repo.create(

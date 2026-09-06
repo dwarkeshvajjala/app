@@ -1,6 +1,6 @@
 # Backline
 
-Collaborative website review platform. Full specification: [`docs/spec/00-README.md`](docs/spec/00-README.md). Build order and Definition of Done per milestone: [`docs/spec/20-Build-Plan.md`](docs/spec/20-Build-Plan.md). Launch readiness (acceptance-criteria traceability, rollback plan, on-call runbook): [`docs/launch-readiness.md`](docs/launch-readiness.md).
+Collaborative website review platform. Full specification: [`docs/spec/00-README.md`](docs/spec/00-README.md). The current Final Draft product index, flow matrix, and implementation plan are in [`docs/implementation/00-index.md`](docs/implementation/00-index.md). Build order and Definition of Done per milestone: [`docs/spec/20-Build-Plan.md`](docs/spec/20-Build-Plan.md). Launch readiness (acceptance-criteria traceability, rollback plan, on-call runbook): [`docs/launch-readiness.md`](docs/launch-readiness.md).
 
 ## Status
 

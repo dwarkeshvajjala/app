@@ -17,6 +17,7 @@ from app.modules.comments.schemas import (
     AttachmentIn,
     AttachmentOut,
     CommentOut,
+    CommentUpdate,
     ContextIn,
 )
 from app.modules.notifications import service as notification_service
@@ -153,6 +154,14 @@ async def _comment_out(db: AsyncIOMotorDatabase[dict[str, Any]], doc: dict[str, 
         layer=doc["layer"],
         body=doc["body"],
         status=doc["status"],
+        priority=doc.get("priority", "medium"),
+        tags=doc.get("tags", []),
+        assignee_ids=doc.get(
+            "assignee_ids", [doc["assignee_id"]] if doc.get("assignee_id") else []
+        ),
+        waiting_on_ids=doc.get("waiting_on_ids", []),
+        waiting_on_client=doc.get("waiting_on_client", False),
+        is_standalone=doc.get("is_standalone", False),
         assignee_id=doc.get("assignee_id"),
         due_at=doc.get("due_at"),
         anchor=doc["anchor"],
@@ -597,6 +606,7 @@ async def update_comment(
     status: str | None,
     assignee_id: str | None,
     due_at: datetime | None,
+    changes: CommentUpdate | None = None,
 ) -> CommentOut:
     repo = CommentRepository(db)
     existing = await repo.find_by_id(comment_id)
@@ -613,6 +623,49 @@ async def update_comment(
     if due_at is not None:
         patch["due_at"] = due_at
 
+    if existing.get("deleted_at"):
+        raise NotFoundError("Comment not found.")
+    if changes is not None:
+        supplied = changes.model_dump(exclude_unset=True)
+        for key in (
+            "body",
+            "status",
+            "priority",
+            "tags",
+            "assignee_ids",
+            "waiting_on_ids",
+            "waiting_on_client",
+        ):
+            if key in supplied and supplied[key] is None:
+                raise ValidationError(f"{key} cannot be null.")
+        patch.update(supplied)
+    if "assignee_ids" in patch:
+        patch["assignee_ids"] = list(dict.fromkeys(patch["assignee_ids"]))
+        patch["assignee_id"] = next(iter(patch["assignee_ids"]), None)
+    elif "assignee_id" in patch:
+        patch["assignee_ids"] = [patch["assignee_id"]] if patch["assignee_id"] else []
+    if "tags" in patch:
+        patch["tags"] = list(dict.fromkeys(patch["tags"]))
+    if "waiting_on_ids" in patch:
+        patch["waiting_on_ids"] = list(dict.fromkeys(patch["waiting_on_ids"]))
+    from app.modules.workspaces.repository import MembershipRepository
+
+    # Keep the legacy singular assignee_id contract backward-compatible. The new
+    # multi-user fields are workspace-scoped and must reference actual members.
+    member_list_fields = {"assignee_ids", "waiting_on_ids"}
+    if changes is not None:
+        member_list_fields &= set(changes.model_dump(exclude_unset=True))
+    recipients = set(
+        value
+        for field in member_list_fields
+        for value in patch.get(field, [])
+    )
+    for user_id in recipients:
+        if not await MembershipRepository(db).find(workspace_id=workspace_id, user_id=user_id):
+            raise ValidationError("Assignees and waiting-on people must belong to this workspace.")
+    if patch.get("status", existing["status"]) in ("resolved", "wont_fix"):
+        patch.update(waiting_on_ids=[], waiting_on_client=False)
+
     await repo.update(comment_id, patch)
     await append_event(
         db,
@@ -625,12 +678,15 @@ async def update_comment(
 
     status_changed = status is not None and status != existing["status"]
 
-    if assignee_id is not None and assignee_id != existing.get("assignee_id"):
+    previous_assignees = existing.get(
+        "assignee_ids", [existing["assignee_id"]] if existing.get("assignee_id") else []
+    )
+    for assigned_user_id in set(patch.get("assignee_ids", [])) - set(previous_assignees):
         await notification_service.notify_comment_assigned(
             db,
             workspace_id=workspace_id,
             comment_id=comment_id,
-            assignee_user_id=assignee_id,
+            assignee_user_id=assigned_user_id,
             actor_user_id=actor_user_id,
         )
 

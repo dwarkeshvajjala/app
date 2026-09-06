@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -64,9 +65,11 @@ async def fetch_proxied_resource(
         raise NotFoundError("This review link doesn't exist.")
     if link["revoked_at"] is not None:
         raise ConflictError("This review link has been revoked.")
+    if link.get("expires_at") and link["expires_at"] <= datetime.now(UTC):
+        raise ConflictError("This review link has expired.")
 
     project = await ProjectRepository(db).find_by_id(link["project_id"])
-    if project is None:
+    if project is None or project.get("archived_at"):
         raise NotFoundError("Project not found.")
     target_origin = project["target_origin"].rstrip("/")
 

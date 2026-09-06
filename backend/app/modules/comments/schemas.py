@@ -4,7 +4,9 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 Layer = Literal["client", "team"]
-Status = Literal["todo", "in_progress", "resolved", "wont_fix"]
+Status = Literal["todo", "in_progress", "in_review", "blocked", "resolved", "wont_fix"]
+Priority = Literal["low", "medium", "high"]
+Tag = Literal["Bug", "Copy", "Design", "Responsive", "Content", "Accessibility"]
 RecoveryStatus = Literal["ok", "low_confidence", "orphaned", "permanently_orphaned"]
 
 
@@ -108,6 +110,11 @@ class CommentUpdate(BaseModel):
     status: Status | None = None
     assignee_id: str | None = None
     due_at: datetime | None = None
+    priority: Priority | None = None
+    tags: list[Tag] | None = Field(default=None, max_length=6)
+    assignee_ids: list[str] | None = Field(default=None, max_length=20)
+    waiting_on_ids: list[str] | None = Field(default=None, max_length=20)
+    waiting_on_client: bool | None = None
 
 
 class LayerToggleRequest(BaseModel):
@@ -139,3 +146,9 @@ class CommentOut(BaseModel):
     attachments: list[AttachmentOut]
     created_at: datetime
     edited_at: datetime | None
+    priority: Priority = "medium"
+    tags: list[Tag] = Field(default_factory=list)
+    assignee_ids: list[str] = Field(default_factory=list)
+    waiting_on_ids: list[str] = Field(default_factory=list)
+    waiting_on_client: bool = False
+    is_standalone: bool = False

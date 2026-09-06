@@ -14,6 +14,7 @@ import * as projectsApi from "./api";
 import { ProjectFooter, type CanvasMode } from "./footer/ProjectFooter";
 import type { ViewportOption } from "./footer/ViewportMenu";
 import { ProjectSidePanel } from "./panel/ProjectSidePanel";
+import { AssetReview } from "../assets/AssetReview";
 
 export function ProjectOverviewPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
@@ -101,6 +102,12 @@ export function ProjectOverviewPage() {
   }
 
   const activeLinks = (shareLinks ?? []).filter((link) => link.revoked_at === null);
+  if (project.archived_at) {
+    return <main className="bl-wrap"><h1>This project is archived</h1><Link className="bl-button" to={`/w/${workspace.slug}?archived=true`}>Go to archived projects</Link></main>;
+  }
+  if (project.project_type && project.project_type !== "website") {
+    return <AssetReview projectId={project.id} title={project.name} workspaceSlug={workspace.slug} />;
+  }
   // Proxy mode is embeddable regardless of whether the real site has the Review SDK
   // installed (07-Review-SDK.md) - snippet mode only works if the client's own site
   // already has it, so proxy is the reliable default for "show me the live site here."

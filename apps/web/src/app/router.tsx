@@ -15,7 +15,10 @@ import { MembersPage } from "../features/workspaces/MembersPage";
 import { ProjectTypePlaceholderPage } from "../features/workspaces/ProjectTypePlaceholderPage";
 import { SettingsPage } from "../features/workspaces/SettingsPage";
 import { UsagePage } from "../features/workspaces/UsagePage";
-import { WorkspaceHomePage } from "../features/workspaces/WorkspaceHomePage";
+import { ProjectsPage } from "../features/projects/ProjectsPage";
+import { TicketsPage } from "../features/tickets/TicketsPage";
+import { ClientsPage } from "../features/clients/ClientsPage";
+import { ActivityPage } from "../features/activity/ActivityPage";
 import { WorkspacePickerPage } from "../features/workspaces/WorkspacePickerPage";
 import { ImagePdfIcon, MobileIcon, WebAppIcon } from "./layout/sidebar-icons";
 import { ProjectLayout } from "./layout/ProjectLayout";
@@ -50,7 +53,10 @@ const router = createBrowserRouter([
         path: "/w/:workspaceSlug",
         element: <WorkspaceLayout />,
         children: [
-          { index: true, element: <WorkspaceHomePage /> },
+          { index: true, element: <ProjectsPage /> },
+          { path: "tickets", element: <TicketsPage /> },
+          { path: "clients", element: <ClientsPage /> },
+          { path: "activity", element: <ActivityPage /> },
           {
             path: "apps",
             element: (

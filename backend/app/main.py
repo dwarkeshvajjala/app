@@ -15,8 +15,11 @@ from app.core.db import close_client, get_client, get_db
 from app.core.errors import register_exception_handlers
 from app.core.indexes import ensure_indexes
 from app.core.redis_client import close_redis, get_redis
+from app.modules.assets.router import router as assets_router
 from app.modules.auth.router import router as auth_router
+from app.modules.clients.router import router as clients_router
 from app.modules.comments.router import router as comments_router
+from app.modules.dashboard.router import router as dashboard_router
 from app.modules.integrations.router import router as integrations_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.pages.router import router as pages_router
@@ -80,6 +83,9 @@ register_exception_handlers(app)
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(workspaces_router, prefix="/api/v1")
 app.include_router(projects_router, prefix="/api/v1")
+app.include_router(clients_router, prefix="/api/v1")
+app.include_router(dashboard_router, prefix="/api/v1")
+app.include_router(assets_router, prefix="/api/v1")
 app.include_router(share_links_router, prefix="/api/v1")
 app.include_router(pages_router, prefix="/api/v1")
 app.include_router(snapshots_router, prefix="/api/v1")

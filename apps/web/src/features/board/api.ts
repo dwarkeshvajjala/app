@@ -3,8 +3,8 @@ import type { Schemas } from "@backline/types";
 import { apiFetch } from "../../lib/api-client";
 
 export type CommentOut = Schemas["CommentOut"];
-export type CommentStatus = "todo" | "in_progress" | "resolved" | "wont_fix";
-export type CommentLayer = "client" | "team";
+export type CommentStatus = CommentOut["status"];
+export type CommentLayer = CommentOut["layer"];
 
 export function listProjectComments(projectId: string): Promise<CommentOut[]> {
   return apiFetch<CommentOut[]>(`/api/v1/projects/${projectId}/comments`);
@@ -12,7 +12,7 @@ export function listProjectComments(projectId: string): Promise<CommentOut[]> {
 
 export function updateComment(
   commentId: string,
-  patch: { status?: CommentStatus; assignee_id?: string | null },
+  patch: Schemas["CommentUpdate"],
 ): Promise<CommentOut> {
   return apiFetch<CommentOut>(`/api/v1/comments/${commentId}`, {
     method: "PATCH",

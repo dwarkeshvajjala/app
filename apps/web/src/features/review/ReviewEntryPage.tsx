@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 
 import { API_BASE_URL, ApiError } from "../../lib/api-client";
 import * as reviewApi from "./api";
+import { AssetReview } from "../assets/AssetReview";
 
 // Guest reviewer entry (05-Frontend-Architecture.md §5.2) - outside the dashboard shell
 // entirely. Resolves the share link, collects a name (+ passcode if required), creates
@@ -20,6 +21,7 @@ export function ReviewEntryPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [handoffUrl, setHandoffUrl] = useState<string | null>(null);
+  const [assetGuest, setAssetGuest] = useState<string | null>(null);
 
   const {
     data: resolved,
@@ -47,6 +49,10 @@ export function ReviewEntryPage() {
         backline_guest: result.guest_session_token,
         backline_name: result.display_name,
       });
+      if (resolved.project_type && resolved.project_type !== "website") {
+        setAssetGuest(result.guest_session_token);
+        return;
+      }
       const destination =
         resolved.mode === "proxy"
           ? `${API_BASE_URL}/proxy/${shareToken}/?${handoff.toString()}`
@@ -62,6 +68,9 @@ export function ReviewEntryPage() {
 
   if (!shareToken) {
     return <ErrorScreen message="Missing share link." />;
+  }
+  if (assetGuest && resolved) {
+    return <AssetReview projectId={resolved.project_id} title={resolved.project_name} guest={assetGuest} />;
   }
 
   if (handoffUrl) {

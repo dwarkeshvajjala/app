@@ -5,5 +5,10 @@ export const qk = {
   workspaces: () => ["workspaces"] as const,
   workspace: (id: string) => ["workspace", id] as const,
   members: (workspaceId: string) => ["workspace", workspaceId, "members"] as const,
+  projects: (id: string) => ["workspace", id, "projects"] as const,
+  clients: (id: string) => ["workspace", id, "clients"] as const,
+  dashboard: (id: string) => ["workspace", id, "dashboard"] as const,
+  tickets: (id: string) => ["workspace", id, "tickets"] as const,
+  activity: (id: string) => ["workspace", id, "activity"] as const,
   projectComments: (projectId: string) => ["project", projectId, "comments"] as const,
 };

@@ -1,0 +1,36 @@
+# Flow inventory and acceptance criteria
+
+Source line references point to the checked-in unmodified HTML. Every row is a requirement, not a completion claim. Delivery evidence lives in [06-delivery](06-delivery.md).
+
+| ID | Source | User flow | Backend/data dependencies | Acceptance |
+|---|---|---|---|---|
+| FD-01 | L2097–2246 | Navigate workspace, search, status links | membership, project/ticket summary | Correct workspace; URL filters; real counts |
+| FD-02 | L2782–3020 | Project cards/compact/list/table, sort/filter | project metadata and aggregate root counts | Same projects/counts in every view; empty/error states |
+| FD-03 | L2871 | Waiting on you | assignees/waiting-on/dates | Only open, relevant tickets; links open actual thread |
+| FD-04 | L5395–5483 | New website project, client, environment | project/client create; existing link creation | Valid URL; persistent client/env; real link after success |
+| FD-05 | L5395, L3374 | Image set/PDF creation and review | private uploads, assets, page identities | Validated files survive refresh; image/PDF preview and scoped guest access |
+| FD-06 | L2724 | Web App/Mobile coming soon | none | Clearly upcoming; no fake working controls |
+| FD-07 | L3066, L5299–5348 | Rename/settings/archive/restore/export | project mutation, audit, archive read guard | Restore works; archive revokes review access; safe CSV |
+| FD-08 | L3081–3497 | Project/page preview, viewport/version/navigation | pages, revisions, proxy, widget | Existing website navigation and recovery remain functional |
+| FD-09 | L3498–3734 | Thread detail, reply, screenshot/attachments | comments, storage, realtime | Persist after refresh; team replies never reach guests |
+| FD-10 | L2475, L3605, L3799 | Workflow metadata | extended comment schemas | Five statuses plus legacy closed; multi-assign; nullable due date; tags/priority |
+| FD-11 | L3824–4152 | Workspace tickets and filters | paginated workspace query | Root-only; no cross-workspace data; project/person/status/tag filters compose |
+| FD-12 | L3859–3974 | List, board, table, calendar, groups/sorts | same ticket read model | Status updates reflected in every view; unscheduled items retained |
+| FD-13 | L3977 | Standalone new ticket | project ticket creation | No fake DOM anchor; real detail/replies; validated project and members |
+| FD-14 | L3736–3798 | Clients table, add/edit, project chips | clients module, project client_id | Persistent contact data and project association; no automatic access grants |
+| FD-15 | L4005–4046 | Activity feed | existing append-only events | Paginated tenant scoped events; no fabricated history |
+| FD-16 | L5191–5248, L5820 | Share roles, passcode, expiry, regenerate | share links and guest access | Old link/session rejected after revoke; expiration/passcode enforced |
+| FD-17 | L5820 | Domain restrictions and export permission | verified reviewer email + policy | Cannot be bypassed by typing an email; not enabled without verification |
+| FD-18 | L5249–5289 | Global search and notifications | scoped search, notifications | Results link correctly; read state persists |
+| FD-19 | L5947–5968 | Guest name gate | current guest sessions | No member privileges; archived/revoked/expired links fail |
+| FD-20 | L5969–end placement handlers | Point/region create, drag/resize, tags | region geometry anchored to page/version | Persist geometry; no overlapping accidental comments; cancel creates nothing |
+| FD-21 | L5355, L5916 | Attachments and mentions | upload scopes, member resolution, notifications | Attachment authorization; mention recipients belong to workspace |
+| FD-22 | L5484–5683 | AI summary/task/duplicates/tags/changelog/reply | provider, job states, quotas | Actual provider result/error; no prototype heuristics represented as AI |
+| FD-23 | L5684–5716 | Plans and checkout | billing provider/webhooks/entitlements | Server verified payment; no arbitrary retroactive lockout |
+| FD-24 | L5717–5819 | Profile and notifications | users/preferences/email jobs | Persistent settings reflected in delivery behavior |
+| FD-25 | L1590, L6430–end | Login/signup/reset/Google/2FA/sessions | actual authentication/security | Existing OTP/OAuth preserved; fake accounts and QR removed |
+| FD-26 | L3034–3052 | Undo/redo | inverse validated mutations | Does not overwrite others' changes; no local-only illusion of persistence |
+
+## Negative journeys
+
+Wrong workspace IDs, guest access to staff routes, assignment to a foreign user, client/project from another tenant, invalid/duplicate tags, null required values, date clearing, archived project writes, expired links, reply-as-root counts, empty searches, CSV formula payloads, upload failures, missing provider configuration, and stale query responses must all have explicit behavior.

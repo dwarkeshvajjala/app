@@ -22,6 +22,8 @@ import { connectReviewSocket } from "./ws-client";
 const STATUS_LABELS: Record<string, string> = {
   todo: "To do",
   in_progress: "In progress",
+  in_review: "In review",
+  blocked: "Blocked",
   resolved: "Resolved",
   wont_fix: "Won't fix",
 };

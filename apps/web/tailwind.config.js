@@ -6,10 +6,12 @@ export default {
     extend: {
       colors: {
         "bg-surface": { DEFAULT: "#FFFFFF", dark: "#14141A" },
-        "bg-canvas": { DEFAULT: "#F7F7F9", dark: "#0B0B0E" },
-        "text-primary": { DEFAULT: "#14141A", dark: "#F2F2F5" },
-        "text-muted": { DEFAULT: "#6B6B76", dark: "#9A9AA6" },
-        "accent-primary": { DEFAULT: "#4F46E5", dark: "#818CF8" },
+        "bg-canvas": { DEFAULT: "#F1F2F0", dark: "#0B0B0E" },
+        "text-primary": { DEFAULT: "#0B0B0B", dark: "#F2F2F5" },
+        "text-muted": { DEFAULT: "#62665F", dark: "#9A9AA6" },
+        "accent-primary": { DEFAULT: "#0A6B4B", dark: "#69DEB2" },
+        "status-in-review": "#396586",
+        "status-blocked": "#A33D1F",
         // #0EA5E9/#7C3AED (sky-500/violet-600) only reached 2.39:1 / ~4.5:1 as
         // `text-layer-*` against their own `bg-layer-*/15` badge background - short of
         // (or too close to trust against) WCAG AA's 4.5:1 (Milestone 12 axe-core audit,

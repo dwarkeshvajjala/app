@@ -120,6 +120,8 @@ class CommentRepository:
             "workspace_id": workspace_id,
             "page_id": page_id,
             "recovery_status": {"$ne": "permanently_orphaned"},
+            "is_standalone": {"$ne": True},
+            "anchor.kind": {"$ne": "asset"},
             "deleted_at": None,
         }
         cursor = self.db.comments.find(query)

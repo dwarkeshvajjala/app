@@ -311,6 +311,31 @@ AWS S3 because it doesn't charge for downloads, which matters a lot for image-he
 8. Your **Account ID** is on the R2 overview page (and inside that endpoint URL) →
    `R2_ACCOUNT_ID`
 
+### 5.3 Allow browser uploads with an R2 CORS rule
+
+The review widget uploads screenshots directly to short-lived, single-object presigned
+R2 URLs. Because the widget can run on any client website, the private bucket must allow
+browser `PUT` requests from arbitrary origins. This does **not** make the bucket public:
+an upload still needs a valid signed URL, object key, HTTP method, and unexpired signature.
+
+1. Open the `backline-prod` bucket in Cloudflare → **Settings** → **CORS Policy**.
+2. Add this policy:
+
+   ```json
+   [
+     {
+       "AllowedOrigins": ["*"],
+       "AllowedMethods": ["GET", "PUT", "HEAD"],
+       "AllowedHeaders": ["Content-Type"],
+       "ExposeHeaders": ["ETag"],
+       "MaxAgeSeconds": 3600
+     }
+   ]
+   ```
+
+3. Save it. Keep the bucket's public-development URL and custom-domain access disabled;
+   Backline reads files through expiring signed URLs instead.
+
 ---
 
 ## Part 6 — Set up email (Resend)

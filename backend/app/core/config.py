@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     r2_secret_access_key: str = "backline-local-secret"
     r2_bucket_name: str = "backline-local"
     r2_endpoint_url: str = "http://localhost:9000"
+    r2_region: str = "auto"
 
     jwt_signing_key: str = "dev-only-change-me"
     jwt_access_ttl_minutes: int = 15

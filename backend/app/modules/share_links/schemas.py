@@ -24,6 +24,7 @@ class ShareLinkOut(BaseModel):
 
 
 class ReviewResolveOut(BaseModel):
+    project_type: str = "website"
     project_id: str
     project_name: str
     mode: ShareLinkMode

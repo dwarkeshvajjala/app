@@ -28,10 +28,12 @@ const CONNECTION_DOT: Record<string, string> = {
   disconnected: "bg-status-wont-fix",
 };
 
-const STATUSES: CommentStatus[] = ["todo", "in_progress", "resolved", "wont_fix"];
+const STATUSES: CommentStatus[] = ["todo", "in_progress", "in_review", "blocked", "resolved", "wont_fix"];
 const STATUS_LABELS: Record<CommentStatus, string> = {
   todo: "To do",
   in_progress: "In progress",
+  in_review: "In review",
+  blocked: "Blocked",
   resolved: "Resolved",
   wont_fix: "Won't fix",
 };
@@ -64,7 +66,7 @@ export function BoardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<"kanban" | "list">("kanban");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [openThreadId, setOpenThreadId] = useState<string | null>(null);
+  const [openThreadId, setOpenThreadId] = useState<string | null>(searchParams.get("comment"));
   const queryClient = useQueryClient();
 
   const filters = filtersFromParams(searchParams);

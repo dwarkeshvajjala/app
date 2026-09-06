@@ -24,6 +24,17 @@ async def ensure_indexes(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
     await db.events.create_index([("type", 1), ("created_at", -1)])
 
     await db.projects.create_index("workspace_id")
+    await db.projects.create_index(
+        [("workspace_id", 1), ("archived_at", 1), ("created_at", -1), ("_id", -1)]
+    )
+    await db.projects.create_index([("workspace_id", 1), ("client_id", 1)])
+    await db.project_assets.create_index(
+        [("workspace_id", 1), ("project_id", 1), ("created_at", 1)]
+    )
+    await db.project_assets.create_index("page_id", unique=True)
+    await db.clients.create_index(
+        [("workspace_id", 1), ("archived_at", 1), ("name", 1), ("_id", 1)]
+    )
 
     await db.share_links.create_index("token", unique=True)
     await db.share_links.create_index("project_id")
@@ -40,6 +51,18 @@ async def ensure_indexes(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
     await db.comments.create_index([("workspace_id", 1), ("assignee_id", 1)])
     await db.comments.create_index("parent_id")
     await db.comments.create_index([("workspace_id", 1), ("layer", 1)])
+    await db.comments.create_index(
+        [("workspace_id", 1), ("deleted_at", 1), ("parent_id", 1), ("created_at", -1), ("_id", -1)]
+    )
+    await db.comments.create_index(
+        [("workspace_id", 1), ("deleted_at", 1), ("parent_id", 1), ("status", 1), ("due_at", 1)]
+    )
+    await db.comments.create_index(
+        [("workspace_id", 1), ("assignee_ids", 1), ("deleted_at", 1), ("parent_id", 1)]
+    )
+    await db.comments.create_index(
+        [("workspace_id", 1), ("page_id", 1), ("deleted_at", 1), ("parent_id", 1)]
+    )
 
     await db.revision_diffs.create_index([("page_id", 1), ("to_revision_id", 1)])
     await db.recovery_logs.create_index([("comment_id", 1), ("created_at", -1)])

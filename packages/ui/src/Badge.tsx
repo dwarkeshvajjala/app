@@ -5,6 +5,8 @@ export type BadgeTone =
   | "layer-team"
   | "status-todo"
   | "status-in-progress"
+  | "status-in-review"
+  | "status-blocked"
   | "status-resolved"
   | "status-wont-fix"
   | "recovery-low-confidence"
@@ -15,6 +17,8 @@ const toneClasses: Record<BadgeTone, string> = {
   "layer-team": "bg-layer-team/15 text-layer-team",
   "status-todo": "bg-status-todo/15 text-status-todo",
   "status-in-progress": "bg-status-in-progress/15 text-status-in-progress",
+  "status-in-review": "bg-status-in-review/15 text-status-in-review",
+  "status-blocked": "bg-status-blocked/15 text-status-blocked",
   "status-resolved": "bg-status-resolved/15 text-status-resolved",
   "status-wont-fix": "bg-status-wont-fix/15 text-status-wont-fix line-through",
   "recovery-low-confidence": "border border-recovery-low-confidence text-recovery-low-confidence",
@@ -39,6 +43,8 @@ export function Badge({ tone, children }: BadgeProps) {
 const STATUS_LABELS: Record<string, string> = {
   todo: "To do",
   in_progress: "In progress",
+  in_review: "In review",
+  blocked: "Blocked",
   resolved: "Resolved",
   wont_fix: "Won't fix",
 };

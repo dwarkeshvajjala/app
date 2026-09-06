@@ -6,6 +6,10 @@ The differentiator: comments attach to a **Persistent Anchor** (structural + tex
 
 This folder is the single source of truth for building it end to end.
 
+## Current product amendment
+
+The current Final Draft reference is indexed in [`docs/implementation/00-index.md`](../implementation/00-index.md). That index and the linked implementation documents extend this specification with the latest product flows while preserving its module boundaries, tenant model, and security rules. The dated decision record is [`docs/tdr/0012-final-draft-product-evolution.md`](../tdr/0012-final-draft-product-evolution.md).
+
 ## How to use this spec
 
 1. **Read in order.** Each file assumes the previous ones are known. Don't jump to `06-Backend-Architecture.md` without `04-Technology-Decisions.md` and `11-Database.md` - the schemas are defined once, there.

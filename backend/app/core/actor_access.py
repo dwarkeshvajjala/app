@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -21,7 +22,11 @@ async def resolve_actor_project_access(
         workspace_id = actor.workspace_id
         if workspace_id is None:
             raise PermissionDeniedError("No active workspace context.")
-        await project_service.get_project(db, project_id=project_id, workspace_id=workspace_id)
+        project = await project_service.get_project(
+            db, project_id=project_id, workspace_id=workspace_id
+        )
+        if project.archived_at:
+            raise PermissionDeniedError("This project is archived. Restore it before reviewing.")
         return workspace_id
 
     guest: GuestSession = actor
@@ -30,6 +35,13 @@ async def resolve_actor_project_access(
         raise PermissionDeniedError("Guest session's share link is no longer active.")
     if link["project_id"] != project_id:
         raise PermissionDeniedError("Guest session is not scoped to this project.")
+    if link.get("expires_at") and link["expires_at"] <= datetime.now(UTC):
+        raise PermissionDeniedError("This review link has expired.")
+    project = await project_service.get_project(
+        db, project_id=project_id, workspace_id=link["workspace_id"]
+    )
+    if project.archived_at:
+        raise PermissionDeniedError("This project is archived.")
 
     guest_workspace_id: str = link["workspace_id"]
     return guest_workspace_id

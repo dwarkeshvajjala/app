@@ -19,7 +19,7 @@ async function rawRequest(path: string, init?: RequestInit): Promise<Response> {
     ...init,
     credentials: "include", // sends/receives the httpOnly refresh_token cookie (13-Authentication.md §13.6)
     headers: {
-      "Content-Type": "application/json",
+      ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init?.headers,
     },

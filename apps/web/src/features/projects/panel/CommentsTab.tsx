@@ -10,12 +10,14 @@ import { qk } from "../../../lib/query-keys";
 import { timeAgo } from "../../../lib/time";
 import { FilterIcon, MonitorIcon, SortIcon } from "./icons";
 
-const STATUS_ORDER: CommentStatus[] = ["todo", "in_progress", "resolved", "wont_fix"];
+const STATUS_ORDER: CommentStatus[] = ["todo", "in_progress", "in_review", "blocked", "resolved", "wont_fix"];
 
 const STATUS_META: Record<
   CommentStatus,
   { label: string; dot: string; fill: string; border: string }
 > = {
+  in_review: { label: "In review", dot: "bg-status-in-review", fill: "bg-status-in-review/10 text-status-in-review", border: "border-status-in-review/40" },
+  blocked: { label: "Blocked", dot: "bg-status-blocked", fill: "bg-status-blocked/10 text-status-blocked", border: "border-status-blocked/40" },
   todo: {
     label: "Active",
     dot: "bg-status-todo",
@@ -276,6 +278,8 @@ export function CommentsTab({ projectId, canvasRef, currentPageId }: CommentsTab
     const counts: Record<CommentStatus, number> = {
       todo: 0,
       in_progress: 0,
+      in_review: 0,
+      blocked: 0,
       resolved: 0,
       wont_fix: 0,
     };
