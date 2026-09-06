@@ -1,11 +1,10 @@
 import asyncio
 import logging
 
+import httpx
 import resend
 
 from app.core.config import get_settings
-
-import httpx
 
 logger = logging.getLogger("backline.email")
 
@@ -32,7 +31,8 @@ async def send_email(*, to: str, subject: str, html: str) -> None:
                 response.raise_for_status()
                 res_data = response.json()
                 if res_data.get("status") != "success":
-                    raise Exception(res_data.get("message", "Unknown error from Google Apps Script"))
+                    message = res_data.get("message", "Unknown error from Google Apps Script")
+                    raise Exception(message)
                 logger.info("Successfully sent email via Google Apps Script to %s", to)
                 return
         except Exception as e:
@@ -61,7 +61,8 @@ async def send_email(*, to: str, subject: str, html: str) -> None:
 
     # Fallback: Local logging
     logger.warning(
-        "Neither Google Apps Script URL nor RESEND_API_KEY set - logging email instead of sending. to=%s subject=%s\n%s",
+        "Neither Google Apps Script URL nor RESEND_API_KEY set - logging email instead of "
+        "sending. to=%s subject=%s\n%s",
         to,
         subject,
         html,

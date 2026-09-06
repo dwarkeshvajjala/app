@@ -31,7 +31,7 @@ def _set_refresh_cookie(response: Response, raw_refresh_token: str) -> None:
         max_age=settings.jwt_refresh_ttl_days * 24 * 60 * 60,
         httponly=True,
         secure=settings.environment != "local",
-        samesite="none",
+        samesite="lax" if settings.environment == "local" else "none",
         path=REFRESH_COOKIE_PATH,
     )
 
@@ -91,6 +91,8 @@ async def logout(
 async def switch_workspace(
     body: SwitchWorkspaceRequest, session: Session = Depends(get_current_session)
 ) -> AccessTokenOut:
-    access_token = await auth_service.switch_workspace(get_db(), session.user_id, body.workspace_id)
+    access_token = await auth_service.switch_workspace(
+        get_db(), session.user_id, body.workspace_id, sid=session.sid
+    )
     flags = await load_feature_flags(get_db(), body.workspace_id)
     return AccessTokenOut(access_token=access_token, feature_flags=flags)

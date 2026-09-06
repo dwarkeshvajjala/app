@@ -5,8 +5,6 @@ from typing import Any
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.email import send_email
-
-logger = logging.getLogger("backline.workspaces")
 from app.core.errors import ConflictError, NotFoundError, PermissionDeniedError, ValidationError
 from app.core.events import append_event
 from app.modules.auth.repository import UserRepository
@@ -14,6 +12,8 @@ from app.modules.workspaces import events as workspace_events
 from app.modules.workspaces.onboarding import seed_sample_project
 from app.modules.workspaces.repository import MembershipRepository, WorkspaceRepository
 from app.modules.workspaces.schemas import MemberOut, WorkspaceOut
+
+logger = logging.getLogger("backline.workspaces")
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 

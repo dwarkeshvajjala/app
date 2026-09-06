@@ -3,7 +3,7 @@ import secrets
 import time
 
 from jose import JWTError, jwt
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from app.core.config import get_settings
 
@@ -16,6 +16,7 @@ class InvalidTokenError(Exception):
 
 class AccessTokenClaims(BaseModel):
     sub: str
+    sid: str | None = None
     workspace_id: str | None = None
     role: str | None = None
     iat: int
@@ -35,7 +36,8 @@ class GuestTokenClaims(BaseModel):
 
 
 def create_access_token(
-    user_id: str, workspace_id: str | None = None, role: str | None = None
+    user_id: str, workspace_id: str | None = None, role: str | None = None,
+    sid: str | None = None
 ) -> str:
     """Access JWT (13-Authentication.md §13.3). workspace_id/role are None until
     the member has selected a workspace via POST /auth/switch-workspace."""
@@ -43,6 +45,7 @@ def create_access_token(
     now = int(time.time())
     claims = {
         "sub": user_id,
+        "sid": sid,
         "workspace_id": workspace_id,
         "role": role,
         "iat": now,
@@ -58,7 +61,12 @@ def decode_access_token(token: str) -> AccessTokenClaims:
         payload = jwt.decode(token, settings.jwt_signing_key, algorithms=[ALGORITHM])
     except JWTError as exc:
         raise InvalidTokenError(str(exc)) from exc
-    return AccessTokenClaims.model_validate(payload)
+    if payload.get("scope") == "guest" or "share_link_id" in payload:
+        raise InvalidTokenError("A guest token cannot authenticate a member.")
+    try:
+        return AccessTokenClaims.model_validate(payload)
+    except ValidationError as exc:
+        raise InvalidTokenError("Invalid access token claims.") from exc
 
 
 def create_guest_token(guest_session_id: str, share_link_id: str) -> str:

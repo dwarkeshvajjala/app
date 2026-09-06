@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from html import escape
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -33,8 +34,8 @@ async def _project_name_for_page(
 def _render_digest_html(grouped: dict[str, list[dict[str, Any]]]) -> str:
     sections = []
     for project_name, comments in grouped.items():
-        items = "".join(f"<li>{c['body'][:200]}</li>" for c in comments)
-        sections.append(f"<h3>{project_name}</h3><ul>{items}</ul>")
+        items = "".join(f"<li>{escape(c['body'][:200])}</li>" for c in comments)
+        sections.append(f"<h3>{escape(project_name)}</h3><ul>{items}</ul>")
     return "<p>New comments since your last digest:</p>" + "".join(sections)
 
 
@@ -55,7 +56,7 @@ async def run_digest_for_workspace(
         return 0
 
     comments = await db.comments.find(
-        {"workspace_id": workspace_id, "created_at": {"$gt": since}}
+        {"workspace_id": workspace_id, "deleted_at": None, "created_at": {"$gt": since}}
     ).to_list(length=None)
 
     if not comments:
@@ -78,7 +79,7 @@ async def run_digest_for_workspace(
     members = await MembershipRepository(db).list_for_workspace(workspace_id)
     for membership in members:
         user_doc = await UserRepository(db).find_by_id(membership["user_id"])
-        if user_doc is None:
+        if user_doc is None or not user_doc.get("preferences", {}).get("daily_digest", True):
             continue
         await send_email(to=user_doc["email"], subject=subject, html=html)
 

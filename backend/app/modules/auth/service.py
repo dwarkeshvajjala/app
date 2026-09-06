@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -45,11 +46,11 @@ async def _issue_tokens(
     the client calls /auth/switch-workspace next (auto-selecting if there's exactly
     one membership, or prompting if there are several / none yet)."""
     user_id = str(user_doc["_id"])
-    access_token = create_access_token(user_id)
 
     refresh_repo = RefreshTokenRepository(db)
     raw_refresh = generate_opaque_token()
     family_id = generate_opaque_token()
+    access_token = create_access_token(user_id, sid=family_id)
     settings = get_settings()
     await refresh_repo.create(
         user_id=user_doc["_id"],
@@ -138,6 +139,9 @@ async def refresh_tokens(
     if token_doc is None:
         raise AuthenticationError("Invalid refresh token.")
 
+    if token_doc["expires_at"] <= datetime.now(UTC):
+        raise AuthenticationError("Refresh token has expired.")
+
     if token_doc["revoked_at"] is not None:
         # Reuse of an already-rotated token: theft detection (13-Authentication.md §13.6).
         await refresh_repo.revoke_family(token_doc["family_id"])
@@ -159,21 +163,24 @@ async def refresh_tokens(
     )
     await refresh_repo.rotate(old_token_hash=token_hash, new_token_hash=new_hash)
 
-    access_token = create_access_token(str(user_doc["_id"]))
+    access_token = create_access_token(str(user_doc["_id"]), sid=token_doc["family_id"])
     return IssuedTokens(access_token=access_token, refresh_token=new_raw, user=_user_out(user_doc))
 
 
 async def logout(db: AsyncIOMotorDatabase[dict[str, Any]], raw_refresh_token: str) -> None:
     refresh_repo = RefreshTokenRepository(db)
-    await refresh_repo.revoke_by_hash(hash_secret(raw_refresh_token))
+    token_doc = await refresh_repo.find_by_hash(hash_secret(raw_refresh_token))
+    if token_doc is not None:
+        await refresh_repo.revoke_family(token_doc["family_id"])
 
 
 async def switch_workspace(
-    db: AsyncIOMotorDatabase[dict[str, Any]], user_id: str, workspace_id: str
+    db: AsyncIOMotorDatabase[dict[str, Any]], user_id: str, workspace_id: str,
+    sid: str | None = None,
 ) -> str:
     membership_repo = MembershipRepository(db)
     membership = await membership_repo.find(workspace_id=workspace_id, user_id=user_id)
     if membership is None:
         raise PermissionDeniedError("Not a member of this workspace.")
 
-    return create_access_token(user_id, workspace_id=workspace_id, role=membership["role"])
+    return create_access_token(user_id, workspace_id=workspace_id, role=membership["role"], sid=sid)

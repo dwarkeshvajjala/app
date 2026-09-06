@@ -10,12 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.core.arq_pool import close_arq_pool
+from app.core.auth_origin import AuthOriginMiddleware
 from app.core.config import get_settings
 from app.core.db import close_client, get_client, get_db
 from app.core.errors import register_exception_handlers
 from app.core.indexes import ensure_indexes
 from app.core.redis_client import close_redis, get_redis
 from app.modules.assets.router import router as assets_router
+from app.modules.auth.account import router as account_router
 from app.modules.auth.router import router as auth_router
 from app.modules.clients.router import router as clients_router
 from app.modules.comments.router import router as comments_router
@@ -28,6 +30,7 @@ from app.modules.proxy.fallback_router import router as proxy_fallback_router
 from app.modules.proxy.router import router as proxy_router
 from app.modules.realtime.pubsub import run_subscriber
 from app.modules.realtime.router import router as realtime_router
+from app.modules.search.router import router as search_router
 from app.modules.share_links.router import router as share_links_router
 from app.modules.snapshot_engine.router import router as snapshots_router
 from app.modules.storage.r2_client import ensure_bucket_exists
@@ -69,9 +72,8 @@ app.add_middleware(
     # calls (guest-sessions, review resolve, pages, snapshots, uploads) must be allowed
     # from any origin - allow_origin_regex reflects the actual request Origin, which is
     # what lets "any origin" coexist with allow_credentials=True (a literal "*" cannot).
-    # The dashboard's own credentialed cookie (the refresh token) is still safe: it's
-    # SameSite=Strict and scoped to /api/v1/auth, so browsers never attach it to a
-    # cross-site request regardless of what CORS allows.
+    # Cookie-bearing auth paths additionally enforce the dashboard origin allowlist
+    # in AuthOriginMiddleware; arbitrary origins are only for header-authenticated guests.
     allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
@@ -80,6 +82,9 @@ app.add_middleware(
 
 register_exception_handlers(app)
 
+app.add_middleware(AuthOriginMiddleware)
+app.include_router(account_router, prefix="/api/v1")
+app.include_router(search_router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(workspaces_router, prefix="/api/v1")
 app.include_router(projects_router, prefix="/api/v1")

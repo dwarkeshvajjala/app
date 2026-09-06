@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from bson import ObjectId
+from bson.errors import InvalidId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 
@@ -32,6 +33,9 @@ class UserRepository:
         result = await self.db.users.insert_one(doc)
         doc["_id"] = result.inserted_id
         return doc
+
+    async def update_profile(self, user_id: str, patch: dict[str, Any]) -> None:
+        await self.db.users.update_one({"_id": ObjectId(user_id)}, {"$set": patch})
 
     async def touch_login(self, user_id: ObjectId, auth_provider: str) -> None:
         await self.db.users.update_one(
@@ -72,6 +76,46 @@ class RefreshTokenRepository:
         await self.db.refresh_tokens.update_one(
             {"token_hash": old_token_hash},
             {"$set": {"revoked_at": datetime.now(UTC), "replaced_by_token_hash": new_token_hash}},
+        )
+
+    async def family_is_active(self, user_id: str, family_id: str) -> bool:
+        try:
+            user_object_id = ObjectId(user_id)
+        except InvalidId:
+            return False
+        return (
+            await self.db.refresh_tokens.find_one(
+                {
+                    "user_id": user_object_id,
+                    "family_id": family_id,
+                    "revoked_at": None,
+                    "expires_at": {"$gt": datetime.now(UTC)},
+                }
+            )
+            is not None
+        )
+
+    async def list_active(self, user_id: str) -> list[dict[str, Any]]:
+        cursor = (
+            self.db.refresh_tokens.find(
+                {
+                    "user_id": ObjectId(user_id),
+                    "revoked_at": None,
+                    "expires_at": {"$gt": datetime.now(UTC)},
+                }
+            )
+            .sort("issued_at", -1)
+        )
+        return [row async for row in cursor]
+
+    async def revoke_other_sessions(self, user_id: str, current: str) -> None:
+        await self.db.refresh_tokens.update_many(
+            {
+                "user_id": ObjectId(user_id),
+                "family_id": {"$ne": current},
+                "revoked_at": None,
+            },
+            {"$set": {"revoked_at": datetime.now(UTC)}},
         )
 
     async def revoke_family(self, family_id: str) -> None:

@@ -17,6 +17,7 @@ class Session:
     user_id: str
     workspace_id: str | None
     role: str | None
+    sid: str | None = None
 
 
 @dataclass(frozen=True)
@@ -40,7 +41,11 @@ async def get_current_session(
     except InvalidTokenError as exc:
         raise AuthenticationError("Invalid or expired token.") from exc
 
-    return Session(user_id=claims.sub, workspace_id=claims.workspace_id, role=claims.role)
+    session = Session(
+        user_id=claims.sub, workspace_id=claims.workspace_id, role=claims.role, sid=claims.sid
+    )
+    await validate_member_session(session)
+    return session
 
 
 async def get_guest_session(
@@ -109,3 +114,22 @@ def actor_identity(actor: Actor) -> tuple[ActorType, str]:
     if isinstance(actor, Session):
         return "member", actor.user_id
     return "guest", actor.guest_session_id
+
+
+async def validate_member_session(session: Session) -> None:
+    # New tokens retain their login family through refresh and workspace switching.
+    # Legacy tokens keep their existing short access-token lifetime during rollout.
+    from app.core.db import get_db
+    from app.modules.auth.repository import RefreshTokenRepository
+    from app.modules.workspaces.repository import MembershipRepository
+
+    if session.sid and not await RefreshTokenRepository(get_db()).family_is_active(
+        session.user_id, session.sid
+    ):
+        raise AuthenticationError("This session has been signed out.")
+    if session.workspace_id:
+        member = await MembershipRepository(get_db()).find(
+            workspace_id=session.workspace_id, user_id=session.user_id
+        )
+        if member is None or member["role"] != session.role:
+            raise PermissionDeniedError("Workspace access changed. Reopen the workspace.")

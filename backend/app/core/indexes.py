@@ -15,6 +15,7 @@ async def ensure_indexes(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
 
     await db.refresh_tokens.create_index("token_hash", unique=True)
     await db.refresh_tokens.create_index("user_id")
+    await db.refresh_tokens.create_index([("user_id", 1), ("family_id", 1), ("revoked_at", 1)])
     await db.refresh_tokens.create_index("expires_at", expireAfterSeconds=0)
 
     await db.otp_codes.create_index([("email", 1), ("created_at", -1)])
