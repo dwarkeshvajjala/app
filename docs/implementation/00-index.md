@@ -12,7 +12,8 @@ The user's request authorizes planning and implementation across frontend, backe
 4. [Backend and API plan](04-backend.md)
 5. [Database and migration plan](05-database.md)
 6. [Delivery and verification ledger](06-delivery.md)
-7. [Source inventory](../reference/html-inventory.md) and [original HTML](../reference/backline-final-draft.html)
+7. [HTML parity audit and pending backlog](07-html-parity-audit.md)
+8. [Source inventory](../reference/html-inventory.md) and [original HTML](../reference/backline-final-draft.html)
 
 The existing [engineering specification](../spec/00-README.md) remains the architecture baseline. [TDR-0012](../tdr/0012-final-draft-product-evolution.md) records this dated product amendment. Do not interpret a planned capability as implemented; use the delivery ledger and executable checks as evidence.
 
