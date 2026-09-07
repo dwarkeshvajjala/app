@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { qk } from "../../lib/query-keys";
 import * as workspaceApi from "../workspaces/api";
 
 interface MentionsInputProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -22,7 +23,7 @@ export function MentionsInput({ onMentionedIdsChange, ...props }: MentionsInputP
   const [mentionState, setMentionState] = useState<{ active: boolean; query: string; startIndex: number; top: number; left: number } | null>(null);
 
   const workspaceQuery = useQuery({
-    queryKey: ['workspace'],
+    queryKey: qk.workspaces(),
     queryFn: async () => {
       const ws = await workspaceApi.listWorkspaces();
       return ws.find(w => w.slug === workspaceSlug);
@@ -31,7 +32,7 @@ export function MentionsInput({ onMentionedIdsChange, ...props }: MentionsInputP
   });
 
   const membersQuery = useQuery({
-    queryKey: ['members', workspaceQuery.data?.id],
+    queryKey: qk.members(workspaceQuery.data?.id),
     queryFn: () => workspaceApi.listMembers(workspaceQuery.data!.id),
     enabled: !!workspaceQuery.data?.id,
   });

@@ -136,6 +136,7 @@ async def resolve_share_link(
         requires_passcode=link["passcode_hash"] is not None,
         target_origin=project["target_origin"],
         ask_reviewer_name=link.get("ask_reviewer_name", True),
+        show_board_to_client=project.get("settings_json", {}).get("show_board_to_client", False),
     )
 
 

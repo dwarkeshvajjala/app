@@ -20,7 +20,7 @@ from app.core.security import (
 )
 from app.modules.auth.google_oauth import exchange_code_for_user_info
 from app.modules.auth.repository import OtpRepository, RefreshTokenRepository, UserRepository
-from app.modules.auth.schemas import UserOut
+from app.modules.auth.schemas import SessionOut, UserOut
 from app.modules.workspaces.repository import MembershipRepository
 
 
@@ -248,7 +248,7 @@ async def switch_workspace(
 
 async def list_sessions(
     db: AsyncIOMotorDatabase[dict[str, Any]], user_id: str, current_refresh_token: str | None
-) -> list[dict[str, Any]]:
+) -> list[SessionOut]:
     from bson import ObjectId
 
     refresh_repo = RefreshTokenRepository(db)
@@ -261,22 +261,20 @@ async def list_sessions(
         if current_token_doc and current_token_doc.get("user_id") == ObjectId(user_id):
             current_family_id = current_token_doc.get("family_id")
 
-    sessions = []
-    for f in families:
-        sessions.append(
-            {
-                "id": f["family_id"],
-                "current": f["family_id"] == current_family_id,
-                "browser": f.get("browser"),
-                "os": f.get("os"),
-                "ip_address": f.get("ip_address"),
-                # M-05: typed datetimes now (SessionOut), not hand-formatted ISO strings -
-                # Pydantic's response_model handles wire serialization.
-                "created_at": f["issued_at"],
-                "last_active_at": f["issued_at"],
-            }
+    return [
+        SessionOut(
+            id=f["family_id"],
+            current=f["family_id"] == current_family_id,
+            browser=f.get("browser"),
+            os=f.get("os"),
+            ip_address=f.get("ip_address"),
+            # M-05: typed datetimes now (SessionOut), not hand-formatted ISO strings -
+            # Pydantic's response_model handles wire serialization.
+            created_at=f["issued_at"],
+            last_active_at=f["issued_at"],
         )
-    return sessions
+        for f in families
+    ]
 
 
 async def revoke_session_family(

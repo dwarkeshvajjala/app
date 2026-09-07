@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
+import { qk } from "../../lib/query-keys";
 import * as projectsApi from "../projects/api";
 import type { ProjectOut } from "../projects/api";
 import { NewProjectModal } from "./NewProjectModal";
@@ -29,7 +30,7 @@ export function WorkspaceHomePage() {
   });
 
   const { data: members } = useQuery({
-    queryKey: ["workspace", workspace.id, "members"],
+    queryKey: qk.members(workspace.id),
     queryFn: () => workspacesApi.listMembers(workspace.id),
   });
   const memberByUserId = useMemo(

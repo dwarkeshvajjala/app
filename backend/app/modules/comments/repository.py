@@ -159,10 +159,17 @@ class CommentRepository:
         """Every comment the recovery pipeline should re-attempt on a new revision
         (10-Revision-Recovery.md §10.4/§10.5) - everything except `permanently_orphaned`,
         which means the system has explicitly given up (two consecutive misses) until a
-        human manually reanchors it (`PATCH /comments/{id}/reanchor`)."""
+        human manually reanchors it (`PATCH /comments/{id}/reanchor`).
+
+        DB-02: top-level comments only. A reply is the same visual pin as its parent
+        (comments/service.py::create_reply no longer copies the parent's anchor onto
+        it), so re-anchoring it independently would be redundant work against a stale
+        or absent anchor - it inherits recovery_status from the parent at read time
+        instead (comments/service.py::_comment_out)."""
         query = {
             "workspace_id": workspace_id,
             "page_id": page_id,
+            "parent_id": None,
             "recovery_status": {"$ne": "permanently_orphaned"},
             "is_standalone": {"$ne": True},
             "anchor.kind": {"$ne": "asset"},

@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { GearIcon } from "../../../components/icons";
+import { qk } from "../../../lib/query-keys";
 import { useAuth } from "../../auth/AuthContext";
 import * as shareLinksApi from "../../share-links/api";
 import * as workspacesApi from "../../workspaces/api";
@@ -58,12 +60,12 @@ export function CollaboratorsModal({
   }, [onClose]);
 
   const { data: members } = useQuery({
-    queryKey: ["workspace", workspaceId, "members"],
+    queryKey: qk.members(workspaceId),
     queryFn: () => workspacesApi.listMembers(workspaceId),
   });
 
   const shareLinksQuery = useQuery({
-    queryKey: ["project", project.id, "share-links"],
+    queryKey: qk.shareLinks(project.id),
     queryFn: () => shareLinksApi.listShareLinks(project.id),
   });
   const activeLink = (shareLinksQuery.data ?? []).find((link) => link.revoked_at === null);
@@ -72,7 +74,7 @@ export function CollaboratorsModal({
     mutationFn: () => workspacesApi.inviteMember(workspaceId, email.trim(), role),
     onSuccess: () => {
       setEmail("");
-      queryClient.invalidateQueries({ queryKey: ["workspace", workspaceId, "members"] });
+      queryClient.invalidateQueries({ queryKey: qk.members(workspaceId) });
     },
   });
 
@@ -221,7 +223,7 @@ export function CollaboratorsModal({
                 onClick={onClose}
                 className="text-text-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-black/10 dark:border-white/10"
               >
-                ⚙
+                <GearIcon />
               </Link>
             </div>
           )}

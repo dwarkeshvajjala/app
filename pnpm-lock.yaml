@@ -141,6 +141,9 @@ importers:
 
   packages/ui:
     dependencies:
+      '@backline/types':
+        specifier: workspace:*
+        version: link:../types
       react:
         specifier: ^18.3.1
         version: 18.3.1

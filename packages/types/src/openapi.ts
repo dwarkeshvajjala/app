@@ -4,6 +4,92 @@
  */
 
 export interface paths {
+    "/api/v1/auth/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Profile */
+        get: operations["profile_api_v1_auth_account_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Profile */
+        patch: operations["update_profile_api_v1_auth_account_patch"];
+        trace?: never;
+    };
+    "/api/v1/auth/account/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sessions */
+        get: operations["sessions_api_v1_auth_account_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/account/sessions/others": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Other Sessions */
+        delete: operations["revoke_other_sessions_api_v1_auth_account_sessions_others_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/account/sessions/{family_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Session */
+        delete: operations["revoke_session_api_v1_auth_account_sessions__family_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search */
+        get: operations["search_api_v1_workspaces__workspace_id__search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/google/callback": {
         parameters: {
             query?: never;
@@ -430,23 +516,6 @@ export interface paths {
         head?: never;
         /** Update Client */
         patch: operations["update_client_api_v1_workspaces__workspace_id__clients__client_id__patch"];
-        trace?: never;
-    };
-    "/api/v1/workspaces/{workspace_id}/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Search */
-        get: operations["search_api_v1_workspaces__workspace_id__search_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/api/v1/workspaces/{workspace_id}/tickets": {
@@ -1172,6 +1241,7 @@ export interface components {
             /**
              * Tier
              * @constant
+             * @enum {integer}
              */
             tier: 1;
             dom_fingerprint: components["schemas"]["DomFingerprintIn"];
@@ -1393,18 +1463,14 @@ export interface components {
             /** Due At */
             due_at: string | null;
             /** Anchor */
-            anchor: {
-                [key: string]: unknown;
-            };
+            anchor: Record<string, never>;
             /**
              * Recovery Status
              * @enum {string}
              */
             recovery_status: "ok" | "low_confidence" | "orphaned" | "permanently_orphaned";
             /** Context */
-            context: {
-                [key: string]: unknown;
-            };
+            context: Record<string, never>;
             /** Screenshot Url */
             screenshot_url: string | null;
             /**
@@ -1567,6 +1633,7 @@ export interface components {
              * Layer
              * @default client
              * @constant
+             * @enum {string}
              */
             layer: "client";
             /**
@@ -1624,9 +1691,7 @@ export interface components {
              */
             type: "slack" | "clickup" | "trello";
             /** Config Summary */
-            config_summary: {
-                [key: string]: unknown;
-            };
+            config_summary: Record<string, never>;
             /** Connected By */
             connected_by: string;
             /**
@@ -1697,9 +1762,7 @@ export interface components {
              */
             type: "comment_assigned" | "comment_reply" | "comment_mention" | "comment_status_changed" | "share_link_created" | "integration_disconnected" | "deploy_recovery_completed";
             /** Payload */
-            payload: {
-                [key: string]: unknown;
-            };
+            payload: Record<string, never>;
             /** Target Route */
             target_route?: string | null;
             /** Read At */
@@ -1766,6 +1829,68 @@ export interface components {
             title?: string | null;
             /** Sort Order */
             sort_order?: number | null;
+        };
+        /** Preferences */
+        Preferences: {
+            /**
+             * Locale
+             * @default en
+             * @enum {string}
+             */
+            locale: "en" | "hi-IN";
+            /**
+             * Timezone
+             * @default UTC
+             */
+            timezone: string;
+            /**
+             * Email On Comment
+             * @default true
+             */
+            email_on_comment: boolean;
+            /**
+             * Email On Mention
+             * @default true
+             */
+            email_on_mention: boolean;
+            /**
+             * Daily Digest
+             * @default true
+             */
+            daily_digest: boolean;
+            /**
+             * Weekly Summary
+             * @default false
+             */
+            weekly_summary: boolean;
+        };
+        /** ProfileOut */
+        ProfileOut: {
+            /** Name */
+            name: string;
+            /**
+             * Professional Role
+             * @default
+             */
+            professional_role: string;
+            preferences?: components["schemas"]["Preferences"];
+            /** Id */
+            id: string;
+            /** Email */
+            email: string;
+            /** Avatar Url */
+            avatar_url?: string | null;
+        };
+        /** ProfileUpdate */
+        ProfileUpdate: {
+            /** Name */
+            name: string;
+            /**
+             * Professional Role
+             * @default
+             */
+            professional_role: string;
+            preferences?: components["schemas"]["Preferences"];
         };
         /** ProjectCreate */
         ProjectCreate: {
@@ -1868,6 +1993,7 @@ export interface components {
             /**
              * Acknowledge Permanent Deletion
              * @constant
+             * @enum {boolean}
              */
             acknowledge_permanent_deletion: true;
         };
@@ -1897,6 +2023,7 @@ export interface components {
             /**
              * Status
              * @constant
+             * @enum {string}
              */
             status: "deleted";
             counts: components["schemas"]["ProjectDeletionCounts"];
@@ -2081,6 +2208,11 @@ export interface components {
              * @default true
              */
             ask_reviewer_name: boolean;
+            /**
+             * Show Board To Client
+             * @default false
+             */
+            show_board_to_client: boolean;
         };
         /** RevisionOut */
         RevisionOut: {
@@ -2099,6 +2231,32 @@ export interface components {
             is_current: boolean;
             /** Created New */
             created_new: boolean;
+        };
+        /** SearchOut */
+        SearchOut: {
+            /** Items */
+            items: components["schemas"]["SearchResult"][];
+            /**
+             * Has More
+             * @default false
+             */
+            has_more: boolean;
+        };
+        /** SearchResult */
+        SearchResult: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "project" | "ticket" | "person" | "client";
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Project Id */
+            project_id?: string | null;
+            /** Page Id */
+            page_id?: string | null;
         };
         /**
          * SearchResultOut
@@ -2125,36 +2283,6 @@ export interface components {
         SearchResultsOut: {
             /** Items */
             items: components["schemas"]["SearchResultOut"][];
-        };
-        /**
-         * SessionOut
-         * @description FD-AUD-011: Represents an active refresh token family for the user.
-         *     M-05: created_at/last_active_at are typed datetimes (Pydantic serializes to a real
-         *     ISO-8601 string with timezone on the wire) rather than hand-formatted str fields -
-         *     API contracts stay generated/typed end-to-end per 06-Backend-Architecture.md §2.3,
-         *     and the frontend gets a real Date-parseable value instead of an ad hoc string.
-         */
-        SessionOut: {
-            /** Id */
-            id: string;
-            /** Current */
-            current: boolean;
-            /** Browser */
-            browser: string | null;
-            /** Os */
-            os: string | null;
-            /** Ip Address */
-            ip_address: string | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Last Active At
-             * Format: date-time
-             */
-            last_active_at: string;
         };
         /** ShareLinkCreate */
         ShareLinkCreate: {
@@ -2245,13 +2373,9 @@ export interface components {
                 [key: string]: number;
             };
             /** Node Tree */
-            node_tree: {
-                [key: string]: unknown;
-            };
+            node_tree: Record<string, never>;
             /** Nodes Index */
-            nodes_index: {
-                [key: string]: unknown;
-            };
+            nodes_index: Record<string, never>;
             /** Full Page Hash */
             full_page_hash: string;
         };
@@ -2335,18 +2459,14 @@ export interface components {
             /** Due At */
             due_at: string | null;
             /** Anchor */
-            anchor: {
-                [key: string]: unknown;
-            };
+            anchor: Record<string, never>;
             /**
              * Recovery Status
              * @enum {string}
              */
             recovery_status: "ok" | "low_confidence" | "orphaned" | "permanently_orphaned";
             /** Context */
-            context: {
-                [key: string]: unknown;
-            };
+            context: Record<string, never>;
             /** Screenshot Url */
             screenshot_url: string | null;
             /**
@@ -2522,6 +2642,53 @@ export interface components {
             /** Name */
             name?: string | null;
         };
+        /** SessionOut */
+        app__modules__auth__account__SessionOut: {
+            /** Id */
+            id: string;
+            /** Current */
+            current: boolean;
+            /**
+             * Last Active At
+             * Format: date-time
+             */
+            last_active_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /**
+         * SessionOut
+         * @description FD-AUD-011: Represents an active refresh token family for the user.
+         *     M-05: created_at/last_active_at are typed datetimes (Pydantic serializes to a real
+         *     ISO-8601 string with timezone on the wire) rather than hand-formatted str fields -
+         *     API contracts stay generated/typed end-to-end per 06-Backend-Architecture.md §2.3,
+         *     and the frontend gets a real Date-parseable value instead of an ad hoc string.
+         */
+        app__modules__auth__schemas__SessionOut: {
+            /** Id */
+            id: string;
+            /** Current */
+            current: boolean;
+            /** Browser */
+            browser: string | null;
+            /** Os */
+            os: string | null;
+            /** Ip Address */
+            ip_address: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Active At
+             * Format: date-time
+             */
+            last_active_at: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -2531,6 +2698,160 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    profile_api_v1_auth_account_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+        };
+    };
+    update_profile_api_v1_auth_account_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sessions_api_v1_auth_account_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__modules__auth__account__SessionOut"][];
+                };
+            };
+        };
+    };
+    revoke_other_sessions_api_v1_auth_account_sessions_others_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    revoke_session_api_v1_auth_account_sessions__family_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                family_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_api_v1_workspaces__workspace_id__search_get: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResultsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     google_callback_api_v1_auth_google_callback_post: {
         parameters: {
             query?: never;
@@ -2738,7 +3059,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionOut"][];
+                    "application/json": components["schemas"]["app__modules__auth__schemas__SessionOut"][];
                 };
             };
             /** @description Validation Error */
@@ -3539,40 +3860,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClientOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    search_api_v1_workspaces__workspace_id__search_get: {
-        parameters: {
-            query: {
-                q: string;
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                workspace_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchResultsOut"];
                 };
             };
             /** @description Validation Error */

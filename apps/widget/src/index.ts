@@ -1,147 +1,21 @@
 import { createApiClient } from "./api-client";
 import { anchorPointFor, computeAnchor, resolveAnchorElement } from "./anchor";
-import { captureSnapshot } from "./dom-snapshot";
+import { uploadAttachment, uploadScreenshot } from "./attachment-upload";
 import { ensureGuestSession } from "./guest-session";
 import { decodeGuestSessionId } from "./jwt";
-import { trackAnchor } from "./position-tracker";
+import { registerCurrentPage, realPageUrl, submitPageSnapshot } from "./page-registration";
+import { wireRealtimeUpdates } from "./realtime";
 import { captureScreenshot } from "./screenshot";
+import { createThreadManager } from "./thread-manager";
 import type { BacklineConfig, CommentRecord } from "./types";
-import { parseUserAgent } from "./user-agent";
 import {
   createShadowRoot,
   openComposer,
-  openThreadView,
   promptForName,
   renderPin,
-  showToast,
   showTooltip,
-  type ThreadViewMessage,
 } from "./ui";
-import { connectReviewSocket } from "./ws-client";
-
-const STATUS_LABELS: Record<string, string> = {
-  todo: "To do",
-  in_progress: "In progress",
-  in_review: "In review",
-  blocked: "Blocked",
-  resolved: "Resolved",
-  wont_fix: "Won't fix",
-};
-
-interface RegisterPageResponse {
-  id: string;
-}
-
-interface UploadResponse {
-  upload_url: string;
-  key: string;
-}
-
-// In proxy mode, window.location is the proxy's own URL (/proxy/{shareToken}/{realPath}),
-// not the reviewed site's - fetch_proxied_resource (backend/app/modules/proxy/service.py)
-// forwards `path` to the target origin verbatim, so stripping the "/proxy/{shareToken}"
-// prefix and swapping in the real target_origin recovers the reviewed site's actual URL.
-// In snippet mode this prefix is simply absent and the URL passes through unchanged.
-// Without this, every page registered from proxy mode records a Backline-internal proxy
-// URL instead of the site's own path - harmless for anchoring (which never reads it) but
-// wrong for anything display-facing, like the dashboard's Comments panel grouping
-// comments by page.
-function realPageUrl(shareToken: string, targetOrigin: string): string {
-  const prefix = `/proxy/${shareToken}`;
-  let pathname = window.location.pathname;
-  if (pathname.startsWith(prefix)) {
-    pathname = pathname.slice(prefix.length) || "/";
-  }
-  const search = new URLSearchParams(window.location.search);
-  search.delete("blMode");
-  const qs = search.toString();
-  return targetOrigin.replace(/\/+$/, "") + pathname + (qs ? `?${qs}` : "");
-}
-
-async function registerCurrentPage(
-  api: ReturnType<typeof createApiClient>,
-  guestToken: string,
-  projectId: string,
-  url: string,
-): Promise<string> {
-  const page = await api.request<RegisterPageResponse>("/api/v1/pages", {
-    method: "POST",
-    guestToken,
-    body: JSON.stringify({
-      project_id: projectId,
-      url,
-      title: document.title || null,
-    }),
-  });
-  return page.id;
-}
-
-async function submitPageSnapshot(
-  api: ReturnType<typeof createApiClient>,
-  guestToken: string,
-  pageId: string,
-): Promise<void> {
-  const snapshot = await captureSnapshot();
-  await api.request(`/api/v1/pages/${pageId}/snapshots`, {
-    method: "POST",
-    guestToken,
-    body: JSON.stringify(snapshot),
-  });
-}
-
-async function uploadScreenshot(
-  api: ReturnType<typeof createApiClient>,
-  guestToken: string,
-  projectId: string,
-  blob: Blob,
-): Promise<string | null> {
-  try {
-    const { upload_url: uploadUrl, key } = await api.request<UploadResponse>("/api/v1/uploads", {
-      method: "POST",
-      guestToken,
-      body: JSON.stringify({ project_id: projectId, content_type: blob.type || "image/jpeg" }),
-    });
-    const putResponse = await fetch(uploadUrl, {
-      method: "PUT",
-      body: blob,
-      headers: { "Content-Type": blob.type || "image/jpeg" },
-    });
-    if (!putResponse.ok) return null;
-    return key;
-  } catch {
-    return null;
-  }
-}
-
-// Generic version of uploadScreenshot above, for comment/reply attachments - any
-// content type in the backend's allowlist (images, PDF, Word/Excel docs, Markdown),
-// not just the fixed image/jpeg a captured screenshot always is. Returns the shape
-// openComposer/openThreadView's uploadFile callback expects, or null on failure (the
-// caller removes the attachment's chip when this happens).
-async function uploadAttachment(
-  api: ReturnType<typeof createApiClient>,
-  guestToken: string,
-  projectId: string,
-  file: File,
-): Promise<{ key: string; filename: string; content_type: string } | null> {
-  try {
-    const contentType = file.type || "application/octet-stream";
-    const { upload_url: uploadUrl, key } = await api.request<UploadResponse>("/api/v1/uploads", {
-      method: "POST",
-      guestToken,
-      body: JSON.stringify({ project_id: projectId, content_type: contentType }),
-    });
-    const putResponse = await fetch(uploadUrl, {
-      method: "PUT",
-      body: file,
-      headers: { "Content-Type": contentType },
-    });
-    if (!putResponse.ok) return null;
-    return { key, filename: file.name, content_type: contentType };
-  } catch {
-    return null;
-  }
-}
+import { parseUserAgent } from "./user-agent";
 
 async function init(config: BacklineConfig): Promise<void> {
   const api = createApiClient(config.apiBaseUrl);
@@ -188,161 +62,19 @@ async function init(config: BacklineConfig): Promise<void> {
   // backend re-checks authorship itself on every delete/reply call regardless.
   const myGuestId = decodeGuestSessionId(guest.guestSessionToken);
 
-  // Every top-level comment id maps to [top, ...replies] (sorted oldest-first) - the
-  // full flat list the backend returns per page, regrouped here since the widget is
-  // the one place that needs to render it as threads rather than a flat feed.
-  const threadMessages = new Map<string, CommentRecord[]>();
-  const pinsByTopId = new Map<string, { pin: HTMLElement; untrack: () => void }>();
-  let openThread: { topId: string; controls: ReturnType<typeof openThreadView> } | null = null;
-
-  // Keeps a pin glued to its target element even while the element itself moves - a
-  // CSS transform/animation-driven carousel or marquee, say - independent of page
-  // scroll (already handled by position:absolute + pageX/pageY, see ui.ts). `resolve`
-  // returns the live element to follow; hides the pin entirely if it can't currently be
-  // found (removed from the DOM, off in a part of an infinite-loop carousel that
-  // doesn't exist as a real node right now) rather than leaving it at a stale position
-  // that now belongs to something else.
-  //
-  // `offset` is added to the element's own top-left corner on every update - without
-  // it, a pin created partway through a large element (e.g. clicking the middle of a
-  // tall card) would visibly jump to that element's corner the instant tracking's first
-  // frame fires, since getBoundingClientRect() only ever gives the corner. For a
-  // brand-new pin this is the click point relative to the element, captured once at
-  // click time; for one loaded from the server (no stored click offset - the backend's
-  // anchor is just a selector, not a pixel), it defaults to the corner, same as before
-  // this tracking existed.
-  function trackPinPosition(
-    pin: HTMLElement,
-    resolve: () => Element | null,
-    offset: { x: number; y: number } = { x: 0, y: 0 },
-  ): () => void {
-    return trackAnchor(resolve, (point) => {
-      if (point) {
-        pin.style.left = `${point.x + offset.x}px`;
-        pin.style.top = `${point.y + offset.y}px`;
-        pin.style.display = "";
-      } else {
-        pin.style.display = "none";
-      }
-    });
-  }
-
-  function authorLabel(comment: CommentRecord): string {
-    if (comment.author_type === "guest" && comment.author_id === myGuestId) return "You";
-    return comment.author_type === "member" ? "Team" : "Guest";
-  }
-
-  function canDeleteComment(comment: CommentRecord): boolean {
-    return comment.author_type === "guest" && comment.author_id === myGuestId;
-  }
-
-  function buildMessages(topId: string): ThreadViewMessage[] {
-    return (threadMessages.get(topId) ?? []).map((comment) => ({
-      id: comment.id,
-      body: comment.body,
-      authorLabel: authorLabel(comment),
-      createdAt: comment.created_at,
-      canDelete: canDeleteComment(comment),
-      attachments: comment.attachments,
-    }));
-  }
-
-  function removeThreadPin(topId: string): void {
-    const entry = pinsByTopId.get(topId);
-    if (!entry) return;
-    entry.untrack();
-    entry.pin.remove();
-    pinsByTopId.delete(topId);
-  }
-
-  function openThreadForComment(topId: string, x: number, y: number): void {
-    // A previously-open thread never gets an "outside click" to dismiss it when this
-    // is triggered from outside the iframe (the dashboard's Comments panel, via
-    // postMessage below) - clicking through several comments in a row would otherwise
-    // just keep stacking new .bl-thread panels on top of each other in the shadow
-    // root, each with its own outside-click listener still live. Unconditional (not
-    // just "a different thread") so re-triggering the same comment doesn't duplicate
-    // its own panel either.
-    if (openThread) {
-      openThread.controls.close();
-      openThread = null;
-    }
-
-    const topComment = threadMessages.get(topId)?.[0];
-    const canDeleteThread = topComment ? canDeleteComment(topComment) : false;
-
-    const controls = openThreadView(shadow, x, y, buildMessages(topId), canDeleteThread, {
-      onClose: () => {
-        if (openThread?.topId === topId) openThread = null;
-      },
-      onReply: async (body, attachments) => {
-        // M-08 idempotency: one key per reply attempt (each call here is a distinct
-        // logical reply, unlike the composer's one-key-per-pin case above).
-        const clientRequestId = crypto.randomUUID();
-        const created = await api.request<CommentRecord>(`/api/v1/comments/${topId}/replies`, {
-          method: "POST",
-          guestToken: guest.guestSessionToken,
-          body: JSON.stringify({ body, layer: "client", attachments, client_request_id: clientRequestId }),
-        });
-        threadMessages.set(topId, [...(threadMessages.get(topId) ?? []), created]);
-        controls.setMessages(buildMessages(topId));
-      },
-      onEditMessage: async (id, body) => {
-        const updated = await api.request<CommentRecord>(`/api/v1/comments/${id}/body`, {
-          method: "PATCH",
-          guestToken: guest.guestSessionToken,
-          body: JSON.stringify({ body }),
-        });
-        threadMessages.set(
-          topId,
-          (threadMessages.get(topId) ?? []).map((c) => (c.id === id ? updated : c)),
-        );
-        controls.setMessages(buildMessages(topId));
-      },
-      onDeleteMessage: async (id) => {
-        await api.request(`/api/v1/comments/${id}`, {
-          method: "DELETE",
-          guestToken: guest.guestSessionToken,
-        });
-        threadMessages.set(topId, (threadMessages.get(topId) ?? []).filter((c) => c.id !== id));
-        if (id === topId) {
-          removeThreadPin(topId);
-          controls.close();
-          openThread = null;
-          return;
-        }
-        controls.setMessages(buildMessages(topId));
-      },
-      onDeleteThread: async () => {
-        await api.request(`/api/v1/comments/${topId}/thread`, {
-          method: "DELETE",
-          guestToken: guest.guestSessionToken,
-        });
-        threadMessages.delete(topId);
-        removeThreadPin(topId);
-        controls.close();
-        openThread = null;
-      },
-    }, (file) => uploadAttachment(api, guest.guestSessionToken, projectId, file));
-    openThread = { topId, controls };
-  }
-
-  function attachPinClickHandler(pin: HTMLElement, topId: string): void {
-    // Registered inside the shadow root, so document's own "create a new comment"
-    // click handler below never sees this click directly - Shadow DOM retargets it to
-    // the shadow host first (index.ts's existing `target.closest("[data-backline-root]")`
-    // check), which is what already keeps clicking a pin from also opening a fresh
-    // composer, with zero extra code needed there.
-    pin.addEventListener("click", (event) => {
-      event.stopPropagation();
-      // Read the pin's own current position rather than a coordinate captured back
-      // when the pin was first created - trackPinPosition keeps it live, so this is
-      // always where the pin visually is right now, moving target included.
-      const x = parseFloat(pin.style.left);
-      const y = parseFloat(pin.style.top);
-      openThreadForComment(topId, x, y);
-    });
-  }
+  // threadMessages/pinsByTopId (the per-page thread + pin state) and the handlers that
+  // read/mutate them all live in thread-manager.ts now - see its own comments for the
+  // reasoning behind each piece. index.ts still owns the DOM events (clicks,
+  // postMessage, websocket) that drive them.
+  const threadManager = createThreadManager({
+    shadow,
+    api,
+    guestSessionToken: guest.guestSessionToken,
+    projectId,
+    myGuestId,
+  });
+  const { threadMessages, pinsByTopId, trackPinPosition, openThreadForComment, attachPinClickHandler } =
+    threadManager;
 
   // Existing comments on this page (guest-accessible, already server-side layer-filtered)
   // get a pin each - resolved best-effort back to a live element via the same selector
@@ -412,45 +144,14 @@ async function init(config: BacklineConfig): Promise<void> {
     }, 400);
   });
 
-  // Realtime signal (12-API-WebSocket.md §12.6): presence is announced just by
-  // connecting with this page's id. comment.updated is only surfaced for a comment
-  // *this guest created* (a status change on a comment the guest can't act on isn't
-  // worth interrupting them for). comment.deleted keeps this page's thread state -
-  // pins, and any currently-open thread panel - in sync with deletes made elsewhere
-  // (another tab, or the same delete cascading from a "delete thread" call).
   const ownCommentIds = new Set<string>();
-  connectReviewSocket(
-    config.apiBaseUrl ?? "http://localhost:8000",
+  wireRealtimeUpdates(
+    shadow,
+    config.apiBaseUrl,
     guest.guestSessionToken,
     pageId,
-    (type, payload) => {
-      if (type === "comment.updated") {
-        if (!payload?.id || !ownCommentIds.has(payload.id)) return;
-        const label = STATUS_LABELS[payload.status] ?? payload.status;
-        showToast(shadow, `Your comment was updated: ${label}`);
-        return;
-      }
-
-      if (type === "comment.deleted") {
-        const commentId: string | undefined = payload?.comment_id;
-        if (!commentId) return;
-        const parentId: string | null | undefined = payload?.parent_id;
-        const topId = parentId ?? commentId;
-
-        const list = threadMessages.get(topId);
-        if (list) threadMessages.set(topId, list.filter((c) => c.id !== commentId));
-
-        if (commentId === topId) {
-          removeThreadPin(topId);
-          if (openThread?.topId === topId) {
-            openThread.controls.close();
-            openThread = null;
-          }
-        } else if (openThread?.topId === topId) {
-          openThread.controls.setMessages(buildMessages(topId));
-        }
-      }
-    },
+    threadManager,
+    ownCommentIds,
   );
 
   if (!commentingEnabled) return;

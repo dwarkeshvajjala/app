@@ -15,7 +15,13 @@ class NotificationRepository:
         self.db = db
 
     async def create(
-        self, *, workspace_id: str, user_id: str, type: str, payload_json: dict[str, Any], target_route: str | None = None
+        self,
+        *,
+        workspace_id: str,
+        user_id: str,
+        type: str,
+        payload_json: dict[str, Any],
+        target_route: str | None = None,
     ) -> dict[str, Any]:
         doc = {
             "workspace_id": workspace_id,

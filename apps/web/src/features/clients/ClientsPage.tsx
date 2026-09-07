@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import { Dialog } from "../../components/Dialog";
+import { useToast } from "../../components/Toast";
 import { qk } from "../../lib/query-keys";
 import { useDocumentTitle } from "../../lib/use-document-title";
 import { listProjects } from "../projects/api";
@@ -12,6 +13,7 @@ export function ClientsPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
   useDocumentTitle('Clients');
   const cache = useQueryClient();
+  const { toast } = useToast();
   const [params, setParams] = useSearchParams();
   const search = params.get("search") ?? "";
   const [edit, setEdit] = useState<api.Client | "new" | null>(null);
@@ -34,8 +36,8 @@ export function ClientsPage() {
             const v = e.target.value;
             if (v === 'edit') setEdit(client);
             else if (v === 'archive') setArchive(client);
-            else if (v === 'export') alert('Client export functionality coming soon.');
-            else if (v === 'new') alert('New project wizard coming soon.');
+            else if (v === 'export') toast('Client export functionality coming soon.', 'warning');
+            else if (v === 'new') toast('New project wizard coming soon.', 'warning');
           }}
         >
           <option value="" disabled>Options…</option>

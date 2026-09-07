@@ -1,226 +1,16 @@
-import { Avatar } from "@backline/ui";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import type { RefObject } from "react";
 
 import * as boardApi from "../../board/api";
 import type { CommentOut, CommentStatus } from "../../board/api";
 import { API_BASE_URL } from "../../../lib/api-client";
 import { qk } from "../../../lib/query-keys";
-import { timeAgo } from "../../../lib/time";
-import { FilterIcon, MonitorIcon, SortIcon } from "./icons";
-
-const STATUS_ORDER: CommentStatus[] = ["todo", "in_progress", "in_review", "blocked", "resolved", "wont_fix"];
-
-const STATUS_META: Record<
-  CommentStatus,
-  { label: string; dot: string; fill: string; border: string }
-> = {
-  in_review: { label: "In review", dot: "bg-status-in-review", fill: "bg-status-in-review/10 text-status-in-review", border: "border-status-in-review/40" },
-  blocked: { label: "Blocked", dot: "bg-status-blocked", fill: "bg-status-blocked/10 text-status-blocked", border: "border-status-blocked/40" },
-  todo: {
-    label: "Active",
-    dot: "bg-status-todo",
-    fill: "bg-status-todo/10 text-slate-600 dark:text-slate-300",
-    border: "border-status-todo/40",
-  },
-  in_progress: {
-    label: "In Progress",
-    dot: "bg-status-in-progress",
-    fill: "bg-status-in-progress/10 text-amber-700 dark:text-amber-300",
-    border: "border-status-in-progress/40",
-  },
-  resolved: {
-    label: "Resolved",
-    dot: "bg-status-resolved",
-    fill: "bg-status-resolved/10 text-emerald-700 dark:text-emerald-300",
-    border: "border-status-resolved/40",
-  },
-  wont_fix: {
-    label: "Won't Fix",
-    dot: "bg-status-wont-fix",
-    fill: "bg-status-wont-fix/10 text-slate-600 dark:text-slate-300",
-    border: "border-status-wont-fix/40",
-  },
-};
-
-type LayerFilter = "all" | "client" | "team";
-type SortOrder = "newest" | "oldest";
-
-interface CommentRowProps {
-  comment: CommentOut;
-  projectId: string;
-  sequenceNumber: number;
-  onNavigate: (commentId: string) => void;
-}
-
-function CommentRow({ comment, projectId, sequenceNumber, onNavigate }: CommentRowProps) {
-  const [showMenu, setShowMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: qk.projectComments(projectId) });
-
-  useEffect(() => {
-    if (!showMenu) return;
-    function onClickOutside(event: MouseEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) setShowMenu(false);
-    }
-    document.addEventListener("click", onClickOutside);
-    return () => document.removeEventListener("click", onClickOutside);
-  }, [showMenu]);
-
-  const resolveMutation = useMutation({
-    mutationFn: () =>
-      boardApi.updateComment(comment.id, {
-        status: comment.status === "resolved" ? "todo" : "resolved",
-      }),
-    onSuccess: invalidate,
-  });
-
-  const setStatusMutation = useMutation({
-    mutationFn: (status: CommentStatus) => boardApi.updateComment(comment.id, { status }),
-    onSuccess: invalidate,
-  });
-
-  const deleteThreadMutation = useMutation({
-    mutationFn: () => boardApi.deleteThread(comment.id),
-    onSuccess: invalidate,
-  });
-
-  const meta = STATUS_META[comment.status];
-
-  return (
-    <div
-      onClick={() => onNavigate(comment.id)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") onNavigate(comment.id);
-      }}
-      title="Jump to this comment on the page"
-      className="border-black/8 flex cursor-pointer flex-col gap-2 rounded-lg border bg-white p-3 text-left dark:border-white/10 dark:bg-white/5"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span
-            className={`flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold text-white ${meta.dot}`}
-            title={meta.label}
-          >
-            {sequenceNumber}
-          </span>
-          <Avatar name={comment.author_name} size={26} />
-          <div>
-            <span className="text-sm font-semibold">{comment.author_name}</span>{" "}
-            <span className="text-text-muted text-xs">{timeAgo(comment.created_at)}</span>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <span className="text-text-muted" title="Desktop capture">
-            <MonitorIcon width={14} height={14} />
-          </span>
-          <button
-            onClick={(event) => {
-              event.stopPropagation();
-              resolveMutation.mutate();
-            }}
-            disabled={resolveMutation.isPending}
-            aria-pressed={comment.status === "resolved"}
-            aria-label={comment.status === "resolved" ? "Mark as unresolved" : "Mark as resolved"}
-            title={comment.status === "resolved" ? "Resolved" : "Mark as resolved"}
-            className={`flex h-6 w-6 items-center justify-center rounded-full border ${
-              comment.status === "resolved"
-                ? "border-status-resolved bg-status-resolved text-white"
-                : "border-black/15 text-text-muted dark:border-white/15"
-            }`}
-          >
-            <svg viewBox="0 0 16 16" width="10" height="10" fill="none" aria-hidden="true">
-              <path
-                d="M3 8.5 6.5 12 13 4"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-          <div className="relative" ref={menuRef} onClick={(event) => event.stopPropagation()}>
-            <button
-              onClick={() => setShowMenu((prev) => !prev)}
-              aria-label="Comment options"
-              aria-haspopup="true"
-              className="text-text-muted flex h-6 w-6 items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10"
-            >
-              <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
-                <circle cx="3" cy="8" r="1.3" />
-                <circle cx="8" cy="8" r="1.3" />
-                <circle cx="13" cy="8" r="1.3" />
-              </svg>
-            </button>
-            {showMenu && (
-              <div className="bg-bg-surface absolute top-7 right-0 z-10 w-44 rounded-md border border-black/10 py-1 shadow-lg dark:border-white/10 dark:bg-[#14141A]">
-                <div className="text-text-muted px-3 pt-1 pb-0.5 text-[10px] font-semibold tracking-wide uppercase">
-                  Move to
-                </div>
-                {STATUS_ORDER.map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => {
-                      setShowMenu(false);
-                      setStatusMutation.mutate(status);
-                    }}
-                    disabled={status === comment.status}
-                    className="hover:bg-bg-canvas flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm disabled:opacity-40"
-                  >
-                    <span className={`h-2 w-2 rounded-full ${STATUS_META[status].dot}`} />
-                    {STATUS_META[status].label}
-                  </button>
-                ))}
-                <div className="my-1 border-t border-black/10 dark:border-white/10" />
-                <button
-                  onClick={() => {
-                    setShowMenu(false);
-                    deleteThreadMutation.mutate();
-                  }}
-                  className="text-recovery-orphaned hover:bg-bg-canvas block w-full px-3 py-1.5 text-left text-sm"
-                >
-                  Delete thread
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      <p className="text-sm">{comment.body}</p>
-      {comment.attachments.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {comment.attachments.map((attachment) => (
-            <a
-              key={attachment.url}
-              href={attachment.url}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(event) => event.stopPropagation()}
-              className="bg-bg-canvas flex max-w-[160px] items-center gap-1.5 rounded-md border border-black/10 px-2 py-1 text-xs dark:border-white/10"
-              title={attachment.filename}
-            >
-              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" aria-hidden="true" className="text-text-muted shrink-0">
-                <path
-                  d="M11.5 5.5 6.8 10.2a2 2 0 1 1-2.8-2.8l5-5a3 3 0 1 1 4.2 4.2l-5.2 5.2a1 1 0 1 1-1.4-1.4L11 5.9"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span className="truncate">{attachment.filename}</span>
-            </a>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+import { CommentsList } from "./comments/CommentsList";
+import { FilterSortBar } from "./comments/FilterSortBar";
+import { StatusChips } from "./comments/StatusChips";
+import type { LayerFilter, SortOrder } from "./comments/types";
+import { ViewOptionsBar } from "./comments/ViewOptionsBar";
 
 interface CommentsTabProps {
   projectId: string;
@@ -249,23 +39,6 @@ export function CommentsTab({ projectId, canvasRef, currentPageId }: CommentsTab
   const [activeAssignees, setActiveAssignees] = useState<string[]>([]);
   const [displayMode, setDisplayMode] = useState<"comfortable" | "compact">("comfortable");
   const [groupBy, setGroupBy] = useState<"none" | "page">("none");
-  const [showSortMenu, setShowSortMenu] = useState(false);
-  const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const sortMenuRef = useRef<HTMLDivElement>(null);
-  const filterMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function onClickOutside(event: MouseEvent) {
-      if (sortMenuRef.current && !sortMenuRef.current.contains(event.target as Node)) {
-        setShowSortMenu(false);
-      }
-      if (filterMenuRef.current && !filterMenuRef.current.contains(event.target as Node)) {
-        setShowFilterMenu(false);
-      }
-    }
-    document.addEventListener("click", onClickOutside);
-    return () => document.removeEventListener("click", onClickOutside);
-  }, []);
 
   const allThreads = (comments ?? []).filter((c) => !c.parent_id);
 
@@ -299,7 +72,7 @@ export function CommentsTab({ projectId, canvasRef, currentPageId }: CommentsTab
     if (activeStatus && c.status !== activeStatus) return false;
     if (layerFilter !== "all" && c.layer !== layerFilter) return false;
     if (currentPageOnly && c.page_id !== currentPageId) return false;
-    if (activeTags.length > 0 && !activeTags.some(t => c.tags?.includes(t as any))) return false;
+    if (activeTags.length > 0 && !activeTags.some(t => c.tags?.includes(t as NonNullable<CommentOut["tags"]>[number]))) return false;
     if (activeDeviceTypes.length > 0 && !activeDeviceTypes.includes(c.context?.device_type as string)) return false;
     if (activeBrowsers.length > 0 && !activeBrowsers.includes(c.context?.browser as string)) return false;
     if (activeAssignees.length > 0 && !activeAssignees.some(a => c.assignee_id === a || c.assignee_ids?.includes(a))) return false;
@@ -336,256 +109,54 @@ export function CommentsTab({ projectId, canvasRef, currentPageId }: CommentsTab
 
   return (
     <div className="flex flex-col gap-3 p-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">
-          Comments ({filteredThreads.length}
-          {filteredThreads.length !== allThreads.length ? ` of ${allThreads.length}` : ""})
-        </h3>
-        <button
-          onClick={() => setActiveStatus(null)}
-          className="text-accent-primary text-xs font-medium hover:underline"
-        >
-          Select all
-        </button>
-      </div>
+      <StatusChips
+        activeStatus={activeStatus}
+        statusCounts={statusCounts}
+        filteredCount={filteredThreads.length}
+        totalCount={allThreads.length}
+        onSelectAll={() => setActiveStatus(null)}
+        onStatusChipClick={onStatusChipClick}
+      />
 
-      <div className="text-text-muted text-[10px] font-semibold tracking-wide uppercase">
-        Status
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        {STATUS_ORDER.map((status) => {
-          const meta = STATUS_META[status];
-          const isActive = activeStatus === status;
-          const isShown = activeStatus === null || isActive;
-          return (
-            <button
-              key={status}
-              onClick={() => onStatusChipClick(status)}
-              aria-pressed={isShown}
-              data-active={isActive}
-              className={`flex items-center justify-between gap-2 rounded-lg border-2 px-2.5 py-2 text-xs font-medium ${meta.fill} ${
-                isActive ? "border-text-primary dark:border-white" : meta.border
-              }`}
-            >
-              <span className="flex items-center gap-1.5">
-                <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
-                {meta.label}
-              </span>
-              <span>{statusCounts[status]}</span>
-            </button>
-          );
-        })}
-      </div>
+      <FilterSortBar
+        allThreads={allThreads}
+        sortOrder={sortOrder}
+        setSortOrder={setSortOrder}
+        layerFilter={layerFilter}
+        setLayerFilter={setLayerFilter}
+        activeTags={activeTags}
+        setActiveTags={setActiveTags}
+        activeDeviceTypes={activeDeviceTypes}
+        setActiveDeviceTypes={setActiveDeviceTypes}
+        activeBrowsers={activeBrowsers}
+        setActiveBrowsers={setActiveBrowsers}
+        activeAssignees={activeAssignees}
+        setActiveAssignees={setActiveAssignees}
+      />
 
-      <div className="flex items-center gap-2 border-b border-black/10 pb-3 dark:border-white/10">
-        <div className="relative" ref={sortMenuRef}>
-          <button
-            onClick={() => {
-              setShowSortMenu((prev) => !prev);
-              setShowFilterMenu(false);
-            }}
-            className="border-black/8 text-text-muted flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
-          >
-            <SortIcon width={13} height={13} />
-            Sort
-          </button>
-          {showSortMenu && (
-            <div className="bg-bg-surface absolute top-8 left-0 z-10 w-40 rounded-md border border-black/10 py-1 shadow-lg dark:border-white/10 dark:bg-[#14141A]">
-              {(["newest", "oldest"] as SortOrder[]).map((order) => (
-                <button
-                  key={order}
-                  onClick={() => {
-                    setSortOrder(order);
-                    setShowSortMenu(false);
-                  }}
-                  className={`hover:bg-bg-canvas block w-full px-3 py-1.5 text-left text-sm ${
-                    sortOrder === order ? "text-accent-primary font-medium" : ""
-                  }`}
-                >
-                  {order === "newest" ? "Newest first" : "Oldest first"}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+      <ViewOptionsBar
+        currentPageId={currentPageId}
+        currentPageOnly={currentPageOnly}
+        setCurrentPageOnly={setCurrentPageOnly}
+        hideResolved={hideResolved}
+        setHideResolved={setHideResolved}
+        displayMode={displayMode}
+        setDisplayMode={setDisplayMode}
+        groupBy={groupBy}
+        setGroupBy={setGroupBy}
+      />
 
-        <div className="relative" ref={filterMenuRef}>
-          <button
-            onClick={() => {
-              setShowFilterMenu((prev) => !prev);
-              setShowSortMenu(false);
-            }}
-            className="border-black/8 text-text-muted flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium hover:bg-black/5 dark:border-white/10 dark:hover:bg-white/10"
-          >
-            <FilterIcon width={13} height={13} />
-            Filter
-            {(() => {
-              const count = (layerFilter !== "all" ? 1 : 0) + activeTags.length + activeDeviceTypes.length + activeBrowsers.length + activeAssignees.length;
-              return count > 0 ? <span className="bg-accent-primary text-white rounded-full px-1.5 py-0.5 text-[9px] leading-none">{count}</span> : null;
-            })()}
-          </button>
-          {showFilterMenu && (
-            <div className="bg-bg-surface absolute top-8 left-0 z-10 w-64 rounded-md border border-black/10 p-3 shadow-lg dark:border-white/10 dark:bg-[#14141A] flex flex-col gap-3">
-              <label className="flex flex-col gap-1 text-xs font-medium">
-                Layer
-                <select
-                  value={layerFilter}
-                  onChange={(e) => setLayerFilter(e.target.value as LayerFilter)}
-                  className="rounded border border-black/10 px-2 py-1 dark:border-white/10 dark:bg-transparent"
-                >
-                  <option value="all">All layers</option>
-                  <option value="client">Client visible</option>
-                  <option value="team">Team only</option>
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1 text-xs font-medium">
-                Tags
-                <select
-                  multiple
-                  size={3}
-                  value={activeTags}
-                  onChange={(e) => setActiveTags(Array.from(e.target.selectedOptions).map(o => o.value))}
-                  className="rounded border border-black/10 px-2 py-1 dark:border-white/10 dark:bg-transparent"
-                >
-                  {["Bug", "Copy", "Design", "Responsive", "Content", "Accessibility"].map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1 text-xs font-medium">
-                Browsers
-                <select
-                  multiple
-                  size={2}
-                  value={activeBrowsers}
-                  onChange={(e) => setActiveBrowsers(Array.from(e.target.selectedOptions).map(o => o.value))}
-                  className="rounded border border-black/10 px-2 py-1 dark:border-white/10 dark:bg-transparent"
-                >
-                  {Array.from(new Set(allThreads.map(c => c.context?.browser as string).filter(Boolean))).map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-              </label>
-
-              <button
-                type="button"
-                className="text-xs text-text-muted hover:text-text-primary text-left"
-                onClick={() => {
-                  setLayerFilter("all");
-                  setActiveTags([]);
-                  setActiveDeviceTypes([]);
-                  setActiveBrowsers([]);
-                  setActiveAssignees([]);
-                }}
-              >
-                Clear all filters
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2 border-b border-black/10 pb-3 dark:border-white/10">
-        <label
-          className={`flex items-center gap-2 text-xs ${
-            currentPageId ? "text-text-primary" : "text-text-muted"
-          }`}
-          title={currentPageId ? undefined : "Load a page in the canvas first"}
-        >
-          <input
-            type="checkbox"
-            checked={currentPageOnly}
-            disabled={!currentPageId}
-            onChange={(event) => setCurrentPageOnly(event.target.checked)}
-          />
-          Show comments on current page only
-        </label>
-        <label className="flex items-center gap-2 text-xs text-text-primary">
-          <input
-            type="checkbox"
-            checked={hideResolved}
-            onChange={(event) => setHideResolved(event.target.checked)}
-          />
-          Hide resolved threads
-        </label>
-      </div>
-
-      <div className="flex items-center gap-4 border-b border-black/10 pb-3 dark:border-white/10">
-        <label className="flex items-center gap-2 text-xs">
-          Display:
-          <select
-            value={displayMode}
-            onChange={(e) => setDisplayMode(e.target.value as any)}
-            className="rounded border border-black/10 px-2 py-1 dark:border-white/10 dark:bg-transparent"
-          >
-            <option value="comfortable">Comfortable</option>
-            <option value="compact">Compact</option>
-          </select>
-        </label>
-        <label className="flex items-center gap-2 text-xs">
-          Group by:
-          <select
-            value={groupBy}
-            onChange={(e) => setGroupBy(e.target.value as any)}
-            className="rounded border border-black/10 px-2 py-1 dark:border-white/10 dark:bg-transparent"
-          >
-            <option value="none">None</option>
-            <option value="page">Page</option>
-          </select>
-        </label>
-      </div>
-
-      {isLoading && <p className="text-text-muted text-sm">Loading...</p>}
-      {!isLoading && allThreads.length === 0 && (
-        <p className="text-text-muted text-sm">No comments on this project yet.</p>
-      )}
-      {!isLoading && allThreads.length > 0 && filteredThreads.length === 0 && (
-        <p className="text-text-muted text-sm">No comments match the current filters.</p>
-      )}
-
-      <div className={`flex flex-col ${displayMode === 'compact' ? 'gap-0' : 'gap-2'}`}>
-        {(() => {
-          if (groupBy === 'none') {
-            return sortedThreads.map((comment) => (
-              <CommentRow
-                key={comment.id}
-                comment={comment}
-                projectId={projectId}
-                sequenceNumber={sequenceByCommentId.get(comment.id) ?? 0}
-                onNavigate={navigateToComment}
-              />
-            ));
-          } else {
-            // Group by page
-            const groups = new Map<string, typeof sortedThreads>();
-            for (const comment of sortedThreads) {
-              const p = comment.page_id;
-              if (!groups.has(p)) groups.set(p, []);
-              groups.get(p)!.push(comment);
-            }
-            return Array.from(groups.entries()).map(([pageId, comments]) => (
-              <div key={pageId} className="mb-4">
-                <h3 className="text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">
-                  Page ID: {pageId}
-                </h3>
-                <div className={`flex flex-col ${displayMode === 'compact' ? 'gap-0' : 'gap-2'}`}>
-                  {comments.map((comment) => (
-                    <CommentRow
-                      key={comment.id}
-                      comment={comment}
-                      projectId={projectId}
-                      sequenceNumber={sequenceByCommentId.get(comment.id) ?? 0}
-                      onNavigate={navigateToComment}
-                    />
-                  ))}
-                </div>
-              </div>
-            ));
-          }
-        })()}
-      </div>
+      <CommentsList
+        isLoading={isLoading}
+        allThreads={allThreads}
+        filteredThreads={filteredThreads}
+        sortedThreads={sortedThreads}
+        displayMode={displayMode}
+        groupBy={groupBy}
+        projectId={projectId}
+        sequenceByCommentId={sequenceByCommentId}
+        onNavigate={navigateToComment}
+      />
     </div>
   );
 }

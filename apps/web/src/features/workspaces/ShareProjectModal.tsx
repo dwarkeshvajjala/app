@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { qk } from "../../lib/query-keys";
 import * as shareLinksApi from "../share-links/api";
 import * as workspacesApi from "./api";
 import type { ProjectOut } from "../projects/api";
@@ -57,7 +58,7 @@ export function ShareProjectModal({
   }, [onClose]);
 
   const { data: shareLinks } = useQuery({
-    queryKey: ["project", project.id, "share-links"],
+    queryKey: qk.shareLinks(project.id),
     queryFn: () => shareLinksApi.listShareLinks(project.id),
   });
   const activeLink = (shareLinks ?? []).find((link) => link.revoked_at === null);
@@ -79,7 +80,7 @@ export function ShareProjectModal({
     onSuccess: () => {
       setPasscode("");
       setDomainRestrictionsStr("");
-      return queryClient.invalidateQueries({ queryKey: ["project", project.id, "share-links"] });
+      return queryClient.invalidateQueries({ queryKey: qk.shareLinks(project.id) });
     },
   });
 

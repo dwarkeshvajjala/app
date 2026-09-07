@@ -18,6 +18,21 @@ from app.modules.projects.schemas import (
 
 
 def _project_out(doc: dict[str, Any]) -> ProjectOut:
+    # M-04: settings_json may be missing in documents from before this feature was
+    # added, or may be incomplete (missing new fields or old fields). Merge with
+    # sensible defaults so ProjectSettingsOut unpacking never fails.
+    settings_json = doc.get("settings_json", {})
+    settings_defaults = {
+        "proxy_mode": False,
+        "snippet_installed": False,
+        "capture_device_details": False,
+        "reanchor_on_deploy": False,
+        "reviewer_can_resolve": False,
+        "show_board_to_client": False,
+        "client_digest_enabled": False,
+    }
+    settings_merged = {**settings_defaults, **settings_json}
+
     return ProjectOut(
         id=str(doc["_id"]),
         workspace_id=doc["workspace_id"],
@@ -30,7 +45,7 @@ def _project_out(doc: dict[str, Any]) -> ProjectOut:
         # backfilling every prior row isn't worth it at this scale (no migration tooling
         # exists yet, per core/indexes.py's own docstring).
         created_by=doc.get("created_by"),
-        settings=ProjectSettingsOut(**doc["settings_json"]),
+        settings=ProjectSettingsOut(**settings_merged),
         archived_at=doc["archived_at"],
         created_at=doc["created_at"],
         updated_at=doc["updated_at"],

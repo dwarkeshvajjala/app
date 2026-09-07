@@ -40,7 +40,9 @@ def _set_refresh_cookie(response: Response, raw_refresh_token: str) -> None:
 
 
 @router.post("/google/callback", response_model=TokenPairOut)
-async def google_callback(body: GoogleCallbackRequest, request: Request, response: Response) -> TokenPairOut:
+async def google_callback(
+    body: GoogleCallbackRequest, request: Request, response: Response
+) -> TokenPairOut:
     ua = request.headers.get("user-agent")
     ip = get_client_ip(request)
     issued = await auth_service.login_with_google(get_db(), body.code, ua=ua, ip=ip)
@@ -114,7 +116,9 @@ async def list_sessions(
     refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
 ) -> list[SessionOut]:
     """FD-AUD-011: Lists all active sessions for the current user."""
-    return await auth_service.list_sessions(get_db(), session.user_id, current_refresh_token=refresh_token)
+    return await auth_service.list_sessions(
+        get_db(), session.user_id, current_refresh_token=refresh_token
+    )
 
 
 @router.delete("/sessions/{family_id}", status_code=204)
@@ -132,6 +136,8 @@ async def update_me(
     session: Session = Depends(get_current_session),
 ) -> UserOut:
     """FD-AUD-046: Update user profile and preferences."""
-    return await auth_service.update_user(get_db(), session.user_id, body.model_dump(exclude_unset=True))
+    return await auth_service.update_user(
+        get_db(), session.user_id, body.model_dump(exclude_unset=True)
+    )
 
 

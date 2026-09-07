@@ -1,6 +1,6 @@
 import re
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -72,7 +72,9 @@ async def search(
     )
     comments = await repo.search_comments(pipeline, each_limit)
     for comment in comments:
-        kind = "ticket" if comment.get("is_standalone") else "comment"
+        kind: Literal["ticket", "comment"] = (
+            "ticket" if comment.get("is_standalone") else "comment"
+        )
         title = comment["body"].strip().replace("\n", " ")[:140] or "Untitled comment"
         items.append(
             SearchResultOut(

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Link, useOutletContext, useSearchParams } from "react-router-dom";
+import { BoltIcon, BuildingIcon, CommentBubbleIcon, FolderIcon, LinkIcon, PersonIcon } from "../../components/icons";
 import { qk } from "../../lib/query-keys";
 import { useDocumentTitle } from "../../lib/use-document-title";
 import { listMembers } from "../workspaces/api";
@@ -8,12 +9,12 @@ import type { WorkspaceOut } from "../workspaces/api";
 import { listActivity } from "./api";
 
 function getEventIcon(type: string) {
-  if (type.startsWith("comment.")) return "💬";
-  if (type.startsWith("project.")) return "📁";
-  if (type.startsWith("client.")) return "🏢";
-  if (type.startsWith("share_link.")) return "🔗";
-  if (type.startsWith("member.")) return "👤";
-  return "⚡";
+  if (type.startsWith("comment.")) return CommentBubbleIcon;
+  if (type.startsWith("project.")) return FolderIcon;
+  if (type.startsWith("client.")) return BuildingIcon;
+  if (type.startsWith("share_link.")) return LinkIcon;
+  if (type.startsWith("member.")) return PersonIcon;
+  return BoltIcon;
 }
 
 export function ActivityPage() {
@@ -49,8 +50,8 @@ export function ActivityPage() {
           <h2 className="bl-group-title" style={{ position: 'sticky', top: 0, background: 'var(--bg-base)', padding: '0.5rem 0', zIndex: 1 }}>{date}</h2>
           {events.map((event) => (
             <article key={event.id} style={{ display: 'flex', gap: '1rem', padding: '1rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
-              <span className="bl-avatar" style={{ fontSize: '1.2rem', background: 'var(--bg-elevated)' }}>
-                {getEventIcon(event.type)}
+              <span className="bl-avatar" style={{ background: 'var(--bg-elevated)' }}>
+                {(() => { const EventIcon = getEventIcon(event.type); return <EventIcon width="18" height="18" />; })()}
               </span>
               <div style={{ flex: 1 }}>
                 <p>

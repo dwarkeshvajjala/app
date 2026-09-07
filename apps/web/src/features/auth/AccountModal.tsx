@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Dialog } from "../../components/Dialog";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
+import { useToast } from "../../components/Toast";
 import { useAuth } from "./AuthContext";
 import { updateProfile, listSessions, revokeSession, type SessionOut } from "./api";
 import { useLocale } from "../../lib/use-locale";
@@ -11,7 +13,10 @@ interface AccountModalProps {
 export function AccountModal({ onClose }: AccountModalProps) {
   const { user, logout, updateUser } = useAuth();
   const { locale, setLocale } = useLocale();
-  
+  const { toast } = useToast();
+  const [revokeCandidate, setRevokeCandidate] = useState<SessionOut | null>(null);
+  const [revoking, setRevoking] = useState(false);
+
   const [name, setName] = useState(user?.name ?? "");
   const [prefs, setPrefs] = useState({
     notify_on_assignment: true,
@@ -19,8 +24,7 @@ export function AccountModal({ onClose }: AccountModalProps) {
     notify_on_reply: true,
     notify_on_status_change: true,
     daily_digest: true,
-    // Cast it since UserOut type isn't fully updated everywhere yet
-    ...(user as any)?.preferences
+    ...user?.preferences,
   });
   
   const [sessions, setSessions] = useState<SessionOut[]>([]);
@@ -55,22 +59,27 @@ export function AccountModal({ onClose }: AccountModalProps) {
         preferences: prefs,
       });
       updateUser(updated);
+      toast("Account settings saved.");
       onClose();
     } catch (err) {
       console.error(err);
-      // Could show a toast here
+      toast(err instanceof Error ? err.message : "Could not save your changes.", "error");
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleRevoke(familyId: string) {
-    if (!window.confirm("Sign out of this session?")) return;
+  async function doRevoke(familyId: string) {
+    setRevoking(true);
     try {
       await revokeSession(familyId);
       setSessions(s => s.filter(x => x.id !== familyId));
+      setRevokeCandidate(null);
     } catch (err) {
       console.error(err);
+      toast(err instanceof Error ? err.message : "Could not sign out that session.", "error");
+    } finally {
+      setRevoking(false);
     }
   }
 
@@ -156,7 +165,7 @@ export function AccountModal({ onClose }: AccountModalProps) {
                     </p>
                   </div>
                   {!s.current && (
-                    <button type="button" onClick={() => void handleRevoke(s.id)} style={{ background: "none", border: "none", color: "var(--bl-red)", cursor: "pointer", fontSize: "12px" }}>
+                    <button type="button" onClick={() => setRevokeCandidate(s)} style={{ background: "none", border: "none", color: "var(--bl-red)", cursor: "pointer", fontSize: "12px" }}>
                       Sign out
                     </button>
                   )}
@@ -186,6 +195,18 @@ export function AccountModal({ onClose }: AccountModalProps) {
           </div>
         </footer>
       </form>
+
+      {revokeCandidate && (
+        <ConfirmDialog
+          title="Sign out session"
+          message={`Sign out of the session on ${revokeCandidate.os || "Unknown OS"} • ${revokeCandidate.browser || "Unknown browser"}?`}
+          confirmLabel={revoking ? "Signing out..." : "Sign out"}
+          destructive
+          pending={revoking}
+          onCancel={() => setRevokeCandidate(null)}
+          onConfirm={() => doRevoke(revokeCandidate.id)}
+        />
+      )}
     </Dialog>
   );
 }

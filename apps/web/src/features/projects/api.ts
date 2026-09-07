@@ -39,6 +39,25 @@ export function duplicateProject(projectId: string) {
   return apiFetch<ProjectOut>(`/api/v1/projects/${projectId}/duplicate`, { method: "POST" });
 }
 
+export type ProjectHardDeletePreviewOut = Schemas["ProjectHardDeletePreviewOut"];
+export type ProjectHardDeleteResult = Schemas["ProjectHardDeleteResult"];
+
+export function previewHardDeleteProject(projectId: string): Promise<ProjectHardDeletePreviewOut> {
+  return apiFetch<ProjectHardDeletePreviewOut>(`/api/v1/projects/${projectId}/hard-delete/preview`, {
+    method: "POST",
+  });
+}
+
+export function confirmHardDeleteProject(
+  projectId: string,
+  body: { correlation_id: string; project_name: string },
+): Promise<ProjectHardDeleteResult> {
+  return apiFetch<ProjectHardDeleteResult>(`/api/v1/projects/${projectId}/hard-delete/confirm`, {
+    method: "POST",
+    body: JSON.stringify({ ...body, acknowledge_permanent_deletion: true }),
+  });
+}
+
 export interface ProjectSettingsUpdate {
   capture_device_details?: boolean;
   reanchor_on_deploy?: boolean;

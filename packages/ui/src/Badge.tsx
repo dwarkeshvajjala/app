@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { STATUS_LABELS } from "./workflow";
+
 export type BadgeTone =
   | "layer-client"
   | "layer-team"
@@ -40,18 +42,9 @@ export function Badge({ tone, children }: BadgeProps) {
   );
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  todo: "To do",
-  in_progress: "In progress",
-  in_review: "In review",
-  blocked: "Blocked",
-  resolved: "Resolved",
-  wont_fix: "Won't fix",
-};
-
 export function StatusBadge({ status }: { status: string }) {
   const tone = `status-${status.replace(/_/g, "-")}` as BadgeTone;
-  return <Badge tone={tone}>{STATUS_LABELS[status] ?? status}</Badge>;
+  return <Badge tone={tone}>{STATUS_LABELS[status as keyof typeof STATUS_LABELS] ?? status}</Badge>;
 }
 
 // Layer distinction is a hard requirement, not a style preference: color alone fails

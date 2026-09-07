@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import type { Schemas } from "@backline/types";
+import { PaperclipIcon } from "../../components/icons";
+import { patchProjectComment, upsertProjectComment } from "../../lib/comment-cache";
 import { qk } from "../../lib/query-keys";
 import * as workspaceApi from "../workspaces/api";
 import { MentionsInput } from "../comments/MentionsInput";
@@ -62,7 +64,7 @@ export function CommentThreadPanel({
 
   // We need the workspace ID to list members. We can get it from the workspace object if available.
   const workspaceQuery = useQuery({
-    queryKey: ['workspace'],
+    queryKey: qk.workspaces(),
     queryFn: async () => {
       const ws = await workspaceApi.listWorkspaces();
       return ws.find(w => w.slug === workspaceSlug);
@@ -71,7 +73,7 @@ export function CommentThreadPanel({
   });
 
   const membersQuery = useQuery({
-    queryKey: ['members', workspaceQuery.data?.id],
+    queryKey: qk.members(workspaceQuery.data?.id),
     queryFn: () => workspaceApi.listMembers(workspaceQuery.data!.id),
     enabled: !!workspaceQuery.data?.id,
   });
@@ -98,14 +100,7 @@ export function CommentThreadPanel({
       // the author themselves just posted appears immediately, not after a round trip.
       // Upsert by id, not a blind append: if the WS event already landed first, this
       // would otherwise add a second, duplicate copy of the same reply.
-      queryClient.setQueryData<CommentOut[]>(qk.projectComments(projectId), (old) => {
-        if (!old) return old;
-        const existingIndex = old.findIndex((c) => c.id === created.id);
-        if (existingIndex === -1) return [...old, created];
-        const next = [...old];
-        next[existingIndex] = created;
-        return next;
-      });
+      upsertProjectComment(queryClient, projectId, created);
     },
   });
 
@@ -113,13 +108,7 @@ export function CommentThreadPanel({
     mutationFn: (patch: Parameters<typeof boardApi.updateComment>[1]) => 
       boardApi.updateComment(comment.id, patch),
     onSuccess: (updated) => {
-      queryClient.setQueryData<CommentOut[]>(qk.projectComments(projectId), (old) => {
-        if (!old) return old;
-        const next = [...old];
-        const existingIndex = next.findIndex((c) => c.id === updated.id);
-        if (existingIndex !== -1) next[existingIndex] = updated;
-        return next;
-      });
+      patchProjectComment(queryClient, projectId, updated.id, updated);
     }
   });
 
@@ -238,7 +227,7 @@ export function CommentThreadPanel({
                     </select>
                   </label>
                   <label className="text-xs text-text-muted hover:text-text-primary cursor-pointer border border-transparent hover:border-black/10 dark:hover:border-white/10 rounded-md px-2 py-1">
-                    {isUploading ? "Uploading..." : "📎 Attach"}
+                    {isUploading ? "Uploading..." : <span className="inline-flex items-center gap-1"><PaperclipIcon width="14" height="14" /> Attach</span>}
                     <input
                       type="file"
                       multiple
@@ -269,7 +258,7 @@ export function CommentThreadPanel({
                 Status
                 <select
                   value={comment.status}
-                  onChange={(e) => updateMutation.mutate({ status: e.target.value as any })}
+                  onChange={(e) => updateMutation.mutate({ status: e.target.value as Schemas["CommentUpdate"]["status"] })}
                   className="rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-transparent"
                 >
                   <option value="todo">Active</option>
@@ -285,7 +274,7 @@ export function CommentThreadPanel({
                 Priority
                 <select
                   value={comment.priority || "medium"}
-                  onChange={(e) => updateMutation.mutate({ priority: e.target.value as any })}
+                  onChange={(e) => updateMutation.mutate({ priority: e.target.value as Schemas["CommentUpdate"]["priority"] })}
                   className="rounded-md border border-black/10 px-2 py-1.5 text-xs dark:border-white/10 dark:bg-transparent"
                 >
                   <option value="low">Low</option>
@@ -318,15 +307,15 @@ export function CommentThreadPanel({
               <label className="flex flex-col gap-1 text-xs font-medium">
                 Tags
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {["Bug", "Copy", "Design", "Responsive", "Content", "Accessibility"].map(tag => {
-                    const active = comment.tags?.includes(tag as any);
+                  {(["Bug", "Copy", "Design", "Responsive", "Content", "Accessibility"] as const).map(tag => {
+                    const active = comment.tags?.includes(tag);
                     return (
                       <button
                         key={tag}
                         onClick={() => {
                           const tags = new Set(comment.tags || []);
-                          if (active) tags.delete(tag as any);
-                          else tags.add(tag as any);
+                          if (active) tags.delete(tag);
+                          else tags.add(tag);
                           updateMutation.mutate({ tags: Array.from(tags) });
                         }}
                         className={`rounded px-1.5 py-0.5 text-[10px] font-medium border ${

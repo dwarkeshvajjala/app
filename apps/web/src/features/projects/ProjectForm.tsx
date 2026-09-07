@@ -18,7 +18,7 @@ export function ProjectForm({ workspace, project, onClose }: { workspace: Worksp
   const [environmentEdited, setEnvironmentEdited] = useState(Boolean(project));
   
   // Review settings
-  const settings = project?.settings as any;
+  const settings = project?.settings;
   const [captureDeviceDetails, setCaptureDeviceDetails] = useState(settings?.capture_device_details ?? false);
   const [reanchorOnDeploy, setReanchorOnDeploy] = useState(settings?.reanchor_on_deploy ?? false);
   const [reviewerCanResolve, setReviewerCanResolve] = useState(settings?.reviewer_can_resolve ?? false);
@@ -52,7 +52,7 @@ export function ProjectForm({ workspace, project, onClose }: { workspace: Worksp
     const active = links.find((l) => !l.revoked_at);
     if (active) setLink(`${window.location.origin}/review/${active.token}`);
     return current;
-  }, onSuccess: async () => { await cache.invalidateQueries({ queryKey: qk.workspace(workspace.id) }); if (project) { await cache.invalidateQueries({ queryKey: ['project', project.id] }); onClose(); } else setDone(true); } });
+  }, onSuccess: async () => { await cache.invalidateQueries({ queryKey: qk.workspace(workspace.id) }); if (project) { await cache.invalidateQueries({ queryKey: qk.project(project.id) }); onClose(); } else setDone(true); } });
   if (done && created) return <Dialog title="Project created" onClose={onClose}><div className="bl-form"><p>{created.name} is ready. Reviewers can open this link without creating an account.</p><label>Review link<input className="bl-input" readOnly value={link} onFocus={(e) => e.target.select()} /></label><button className="bl-quiet" onClick={() => { void navigator.clipboard.writeText(link).then(() => setCopied(true)).catch(() => setCopyError('Select the link and copy it manually.')); }}>{copied ? 'Copied' : 'Copy link'}</button>{copyError && <p role="alert">{copyError}</p>}<Link className="bl-button" to={`/w/${workspace.slug}/p/${created.id}`}>Open project →</Link></div></Dialog>;
   return <Dialog title={project ? "Project settings" : "Create a project"} onClose={onClose}><form className="bl-form" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
     {!project && <fieldset disabled={Boolean(created)}><legend>What are you reviewing?</legend><div className="bl-segment">{[['website','Website'],['image','Images'],['pdf','PDF']].map(([key,label]) => <button type="button" key={key} aria-pressed={type === key} onClick={() => { setType(key as typeof type); setFiles([]); }}>{label}</button>)}</div></fieldset>}

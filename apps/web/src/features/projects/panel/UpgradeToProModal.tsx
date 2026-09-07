@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+import { useToast } from "../../../components/Toast";
+
 const FEATURES = [
   "Create unlimited Projects",
   "Invite unlimited guests to collaborate without creating an account",
@@ -15,6 +17,7 @@ const ANNUAL_DISCOUNT = 0.16;
 // static only, same as every other pro-gated surface in this pass: no real billing
 // integration exists yet, "Upgrade Now" doesn't charge anything.
 export function UpgradeToProModal({ onClose }: { onClose: () => void }) {
+  const { toast } = useToast();
   const [billing, setBilling] = useState<"monthly" | "annually">("monthly");
   const [seats, setSeats] = useState(1);
 
@@ -115,7 +118,7 @@ export function UpgradeToProModal({ onClose }: { onClose: () => void }) {
             </p>
           </div>
           <button
-            onClick={() => alert("Billing isn't wired up yet - coming soon.")}
+            onClick={() => toast("Billing isn't wired up yet - coming soon.", "warning")}
             className="from-accent-primary rounded-lg bg-gradient-to-r to-fuchsia-500 px-5 py-2.5 text-sm font-semibold whitespace-nowrap text-white"
           >
             Upgrade Now

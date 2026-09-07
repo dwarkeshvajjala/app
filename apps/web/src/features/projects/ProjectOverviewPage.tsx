@@ -1,10 +1,14 @@
+import type { Schemas } from "@backline/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useOutletContext, useParams } from "react-router-dom";
+import { Link, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 
 import { useWSEvent } from "../../app/WSProvider";
-import { API_BASE_URL } from "../../lib/api-client";
+import { API_BASE_URL, apiFetch } from "../../lib/api-client";
+import { removeProjectComment, upsertProjectComment } from "../../lib/comment-cache";
 import { qk } from "../../lib/query-keys";
+
+type PageOut = Schemas["PageOut"];
 import * as boardApi from "../board/api";
 import type { CommentOut } from "../board/api";
 import * as shareLinksApi from "../share-links/api";
@@ -21,12 +25,23 @@ import { ProjectPagesModal } from "./ProjectPagesModal";
 export function ProjectOverviewPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
   const { projectId } = useParams<{ projectId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showShare, setShowShare] = useState(false);
   const [showPages, setShowPages] = useState(false);
   const [mode, setMode] = useState<CanvasMode>("comment");
   const [viewport, setViewport] = useState<ViewportOption | null>(null);
   const canvasRef = useRef<HTMLIFrameElement>(null);
   const queryClient = useQueryClient();
+
+  // FD-AUD-025: page tabs above the canvas, deep-linkable via ?page=<id> - shares
+  // ProjectPagesModal's query key/cache so add/rename/reorder there is reflected here
+  // without a second fetch.
+  const activePageIdParam = searchParams.get("page");
+  const { data: pages } = useQuery({
+    queryKey: qk.projectPages(projectId ?? ""),
+    queryFn: () => apiFetch<PageOut[]>(`/api/v1/projects/${projectId}/pages`),
+    enabled: !!projectId,
+  });
 
   // Cross-origin (the canvas is served from the API's own proxy origin, not this
   // dashboard's) - the widget (apps/widget/src/index.ts) posts this once it knows
@@ -42,13 +57,13 @@ export function ProjectOverviewPage() {
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
 
   const { data: project, isLoading } = useQuery({
-    queryKey: ["project", projectId],
+    queryKey: qk.project(projectId ?? ""),
     queryFn: () => projectsApi.getProject(projectId!),
     enabled: !!projectId,
   });
 
   const { data: shareLinks } = useQuery({
-    queryKey: ["project", projectId, "share-links"],
+    queryKey: qk.shareLinks(projectId ?? ""),
     queryFn: () => shareLinksApi.listShareLinks(projectId!),
     enabled: !!projectId,
   });
@@ -67,14 +82,7 @@ export function ProjectOverviewPage() {
   const upsertComment = useCallback(
     (payload: CommentOut & { project_id: string }) => {
       if (payload.project_id !== projectId) return;
-      queryClient.setQueryData<CommentOut[]>(qk.projectComments(projectId ?? ""), (old) => {
-        if (!old) return old;
-        const existingIndex = old.findIndex((c) => c.id === payload.id);
-        if (existingIndex === -1) return [...old, payload];
-        const next = [...old];
-        next[existingIndex] = payload;
-        return next;
-      });
+      upsertProjectComment(queryClient, projectId ?? "", payload);
     },
     [projectId, queryClient],
   );
@@ -84,9 +92,7 @@ export function ProjectOverviewPage() {
   const removeComment = useCallback(
     (payload: { comment_id: string; project_id: string }) => {
       if (payload.project_id !== projectId) return;
-      queryClient.setQueryData<CommentOut[]>(qk.projectComments(projectId ?? ""), (old) =>
-        old ? old.filter((c) => c.id !== payload.comment_id) : old,
-      );
+      removeProjectComment(queryClient, projectId ?? "", payload.comment_id);
     },
     [projectId, queryClient],
   );
@@ -96,13 +102,25 @@ export function ProjectOverviewPage() {
     function onMessage(event: MessageEvent) {
       if (event.source !== canvasRef.current?.contentWindow) return;
       if (event.data?.type === "backline:page-registered") {
-        setCurrentPageId(event.data.pageId as string);
+        const pageId = event.data.pageId as string;
+        setCurrentPageId(pageId);
         setIframeStatus("loaded");
+        // Keep the URL's ?page= honest when the reviewer navigates within the
+        // reviewed site itself (an internal link), not just when they click a tab.
+        setSearchParams(
+          (prev) => {
+            if (prev.get("page") === pageId) return prev;
+            const next = new URLSearchParams(prev);
+            next.set("page", pageId);
+            return next;
+          },
+          { replace: true },
+        );
       }
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [setSearchParams]);
 
   useEffect(() => {
     setIframeStatus("loading");
@@ -132,13 +150,55 @@ export function ProjectOverviewPage() {
   // already has it, so proxy is the reliable default for "show me the live site here."
   const embedLink = activeLinks.find((link) => link.mode === "proxy") ?? activeLinks[0];
   const canvasUrl = embedLink ? `${API_BASE_URL}/proxy/${embedLink.token}/` : null;
+
+  const sortedPages = [...(pages ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+  // currentPageId (what the widget last actually reported) wins over the URL's own
+  // ?page= for which tab reads as "active" - the URL param is what *requests* a
+  // navigation, currentPageId is what's *actually* loaded right now.
+  const activePage =
+    sortedPages.find((p) => p.id === currentPageId) ??
+    sortedPages.find((p) => p.id === activePageIdParam) ??
+    null;
+
+  // Path (+query) within the reviewed site to request through the proxy - "" path
+  // means the site's own root, matching canvasUrl's existing bare-trailing-slash
+  // default. Falls back to root rather than guessing if a page's stored URL doesn't
+  // actually belong to this project's own target_origin.
+  function proxyRequestFor(page: PageOut | null): { path: string; search: URLSearchParams } {
+    if (!page) return { path: "", search: new URLSearchParams() };
+    try {
+      const pageUrl = new URL(page.url_normalized);
+      const targetUrl = new URL(project!.target_origin);
+      if (pageUrl.host !== targetUrl.host) return { path: "", search: new URLSearchParams() };
+      return { path: pageUrl.pathname.replace(/^\//, ""), search: new URLSearchParams(pageUrl.search) };
+    } catch {
+      return { path: "", search: new URLSearchParams() };
+    }
+  }
+
+  function goToPage(pageId: string) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("page", pageId);
+        return next;
+      },
+      { replace: true },
+    );
+  }
+
   // blMode tells the widget (apps/widget/src/index.ts) whether to attach its
   // click-to-create-comment listener at all - Browse mode leaves the site otherwise
   // untouched (existing pins still visible for context), Comment mode is this widget's
-  // full normal behavior. Changing it changes the iframe's own src, which is what
-  // actually reloads it with the new mode - there's no live channel into an
+  // full normal behavior. Changing it (or the active page's path) changes the iframe's
+  // own src, which is what actually reloads it - there's no live channel into an
   // already-loaded proxied page's widget instance.
-  const iframeSrc = canvasUrl ? `${canvasUrl}?blMode=${mode}` : null;
+  const activePageRequest = proxyRequestFor(activePage);
+  const iframeSearch = new URLSearchParams(activePageRequest.search);
+  iframeSearch.set("blMode", mode);
+  const iframeSrc = canvasUrl
+    ? `${API_BASE_URL}/proxy/${embedLink!.token}/${activePageRequest.path}?${iframeSearch.toString()}`
+    : null;
   const totalComments = comments?.length ?? 0;
 
   // h-screen, not calc(100vh - Npx): this page renders under ProjectLayout, which
@@ -203,6 +263,29 @@ export function ProjectOverviewPage() {
       <div className="bg-bg-canvas relative min-h-0 flex-1 flex flex-col">
         {iframeSrc ? (
           <>
+            {sortedPages.length > 0 && (
+              <div
+                role="tablist"
+                aria-label="Pages"
+                className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-black/10 bg-white px-2 py-1 dark:border-white/10 dark:bg-[#1C1C21] z-20"
+              >
+                {sortedPages.map((page) => (
+                  <button
+                    key={page.id}
+                    role="tab"
+                    aria-selected={activePage?.id === page.id}
+                    onClick={() => goToPage(page.id)}
+                    className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap ${
+                      activePage?.id === page.id
+                        ? "bg-accent-primary text-white"
+                        : "text-text-muted hover:bg-black/5 dark:hover:bg-white/5"
+                    }`}
+                  >
+                    {page.title || page.url_normalized}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="flex h-10 shrink-0 items-center gap-2 border-b border-black/10 px-4 bg-white dark:bg-[#1C1C21] dark:border-white/10 z-20 shadow-sm">
               <span className="text-xs text-text-muted font-medium truncate flex-1 flex items-center gap-2">
                 <span className="bg-black/5 dark:bg-white/5 px-2 py-1 rounded text-black dark:text-white flex-1 truncate font-mono">

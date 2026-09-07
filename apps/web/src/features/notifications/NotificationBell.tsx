@@ -3,12 +3,14 @@ import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useWSEvent } from "../../app/WSProvider";
+import { BellIcon } from "../../components/icons";
+import { qk } from "../../lib/query-keys";
 import { useAuth } from "../auth/AuthContext";
 import * as notificationsApi from "./api";
 import type { NotificationOut } from "./api";
 
-const UNREAD_COUNT_KEY = ["notifications", "unread-count"];
-const LIST_KEY = ["notifications", "list"];
+const UNREAD_COUNT_KEY = qk.notificationsUnread();
+const LIST_KEY = qk.notificationsList();
 
 // Map notification types to human-readable descriptions (FD-AUD-006)
 function describe(notification: NotificationOut): string {
@@ -99,7 +101,7 @@ export function NotificationBell() {
         aria-label={`Notifications${unread && unread > 0 ? `, ${unread} unread` : ""}`}
         aria-expanded={open}
       >
-        🔔
+        <BellIcon />
         {!!unread && unread > 0 && (
           <span className="bg-recovery-orphaned absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white">
             {unread > 9 ? "9+" : unread}

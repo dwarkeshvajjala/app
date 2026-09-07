@@ -3,6 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { ConfirmDialog } from "../../components/ConfirmDialog";
+import { qk } from "../../lib/query-keys";
 import { timeAgo } from "../../lib/time";
 import * as projectsApi from "../projects/api";
 import * as shareLinksApi from "../share-links/api";
@@ -35,6 +37,8 @@ interface ProjectCardProps {
 export function ProjectCard({ workspaceSlug, project, creator, onShare }: ProjectCardProps) {
   const [copyState, setCopyState] = useState<"idle" | "copying" | "copied">("idle");
   const [showMenu, setShowMenu] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -79,22 +83,30 @@ export function ProjectCard({ workspaceSlug, project, creator, onShare }: Projec
     setShowMenu((prev) => !prev);
   }
 
-  async function handleArchive(event: React.MouseEvent) {
+  function handleArchive(event: React.MouseEvent) {
     event.preventDefault();
     event.stopPropagation();
     setShowMenu(false);
     // Soft-archive (still individually fetchable, never a hard delete) - but there's
     // no "unarchive" UI anywhere yet, so once it's off this list a member has no way
-    // back to it through the product. A native confirm is a deliberately heavier bar
-    // than "Remove"/"Revoke" elsewhere in this app, which don't confirm at all.
-    if (!window.confirm(`Archive "${project.name}"? It will no longer appear on this dashboard.`)) {
-      return;
+    // back to it through the product. A confirmation dialog is a deliberately heavier
+    // bar than "Remove"/"Revoke" elsewhere in this app, which don't confirm at all.
+    setConfirmArchive(true);
+  }
+
+  async function doArchive() {
+    setArchiving(true);
+    try {
+      await projectsApi.archiveProject(project.id);
+      await queryClient.invalidateQueries({ queryKey: qk.projects(project.workspace_id) });
+      setConfirmArchive(false);
+    } finally {
+      setArchiving(false);
     }
-    await projectsApi.archiveProject(project.id);
-    await queryClient.invalidateQueries({ queryKey: ["workspace", project.workspace_id, "projects"] });
   }
 
   return (
+    <>
     <Link
       to={`/w/${workspaceSlug}/p/${project.id}`}
       className="group block overflow-hidden rounded-lg border border-black/10 transition-shadow hover:shadow-md dark:border-white/10"
@@ -215,5 +227,18 @@ export function ProjectCard({ workspaceSlug, project, creator, onShare }: Projec
         <span className="text-text-muted shrink-0 text-xs">Updated {timeAgo(project.updated_at)}</span>
       </div>
     </Link>
+
+    {confirmArchive && (
+      <ConfirmDialog
+        title="Archive project"
+        message={`Archive "${project.name}"? It will no longer appear on this dashboard.`}
+        confirmLabel={archiving ? "Archiving..." : "Archive"}
+        destructive
+        pending={archiving}
+        onCancel={() => setConfirmArchive(false)}
+        onConfirm={doArchive}
+      />
+    )}
+    </>
   );
 }

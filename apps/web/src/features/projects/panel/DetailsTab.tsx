@@ -42,7 +42,7 @@ export function DetailsTab({
   const [showCollaborators, setShowCollaborators] = useState(false);
 
   const { data: members } = useQuery({
-    queryKey: ["workspace", workspaceId, "members"],
+    queryKey: qk.members(workspaceId),
     queryFn: () => workspacesApi.listMembers(workspaceId),
   });
   const { data: comments } = useQuery({
@@ -50,7 +50,7 @@ export function DetailsTab({
     queryFn: () => boardApi.listProjectComments(project.id),
   });
   const { data: pages } = useQuery({
-    queryKey: ["project", project.id, "pages"],
+    queryKey: qk.projectPages(project.id),
     queryFn: () => pagesApi.listProjectPages(project.id),
   });
 

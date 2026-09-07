@@ -1,3 +1,5 @@
+import { useToast } from "../../../components/Toast";
+
 const CONNECTORS = [
   { name: "Claude", color: "#D97757" },
   { name: "Cursor", color: "#14141A" },
@@ -8,6 +10,7 @@ const CONNECTORS = [
 // Static shell only - no real MCP server exists yet (Connect intentionally does
 // nothing beyond a toast). Matches this tab's own stated scope: wired up later.
 export function McpTab() {
+  const { toast } = useToast();
   return (
     <div className="flex flex-col gap-5 p-4">
       <p className="text-text-muted text-sm">
@@ -33,7 +36,7 @@ export function McpTab() {
                 <span className="text-sm font-medium">{connector.name}</span>
               </div>
               <button
-                onClick={() => alert(`Connecting ${connector.name} is coming soon.`)}
+                onClick={() => toast(`Connecting ${connector.name} is coming soon.`, "warning")}
                 className="rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
               >
                 Connect
@@ -42,7 +45,7 @@ export function McpTab() {
           ))}
         </div>
         <button
-          onClick={() => alert("Adding other MCP clients is coming soon.")}
+          onClick={() => toast("Adding other MCP clients is coming soon.", "warning")}
           className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-black/10 py-2.5 text-sm font-medium dark:border-white/10"
         >
           + Add other MCP

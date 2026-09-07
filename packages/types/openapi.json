@@ -5,6 +5,235 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/v1/auth/account": {
+      "get": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Profile",
+        "operationId": "profile_api_v1_auth_account_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Update Profile",
+        "operationId": "update_profile_api_v1_auth_account_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/account/sessions": {
+      "get": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Sessions",
+        "operationId": "sessions_api_v1_auth_account_sessions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/app__modules__auth__account__SessionOut"
+                  },
+                  "type": "array",
+                  "title": "Response Sessions Api V1 Auth Account Sessions Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/account/sessions/others": {
+      "delete": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Revoke Other Sessions",
+        "operationId": "revoke_other_sessions_api_v1_auth_account_sessions_others_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/account/sessions/{family_id}": {
+      "delete": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Revoke Session",
+        "operationId": "revoke_session_api_v1_auth_account_sessions__family_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "family_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Family Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/search": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Search",
+        "operationId": "search_api_v1_workspaces__workspace_id__search_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResultsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/google/callback": {
       "post": {
         "tags": [
@@ -302,7 +531,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SessionOut"
+                    "$ref": "#/components/schemas/app__modules__auth__schemas__SessionOut"
                   },
                   "title": "Response List Sessions Api V1 Auth Sessions Get"
                 }
@@ -1562,76 +1791,6 @@
         "responses": {
           "204": {
             "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/workspaces/{workspace_id}/search": {
-      "get": {
-        "tags": [
-          "dashboard"
-        ],
-        "summary": "Search",
-        "operationId": "search_api_v1_workspaces__workspace_id__search_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workspace_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 200,
-              "title": "Q"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 50,
-              "minimum": 1,
-              "default": 20,
-              "title": "Limit"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SearchResultsOut"
-                }
-              }
-            }
           },
           "422": {
             "description": "Validation Error",
@@ -4430,6 +4589,9 @@
         "properties": {
           "tier": {
             "type": "integer",
+            "enum": [
+              1
+            ],
             "const": 1,
             "title": "Tier"
           },
@@ -4661,6 +4823,9 @@
         "properties": {
           "type": {
             "type": "string",
+            "enum": [
+              "clickup"
+            ],
             "const": "clickup",
             "title": "Type",
             "default": "clickup"
@@ -4998,7 +5163,6 @@
             "title": "Due At"
           },
           "anchor": {
-            "additionalProperties": true,
             "type": "object",
             "title": "Anchor"
           },
@@ -5013,7 +5177,6 @@
             "title": "Recovery Status"
           },
           "context": {
-            "additionalProperties": true,
             "type": "object",
             "title": "Context"
           },
@@ -5490,6 +5653,9 @@
           },
           "layer": {
             "type": "string",
+            "enum": [
+              "client"
+            ],
             "const": "client",
             "title": "Layer",
             "default": "client"
@@ -5643,7 +5809,6 @@
             "title": "Type"
           },
           "config_summary": {
-            "additionalProperties": true,
             "type": "object",
             "title": "Config Summary"
           },
@@ -5800,7 +5965,6 @@
             "title": "Type"
           },
           "payload": {
-            "additionalProperties": true,
             "type": "object",
             "title": "Payload"
           },
@@ -5995,6 +6159,115 @@
         "type": "object",
         "title": "PageUpdate"
       },
+      "Preferences": {
+        "properties": {
+          "locale": {
+            "type": "string",
+            "enum": [
+              "en",
+              "hi-IN"
+            ],
+            "title": "Locale",
+            "default": "en"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "default": "UTC"
+          },
+          "email_on_comment": {
+            "type": "boolean",
+            "title": "Email On Comment",
+            "default": true
+          },
+          "email_on_mention": {
+            "type": "boolean",
+            "title": "Email On Mention",
+            "default": true
+          },
+          "daily_digest": {
+            "type": "boolean",
+            "title": "Daily Digest",
+            "default": true
+          },
+          "weekly_summary": {
+            "type": "boolean",
+            "title": "Weekly Summary",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "Preferences"
+      },
+      "ProfileOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "professional_role": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Professional Role",
+            "default": ""
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/Preferences"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "email"
+        ],
+        "title": "ProfileOut"
+      },
+      "ProfileUpdate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "professional_role": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Professional Role",
+            "default": ""
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/Preferences"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ProfileUpdate"
+      },
       "ProjectCreate": {
         "properties": {
           "name": {
@@ -6133,6 +6406,9 @@
           },
           "acknowledge_permanent_deletion": {
             "type": "boolean",
+            "enum": [
+              true
+            ],
             "const": true,
             "title": "Acknowledge Permanent Deletion"
           }
@@ -6196,6 +6472,9 @@
           },
           "status": {
             "type": "string",
+            "enum": [
+              "deleted"
+            ],
             "const": "deleted",
             "title": "Status"
           },
@@ -6657,6 +6936,11 @@
             "type": "boolean",
             "title": "Ask Reviewer Name",
             "default": true
+          },
+          "show_board_to_client": {
+            "type": "boolean",
+            "title": "Show Board To Client",
+            "default": false
           }
         },
         "type": "object",
@@ -6707,6 +6991,78 @@
           "created_new"
         ],
         "title": "RevisionOut"
+      },
+      "SearchOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResult"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "SearchOut"
+      },
+      "SearchResult": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "project",
+              "ticket",
+              "person",
+              "client"
+            ],
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "page_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "id",
+          "title"
+        ],
+        "title": "SearchResult"
       },
       "SearchResultOut": {
         "properties": {
@@ -6780,73 +7136,6 @@
           "items"
         ],
         "title": "SearchResultsOut"
-      },
-      "SessionOut": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "current": {
-            "type": "boolean",
-            "title": "Current"
-          },
-          "browser": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Browser"
-          },
-          "os": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Os"
-          },
-          "ip_address": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ip Address"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          },
-          "last_active_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Last Active At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "current",
-          "browser",
-          "os",
-          "ip_address",
-          "created_at",
-          "last_active_at"
-        ],
-        "title": "SessionOut",
-        "description": "FD-AUD-011: Represents an active refresh token family for the user.\nM-05: created_at/last_active_at are typed datetimes (Pydantic serializes to a real\nISO-8601 string with timezone on the wire) rather than hand-formatted str fields -\nAPI contracts stay generated/typed end-to-end per 06-Backend-Architecture.md \u00a72.3,\nand the frontend gets a real Date-parseable value instead of an ad hoc string."
       },
       "ShareLinkCreate": {
         "properties": {
@@ -6995,6 +7284,9 @@
         "properties": {
           "type": {
             "type": "string",
+            "enum": [
+              "slack"
+            ],
             "const": "slack",
             "title": "Type",
             "default": "slack"
@@ -7031,12 +7323,10 @@
             "title": "Viewport"
           },
           "node_tree": {
-            "additionalProperties": true,
             "type": "object",
             "title": "Node Tree"
           },
           "nodes_index": {
-            "additionalProperties": true,
             "type": "object",
             "title": "Nodes Index"
           },
@@ -7275,7 +7565,6 @@
             "title": "Due At"
           },
           "anchor": {
-            "additionalProperties": true,
             "type": "object",
             "title": "Anchor"
           },
@@ -7290,7 +7579,6 @@
             "title": "Recovery Status"
           },
           "context": {
-            "additionalProperties": true,
             "type": "object",
             "title": "Context"
           },
@@ -7448,6 +7736,9 @@
         "properties": {
           "type": {
             "type": "string",
+            "enum": [
+              "trello"
+            ],
             "const": "trello",
             "title": "Type",
             "default": "trello"
@@ -7726,6 +8017,103 @@
         },
         "type": "object",
         "title": "WorkspaceUpdate"
+      },
+      "app__modules__auth__account__SessionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current"
+          },
+          "last_active_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Active At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "current",
+          "last_active_at",
+          "expires_at"
+        ],
+        "title": "SessionOut"
+      },
+      "app__modules__auth__schemas__SessionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current"
+          },
+          "browser": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Browser"
+          },
+          "os": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Os"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_active_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Active At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "current",
+          "browser",
+          "os",
+          "ip_address",
+          "created_at",
+          "last_active_at"
+        ],
+        "title": "SessionOut",
+        "description": "FD-AUD-011: Represents an active refresh token family for the user.\nM-05: created_at/last_active_at are typed datetimes (Pydantic serializes to a real\nISO-8601 string with timezone on the wire) rather than hand-formatted str fields -\nAPI contracts stay generated/typed end-to-end per 06-Backend-Architecture.md \u00a72.3,\nand the frontend gets a real Date-parseable value instead of an ad hoc string."
       }
     },
     "securitySchemes": {

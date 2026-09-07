@@ -21,17 +21,17 @@ export function AssetReview({ projectId, title, guest, workspaceSlug }: { projec
   const [tag, setTag] = useState<(typeof TAGS)[number]>("Design");
   const [layer, setLayer] = useState<"client" | "team">("client");
   const start = useRef<{ x: number; y: number } | null>(null);
-  const assets = useQuery({ queryKey: ['assets', projectId, guest ?? 'member'], queryFn: () => api.listAssets(projectId, guest), refetchInterval: 30000 });
+  const assets = useQuery({ queryKey: [...qk.assets(projectId), guest ?? 'member'], queryFn: () => api.listAssets(projectId, guest), refetchInterval: 30000 });
   const asset = assets.data?.find((a) => a.id === assetId) ?? assets.data?.[0];
-  const commentKey = ['asset-comments', asset?.page_id, guest ?? 'member'];
+  const commentKey = [...qk.assetComments(asset?.page_id), guest ?? 'member'];
   const comments = useQuery({ queryKey: commentKey, queryFn: () => api.listAssetComments(asset!.page_id, guest), enabled: Boolean(asset), refetchInterval: 10000 });
   const roots = (comments.data ?? []).filter((c) => !c.parent_id && (c.anchor as { region?: api.Region }).region?.page_number === page);
   const selectedComment = roots.find((c) => c.id === selected);
-  async function refresh() { await cache.invalidateQueries({ queryKey: ['asset-comments', asset?.page_id] }); if (!guest) { await cache.invalidateQueries({ queryKey: qk.projectComments(projectId) }); await cache.invalidateQueries({ queryKey: ['workspace'] }); } }
+  async function refresh() { await cache.invalidateQueries({ queryKey: qk.assetComments(asset?.page_id) }); if (!guest) { await cache.invalidateQueries({ queryKey: qk.projectComments(projectId) }); await cache.invalidateQueries({ queryKey: qk.workspaceAll() }); } }
   const post = useMutation({ mutationFn: () => api.createAssetComment(projectId, asset!.id, { body: body.trim(), region: draft!, tags: [tag], layer }, guest), onSuccess: async (comment) => { setBody(""); setDraft(null); setSelected(comment.id); await refresh(); } });
   const replyMutation = useMutation({ mutationFn: () => api.replyToComment(selected, reply.trim(), selectedComment?.layer ?? 'client', guest), onSuccess: async () => { setReply(""); await refresh(); } });
   const reanchorMutation = useMutation({ mutationFn: ({ commentId, region }: { commentId: string, region: api.Region }) => api.reanchorComment(commentId, { region }), onSuccess: refresh });
-  const upload = useMutation({ mutationFn: async (files: FileList) => { for (const file of Array.from(files)) await api.uploadAsset(projectId, file); }, onSettled: () => cache.invalidateQueries({ queryKey: ['assets', projectId] }) });
+  const upload = useMutation({ mutationFn: async (files: FileList) => { for (const file of Array.from(files)) await api.uploadAsset(projectId, file); }, onSettled: () => cache.invalidateQueries({ queryKey: qk.assets(projectId) }) });
   const [zoomScale, setZoomScale] = useState(1);
   const [rotation, setRotation] = useState(0);
 
@@ -57,7 +57,7 @@ export function AssetReview({ projectId, title, guest, workspaceSlug }: { projec
       const dx = p.x - startPoint.x;
       const dy = p.y - startPoint.y;
       
-      let newRegion = { ...startRegion };
+      const newRegion = { ...startRegion };
       if (type === 'move') {
         newRegion.x = Math.max(0, Math.min(1 - (newRegion.width || 0), startRegion.x + dx));
         newRegion.y = Math.max(0, Math.min(1 - (newRegion.height || 0), startRegion.y + dy));

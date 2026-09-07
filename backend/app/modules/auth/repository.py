@@ -165,7 +165,7 @@ class RefreshTokenRepository:
 
     async def list_active_families(self, user_id: ObjectId) -> list[dict[str, Any]]:
         """Returns the most recent refresh token document for each active family."""
-        pipeline = [
+        pipeline: list[dict[str, Any]] = [
             {
                 "$match": {
                     "user_id": user_id,

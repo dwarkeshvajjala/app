@@ -44,6 +44,10 @@ class ReviewResolveOut(BaseModel):
     # re-enforced server-side in create_guest_session regardless of what the client
     # sends (share_links/policy.py.resolve_guest_display_name).
     ask_reviewer_name: bool = True
+    # M-04: lets ReviewEntryPage offer a "View board" option after session creation.
+    # The guest-board endpoint independently re-checks this setting server-side
+    # regardless of what the client does with this flag (comments/service.py::list_guest_board).
+    show_board_to_client: bool = False
 
 
 class GuestSessionCreate(BaseModel):

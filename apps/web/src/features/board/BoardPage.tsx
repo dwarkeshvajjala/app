@@ -1,4 +1,3 @@
-import { LayerBadge, RecoveryBadge, StatusBadge } from "@backline/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { useOutletContext, useParams, useSearchParams } from "react-router-dom";
@@ -7,69 +6,82 @@ import * as integrationsApi from "../integrations/api";
 import type { WorkspaceOut } from "../workspaces/api";
 import * as workspacesApi from "../workspaces/api";
 import { useWSEvent } from "../../app/WSProvider";
+import { patchProjectComment, removeProjectComment, upsertProjectComment } from "../../lib/comment-cache";
 import { qk } from "../../lib/query-keys";
 import { useConnectionStore } from "../../stores/connectionStore";
 import { usePresenceStore } from "../../stores/presenceStore";
 import * as boardApi from "./api";
 import type { CommentOut, CommentStatus } from "./api";
 import { CommentThreadPanel } from "./CommentThreadPanel";
-
-const CONNECTION_LABEL: Record<string, string> = {
-  connected: "Live",
-  connecting: "Connecting...",
-  reconnecting: "Reconnecting...",
-  disconnected: "Offline",
-};
-
-const CONNECTION_DOT: Record<string, string> = {
-  connected: "bg-status-resolved",
-  connecting: "bg-status-in-progress",
-  reconnecting: "bg-status-in-progress",
-  disconnected: "bg-status-wont-fix",
-};
-
-const STATUSES: CommentStatus[] = ["todo", "in_progress", "in_review", "blocked", "resolved", "wont_fix"];
-const STATUS_LABELS: Record<CommentStatus, string> = {
-  todo: "To do",
-  in_progress: "In progress",
-  in_review: "In review",
-  blocked: "Blocked",
-  resolved: "Resolved",
-  wont_fix: "Won't fix",
-};
-
-function commentContext(comment: CommentOut): { device_type?: string; url?: string } {
-  return comment.context as { device_type?: string; url?: string };
-}
-
-interface Filters {
-  status: string;
-  layer: string;
-  assignee: string;
-  device: string;
-  page: string;
-}
-
-function filtersFromParams(params: URLSearchParams): Filters {
-  return {
-    status: params.get("status") ?? "",
-    layer: params.get("layer") ?? "",
-    assignee: params.get("assignee") ?? "",
-    device: params.get("device") ?? "",
-    page: params.get("page") ?? "",
-  };
-}
+import { BoardHeader } from "./components/BoardHeader";
+import { KanbanBoard } from "./components/KanbanBoard";
+import { ListTable } from "./components/ListTable";
+import { commentContext, filtersFromParams, type Filters } from "./components/types";
 
 export function BoardPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
   const { projectId } = useParams<{ projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [view, setView] = useState<"kanban" | "list">("kanban");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [openThreadId, setOpenThreadId] = useState<string | null>(searchParams.get("comment"));
   const queryClient = useQueryClient();
 
   const filters = filtersFromParams(searchParams);
+
+  // Both `view` and the open-thread id live in the URL (not useState) so a deep
+  // link, refresh, or back-button all reproduce the same screen (FE-03).
+  const view: "kanban" | "list" = searchParams.get("view") === "list" ? "list" : "kanban";
+
+  function setView(next: "kanban" | "list") {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "kanban") {
+          params.delete("view");
+        } else {
+          params.set("view", next);
+        }
+        return params;
+      },
+      { replace: true },
+    );
+  }
+
+  const openThreadId = searchParams.get("comment");
+
+  const setOpenThreadId = useCallback(
+    (id: string | null) => {
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          if (id) {
+            params.set("comment", id);
+          } else {
+            params.delete("comment");
+          }
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  // Only clears the URL's ?comment= if it still points at the comment being removed -
+  // avoids clobbering a thread the user has since navigated to.
+  const closeThreadIfMatches = useCallback(
+    (commentId: string) => {
+      setSearchParams(
+        (prev) => {
+          if (prev.get("comment") !== commentId) return prev;
+          const params = new URLSearchParams(prev);
+          params.delete("comment");
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
 
   function setFilter(key: keyof Filters, value: string) {
     const next = new URLSearchParams(searchParams);
@@ -93,7 +105,7 @@ export function BoardPage() {
   });
 
   const { data: integrations } = useQuery({
-    queryKey: ["workspace", workspace.id, "integrations"],
+    queryKey: qk.integrations(workspace.id),
     queryFn: () => integrationsApi.listIntegrations(workspace.id),
   });
   const clickupIntegration = (integrations ?? []).find((i) => i.type === "clickup");
@@ -129,14 +141,7 @@ export function BoardPage() {
   const upsertComment = useCallback(
     (payload: CommentOut & { project_id: string }) => {
       if (payload.project_id !== projectId) return;
-      queryClient.setQueryData<CommentOut[]>(qk.projectComments(projectId ?? ""), (old) => {
-        if (!old) return old;
-        const existingIndex = old.findIndex((c) => c.id === payload.id);
-        if (existingIndex === -1) return [...old, payload];
-        const next = [...old];
-        next[existingIndex] = payload;
-        return next;
-      });
+      upsertProjectComment(queryClient, projectId ?? "", payload);
     },
     [projectId, queryClient],
   );
@@ -150,13 +155,8 @@ export function BoardPage() {
   // event was for a different project in the same workspace).
   const patchRecoveryStatus = useCallback(
     (payload: { comment_id: string; recovery_status: CommentOut["recovery_status"] }) => {
-      queryClient.setQueryData<CommentOut[]>(qk.projectComments(projectId ?? ""), (old) => {
-        if (!old) return old;
-        const index = old.findIndex((c) => c.id === payload.comment_id);
-        if (index === -1) return old;
-        const next = [...old];
-        next[index] = { ...next[index], recovery_status: payload.recovery_status };
-        return next;
+      patchProjectComment(queryClient, projectId ?? "", payload.comment_id, {
+        recovery_status: payload.recovery_status,
       });
     },
     [projectId, queryClient],
@@ -169,12 +169,10 @@ export function BoardPage() {
   const removeComment = useCallback(
     (payload: { comment_id: string; parent_id: string | null; project_id: string }) => {
       if (payload.project_id !== projectId) return;
-      queryClient.setQueryData<CommentOut[]>(qk.projectComments(projectId ?? ""), (old) =>
-        old ? old.filter((c) => c.id !== payload.comment_id) : old,
-      );
-      setOpenThreadId((current) => (current === payload.comment_id ? null : current));
+      removeProjectComment(queryClient, projectId ?? "", payload.comment_id);
+      closeThreadIfMatches(payload.comment_id);
     },
-    [projectId, queryClient],
+    [projectId, queryClient, closeThreadIfMatches],
   );
   useWSEvent("comment.deleted", removeComment);
 
@@ -287,274 +285,41 @@ export function BoardPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">Board</h1>
-          <span className="text-text-muted flex items-center gap-1.5 text-xs">
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${CONNECTION_DOT[connectionStatus]}`}
-              aria-hidden="true"
-            />
-            {CONNECTION_LABEL[connectionStatus]}
-          </span>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setView("kanban")}
-            className={`rounded-md px-3 py-1.5 text-sm ${view === "kanban" ? "bg-accent-primary text-white" : "border border-black/10 dark:border-white/10"}`}
-          >
-            Kanban
-          </button>
-          <button
-            onClick={() => setView("list")}
-            className={`rounded-md px-3 py-1.5 text-sm ${view === "list" ? "bg-accent-primary text-white" : "border border-black/10 dark:border-white/10"}`}
-          >
-            List
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        <select
-          value={filters.status}
-          onChange={(e) => setFilter("status", e.target.value)}
-          aria-label="Filter by status"
-          className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
-        >
-          <option value="">All statuses</option>
-          {STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {STATUS_LABELS[status]}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filters.layer}
-          onChange={(e) => setFilter("layer", e.target.value)}
-          aria-label="Filter by layer"
-          className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
-        >
-          <option value="">All layers</option>
-          <option value="client">Client visible</option>
-          <option value="team">Team only</option>
-        </select>
-        <select
-          value={filters.assignee}
-          onChange={(e) => setFilter("assignee", e.target.value)}
-          aria-label="Filter by assignee"
-          className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
-        >
-          <option value="">All assignees</option>
-          {(members ?? []).map((member) => (
-            <option key={member.id} value={member.user_id}>
-              {member.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filters.device}
-          onChange={(e) => setFilter("device", e.target.value)}
-          aria-label="Filter by device"
-          className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
-        >
-          <option value="">All devices</option>
-          <option value="desktop">Desktop</option>
-          <option value="mobile">Mobile</option>
-          <option value="tablet">Tablet</option>
-        </select>
-        <select
-          value={filters.page}
-          onChange={(e) => setFilter("page", e.target.value)}
-          aria-label="Filter by page"
-          className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
-        >
-          <option value="">All pages</option>
-          {pageUrls.map((url) => {
-            const reviewerCount = reviewerCountByUrl.get(url) ?? 0;
-            return (
-              <option key={url} value={url}>
-                {url}
-                {reviewerCount > 0 ? ` (${reviewerCount} reviewing)` : ""}
-              </option>
-            );
-          })}
-        </select>
-      </div>
+      <BoardHeader
+        connectionStatus={connectionStatus}
+        view={view}
+        setView={setView}
+        filters={filters}
+        setFilter={setFilter}
+        members={members}
+        pageUrls={pageUrls}
+        reviewerCountByUrl={reviewerCountByUrl}
+      />
 
       {view === "kanban" ? (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {STATUSES.map((status) => (
-            <div key={status} className="flex flex-col gap-2">
-              <h2 className="text-text-muted text-xs font-medium uppercase tracking-wide">
-                {STATUS_LABELS[status]} ({filtered.filter((c) => c.status === status).length})
-              </h2>
-              <div className="flex flex-col gap-2">
-                {filtered
-                  .filter((comment) => comment.status === status)
-                  .map((comment) => (
-                    <div
-                      key={comment.id}
-                      className="flex flex-col gap-2 rounded-md border border-black/10 p-3 dark:border-white/10"
-                    >
-                      {comment.screenshot_url && (
-                        <img
-                          src={comment.screenshot_url}
-                          alt=""
-                          className="h-20 w-full rounded object-cover"
-                        />
-                      )}
-                      <p className="line-clamp-3 text-sm">{comment.body}</p>
-                      <div className="flex flex-wrap items-center gap-1">
-                        <LayerBadge layer={comment.layer} />
-                        <RecoveryBadge status={comment.recovery_status} />
-                      </div>
-                      <div className="text-text-muted flex items-center justify-between text-xs">
-                        <span>{memberName(comment.assignee_id) ?? "Unassigned"}</span>
-                        <span>{commentContext(comment).device_type ?? ""}</span>
-                      </div>
-                      <button
-                        onClick={() => setOpenThreadId(comment.id)}
-                        className="text-accent-primary self-start text-xs underline"
-                      >
-                        {(repliesByParent.get(comment.id)?.length ?? 0) > 0
-                          ? `View thread (${repliesByParent.get(comment.id)?.length})`
-                          : "Reply"}
-                      </button>
-                      <select
-                        value={comment.status}
-                        onChange={(e) =>
-                          updateMutation.mutate({
-                            commentId: comment.id,
-                            patch: { status: e.target.value as CommentStatus },
-                          })
-                        }
-                        aria-label="Change comment status"
-                        className="rounded border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
-                      >
-                        {STATUSES.map((s) => (
-                          <option key={s} value={s}>
-                            {STATUS_LABELS[s]}
-                          </option>
-                        ))}
-                      </select>
-                      {taskLinks[comment.id] ? (
-                        <a
-                          href={taskLinks[comment.id]}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-accent-primary text-xs underline"
-                        >
-                          View linked task
-                        </a>
-                      ) : (
-                        <div className="flex gap-2">
-                          {clickupIntegration && (
-                            <button
-                              onClick={() => createClickUpTaskMutation.mutate(comment.id)}
-                              disabled={createClickUpTaskMutation.isPending}
-                              className="text-text-muted text-xs underline"
-                            >
-                              Send to ClickUp
-                            </button>
-                          )}
-                          {trelloIntegration && (
-                            <button
-                              onClick={() => createTrelloCardMutation.mutate(comment.id)}
-                              disabled={createTrelloCardMutation.isPending}
-                              className="text-text-muted text-xs underline"
-                            >
-                              Send to Trello
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <KanbanBoard
+          filtered={filtered}
+          memberName={memberName}
+          repliesByParent={repliesByParent}
+          setOpenThreadId={setOpenThreadId}
+          updateMutation={updateMutation}
+          taskLinks={taskLinks}
+          clickupIntegration={clickupIntegration}
+          trelloIntegration={trelloIntegration}
+          createClickUpTaskMutation={createClickUpTaskMutation}
+          createTrelloCardMutation={createTrelloCardMutation}
+        />
       ) : (
-        <div className="mt-6">
-          {selected.size > 0 && (
-            <div className="mb-3 flex items-center gap-3">
-              <span className="text-text-muted text-xs">{selected.size} selected</span>
-              <select
-                onChange={(e) => {
-                  if (e.target.value) bulkUpdateMutation.mutate(e.target.value as CommentStatus);
-                  e.target.value = "";
-                }}
-                aria-label="Change status for selected comments"
-                className="rounded border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
-              >
-                <option value="">Change status to...</option>
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {STATUS_LABELS[s]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="text-text-muted border-b border-black/10 text-xs dark:border-white/10">
-                <th className="w-8 py-2">
-                  <input
-                    type="checkbox"
-                    checked={selected.size > 0 && selected.size === filtered.length}
-                    onChange={(e) =>
-                      setSelected(e.target.checked ? new Set(filtered.map((c) => c.id)) : new Set())
-                    }
-                    aria-label="Select all comments"
-                  />
-                </th>
-                <th className="py-2">Comment</th>
-                <th className="py-2">Layer</th>
-                <th className="py-2">Status</th>
-                <th className="py-2">Assignee</th>
-                <th className="py-2">Anchor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((comment) => (
-                <tr key={comment.id} className="border-b border-black/5 dark:border-white/5">
-                  <td className="py-2">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(comment.id)}
-                      onChange={() => toggleSelected(comment.id)}
-                      aria-label={`Select comment: ${comment.body.slice(0, 60)}`}
-                    />
-                  </td>
-                  <td className="max-w-xs truncate py-2">
-                    <button
-                      onClick={() => setOpenThreadId(comment.id)}
-                      className="hover:underline"
-                    >
-                      {comment.body}
-                      {(repliesByParent.get(comment.id)?.length ?? 0) > 0 && (
-                        <span className="text-text-muted ml-1 text-xs">
-                          ({repliesByParent.get(comment.id)?.length})
-                        </span>
-                      )}
-                    </button>
-                  </td>
-                  <td className="py-2">
-                    <LayerBadge layer={comment.layer} />
-                  </td>
-                  <td className="py-2">
-                    <StatusBadge status={comment.status} />
-                  </td>
-                  <td className="py-2">{memberName(comment.assignee_id) ?? "Unassigned"}</td>
-                  <td className="py-2">
-                    <RecoveryBadge status={comment.recovery_status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ListTable
+          filtered={filtered}
+          selected={selected}
+          setSelected={setSelected}
+          toggleSelected={toggleSelected}
+          memberName={memberName}
+          repliesByParent={repliesByParent}
+          setOpenThreadId={setOpenThreadId}
+          bulkUpdateMutation={bulkUpdateMutation}
+        />
       )}
 
       {openThreadComment && (

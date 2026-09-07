@@ -4,8 +4,10 @@ import { type FormEvent, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { API_BASE_URL, ApiError } from "../../lib/api-client";
+import { qk } from "../../lib/query-keys";
 import * as reviewApi from "./api";
 import { AssetReview } from "../assets/AssetReview";
+import { GuestBoard } from "./GuestBoard";
 
 // Guest reviewer entry (05-Frontend-Architecture.md §5.2) - outside the dashboard shell
 // entirely. Resolves the share link, collects a name (+ passcode if required), creates
@@ -22,13 +24,19 @@ export function ReviewEntryPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [handoffUrl, setHandoffUrl] = useState<string | null>(null);
   const [assetGuest, setAssetGuest] = useState<string | null>(null);
+  // Set instead of redirecting immediately when the project's show_board_to_client
+  // setting is on - lets the guest choose "View the board" before heading to the site.
+  const [pendingHandoff, setPendingHandoff] = useState<{ token: string; destination: string } | null>(
+    null,
+  );
+  const [showBoard, setShowBoard] = useState(false);
 
   const {
     data: resolved,
     isLoading,
     error: resolveError,
   } = useQuery({
-    queryKey: ["review", shareToken],
+    queryKey: qk.review(shareToken ?? ""),
     queryFn: () => reviewApi.resolveShareLink(shareToken!),
     enabled: !!shareToken && !handoffUrl,
     retry: false,
@@ -57,6 +65,10 @@ export function ReviewEntryPage() {
         resolved.mode === "proxy"
           ? `${API_BASE_URL}/proxy/${shareToken}/?${handoff.toString()}`
           : `${resolved.target_origin}${resolved.target_origin.includes("?") ? "&" : "?"}${handoff.toString()}`;
+      if (resolved.show_board_to_client) {
+        setPendingHandoff({ token: result.guest_session_token, destination });
+        return;
+      }
       setHandoffUrl(destination);
       window.location.href = destination;
     } catch (err) {
@@ -71,6 +83,39 @@ export function ReviewEntryPage() {
   }
   if (assetGuest && resolved) {
     return <AssetReview projectId={resolved.project_id} title={resolved.project_name} guest={assetGuest} />;
+  }
+
+  if (pendingHandoff && resolved && showBoard) {
+    return (
+      <GuestBoard
+        projectId={resolved.project_id}
+        guestToken={pendingHandoff.token}
+        onBack={() => setShowBoard(false)}
+        continueLabel="Continue to site"
+        onContinue={() => {
+          window.location.href = pendingHandoff.destination;
+        }}
+      />
+    );
+  }
+
+  if (pendingHandoff) {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-sm flex-col items-center justify-center gap-4 px-6 text-center">
+        <h1 className="text-xl font-semibold">You're in</h1>
+        <p className="text-text-muted text-sm">
+          Head to the site to leave comments, or check the board first.
+        </p>
+        <div className="flex w-full flex-col gap-2">
+          <Button onClick={() => (window.location.href = pendingHandoff.destination)}>
+            Open the site
+          </Button>
+          <Button variant="secondary" onClick={() => setShowBoard(true)}>
+            View the board
+          </Button>
+        </div>
+      </main>
+    );
   }
 
   if (handoffUrl) {

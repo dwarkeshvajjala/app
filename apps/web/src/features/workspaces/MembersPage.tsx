@@ -106,7 +106,7 @@ export function MembersPage() {
   });
 
   const { data: projects } = useQuery({
-    queryKey: ["workspace", workspace.id, "projects"],
+    queryKey: qk.projects(workspace.id),
     queryFn: () => projectsApi.listProjects(workspace.id),
   });
 

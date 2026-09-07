@@ -31,6 +31,39 @@ Date: 2026-09-06. This file tracks actual work; specification text alone is not 
 - Backend verification: `ruff check app`, `mypy app/`, and `scripts/check_workspace_scoping.py` pass. The focused application suite passes with `37 passed` using isolated MongoDB, Redis and S3-compatible test services. A complete run reached `186 passed`, then 7 realtime assertions and 4 fixture cleanup cases failed after the local `fakeredis` TCP emulator dropped pub/sub connections; the affected product modules were unchanged by this work.
 - Source limitations recorded: the reference HTML was indexed without executing its mock scripts, and local browser policy prevented opening the copied `file://` reference for visual inspection. Product behavior was derived from its markup, labels, controls and action inventory, then implemented against the existing code architecture.
 
+## 2026-09-08: Cross-session audit reconciliation
+
+- A prior Claude review was reconciled with the current worktree. It identifies the next
+  parity/UX verification targets as BoardPage URL state and deep links, guest-board
+  frontend wiring, page add/reorder controls, hard-delete preview/confirmation UI,
+  website-canvas comment move/resize, calendar drag/drop, website page tabs, status-label
+  consistency, toast/confirm adoption, query-key consolidation, comment parent/reply
+  normalization, debounced/scoped search, and the larger god-file/design-system/i18n
+  cleanup items. These are audit targets, not claims that each item is complete or safe
+  to implement without checking the current code and product decisions.
+- The review confirms that guest manual reanchoring remains member-only under the existing
+  permission matrix. Guest drag/resize affordances must therefore be hidden or disabled,
+  and the 401 behavior should remain covered by a regression test; no guest privilege is
+  inferred from the frontend review UI.
+- Verification limits remain important: local emulator-backed checks are not production
+  health evidence, and shared or cloud database fixtures must not be used. No credentials
+  or connection strings from cross-session chat notes are recorded in this repository.
+
+## 2026-09-08: God-file split handoff
+
+- The cross-session audit work split the large frontend/widget files while preserving
+  their existing public import paths and behavior: `TicketsPage`, `CommentsTab`, and
+  `BoardPage` now delegate to feature-local components, and the widget `index.ts`/`ui.ts`
+  logic is split into focused modules under `apps/widget/src`.
+- FE-01/FE-02 query-key and comment-cache consolidation is included in the same working
+  tree. The i18n rollout remains intentionally deferred; no completion is claimed for
+  FE-07/FE-08 styling/icon cleanup beyond the work explicitly present in this batch.
+- The handoff notes identified duplicate implementations across concurrent sessions;
+  this delivery snapshot reconciles the current worktree versions before publication.
+- This synchronization turn intentionally did not rerun tests or builds at the user's
+  request. Earlier session-reported checks remain historical evidence and should be
+  revalidated before the next release.
+
 ## 2026-09-07 — audit batch 02 (M-03, M-07)
 
 - **Delivered:** replaced the direct project-document hard-delete with owner/admin-only

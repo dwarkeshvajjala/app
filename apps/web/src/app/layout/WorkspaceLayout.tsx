@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Navigate, Outlet } from "react-router-dom";
 import { useWSEvent } from "../WSProvider";
 
-import { useAuth } from "../../features/auth/AuthContext";
 import { qk } from "../../lib/query-keys";
 import { useWorkspaceContext } from "./useWorkspaceContext";
 import { DashboardSidebar } from "./DashboardSidebar";
@@ -16,7 +15,6 @@ import { useConnectionStore } from "../../stores/connectionStore";
 // (ProjectLayout), which need the full viewport for the canvas and have their own,
 // much lighter header instead (see ProjectLayout.tsx's docblock for why).
 export function WorkspaceLayout() {
-  const { logout } = useAuth();
   const result = useWorkspaceContext();
   const cache = useQueryClient();
   const workspaceId = "workspace" in result ? result.workspace.id : undefined;
@@ -46,7 +44,7 @@ export function WorkspaceLayout() {
 
   return (
     <div className="bl-app">
-      <DashboardSidebar workspace={workspace} onSignOut={() => logout()} />
+      <DashboardSidebar workspace={workspace} />
       <div className="bl-main">
         <header className="bl-topbar"><GlobalSearch workspaceId={workspace.id} workspaceSlug={workspace.slug} /><NotificationBell /></header>
         {connStatus !== "connected" && (

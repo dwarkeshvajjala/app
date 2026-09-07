@@ -21,6 +21,7 @@ from app.modules.comments.schemas import (
     ContextIn,
     GuestBoardItemOut,
     GuestBoardOut,
+    RecoveryStatus,
 )
 from app.modules.notifications import service as notification_service
 from app.modules.pages.repository import PageRepository
@@ -146,6 +147,29 @@ async def _comment_out(db: AsyncIOMotorDatabase[dict[str, Any]], doc: dict[str, 
     attachments = await _resolve_attachments(doc)
     author_name = await _resolve_author_name(db, doc)
 
+    # DB-02: a reply created after the anchor/context_json de-duplication (see
+    # create_reply) has none of its own - it's the same visual pin as its parent, so
+    # fall back to the parent doc's values rather than requiring every reply to carry
+    # its own copy. A reply created before that change still has its own copied
+    # values and never reaches this fallback.
+    anchor = doc.get("anchor")
+    context_json = doc.get("context_json")
+    recovery_status = doc.get("recovery_status")
+    if doc.get("parent_id") and (anchor is None or context_json is None or recovery_status is None):
+        parent = await CommentRepository(db).find_by_id(doc["parent_id"])
+        if parent is not None:
+            anchor = anchor if anchor is not None else parent.get("anchor")
+            context_json = context_json if context_json is not None else parent.get("context_json")
+            recovery_status = (
+                recovery_status if recovery_status is not None else parent.get("recovery_status")
+            )
+    # Defensive fallback only - a reply's parent always has these fields in practice
+    # (every top-level comment does); this just keeps a dangling/deleted parent from
+    # turning into a 500 instead of a merely-imprecise render.
+    anchor = anchor if anchor is not None else {}
+    context_json = context_json if context_json is not None else {}
+    final_recovery_status: RecoveryStatus = recovery_status if recovery_status is not None else "ok"
+
     return CommentOut(
         id=str(doc["_id"]),
         page_id=doc["page_id"],
@@ -166,9 +190,9 @@ async def _comment_out(db: AsyncIOMotorDatabase[dict[str, Any]], doc: dict[str, 
         is_standalone=doc.get("is_standalone", False),
         assignee_id=doc.get("assignee_id"),
         due_at=doc.get("due_at"),
-        anchor=doc["anchor"],
-        recovery_status=doc["recovery_status"],
-        context=doc["context_json"],
+        anchor=anchor,
+        recovery_status=final_recovery_status,
+        context=context_json,
         screenshot_url=screenshot_url,
         capture_status=doc["capture_status"],
         attachments=attachments,
@@ -347,10 +371,15 @@ async def create_reply(
         "status": "todo",
         "assignee_id": None,
         "due_at": None,
-        "anchor": parent["anchor"],
-        "recovery_status": parent["recovery_status"],
+        # DB-02: replies no longer copy the parent's anchor/context_json/
+        # recovery_status - a reply is the same visual pin as its parent, so
+        # _comment_out() falls back to the parent's own fields for any reply that
+        # doesn't have its own (every reply created from here on). Replies created
+        # before this change keep their old copied values untouched - no backfill/
+        # deletion, per docs/implementation/audit-batch-01-report.md's own sequencing
+        # note ("stop writing copies for new replies first, backfill reads with
+        # fallback").
         "consecutive_orphaned_revisions": 0,
-        "context_json": parent["context_json"],
         "attachments": [a.model_dump() for a in (attachments or [])],
         "screenshot_key": None,
         "capture_status": "ok",

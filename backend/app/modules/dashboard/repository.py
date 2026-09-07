@@ -297,13 +297,28 @@ class DashboardRepository:
     async def search_members(
         self, workspace_id: str, matcher: dict[str, Any], limit: int
     ) -> list[dict[str, Any]]:
-        memberships = await self.db.memberships.find({"workspace_id": workspace_id}).limit(
-            200
-        ).to_list(200)
-        user_ids = [membership["user_id"] for membership in memberships]
-        object_ids = [oid for user_id in user_ids if (oid := to_object_id(user_id))]
-        cursor = self.db.users.find(
-            {"_id": {"$in": object_ids}, "$or": [{"name": matcher}, {"email": matcher}]},
-            {"name": 1, "email": 1},
-        ).limit(limit)
-        return [doc async for doc in cursor]
+        """BE-05: joins every membership in the workspace against the query, instead of
+        pre-fetching an arbitrary first 200 memberships and only then matching name/
+        email - the old shape silently couldn't find member 201+ regardless of how
+        specific the query was. TDR-0013's bounded-result-count/no-ranking scope is
+        unaffected - `limit` still caps the final match count the same way; this only
+        fixes which memberships are even considered as candidates."""
+        pipeline: list[dict[str, Any]] = [
+            {"$match": {"workspace_id": workspace_id}},
+            {
+                "$lookup": {
+                    "from": "users",
+                    "let": {"uid": {"$toObjectId": "$user_id"}},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$eq": ["$_id", "$$uid"]}}},
+                        {"$match": {"$or": [{"name": matcher}, {"email": matcher}]}},
+                        {"$project": {"name": 1, "email": 1}},
+                    ],
+                    "as": "user",
+                }
+            },
+            {"$unwind": "$user"},
+            {"$limit": limit},
+            {"$replaceRoot": {"newRoot": "$user"}},
+        ]
+        return await self.db.memberships.aggregate(pipeline).to_list(length=limit)

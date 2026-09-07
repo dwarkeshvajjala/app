@@ -27,15 +27,25 @@ function groupResults(items: SearchItem[]): Array<{ section: string; items: Sear
 
 export function GlobalSearch({ workspaceId, workspaceSlug }: { workspaceId: string; workspaceSlug: string }) {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const popover = useRef<HTMLElement>(null);
   const navigate = useNavigate();
-  const activeQuery = query.trim();
+
+  // FE-05/BE-05: fetch on pause, not per keystroke - the input itself stays
+  // immediate (uncontrolled lag would feel broken), only the network request lags.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const activeQuery = debouncedQuery;
   const { data, isFetching } = useQuery({
     queryKey: qk.search(workspaceId, activeQuery),
     queryFn: () => searchWorkspace(workspaceId, activeQuery),
     enabled: activeQuery.length > 0,
+    placeholderData: (previous) => previous,
   });
 
   // Flatten grouped items for keyboard navigation
