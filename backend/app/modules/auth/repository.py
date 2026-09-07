@@ -28,10 +28,22 @@ class UserRepository:
             "auth_providers": [auth_provider],
             "created_at": datetime.now(UTC),
             "last_login_at": datetime.now(UTC),
+            "preferences": {
+                "notify_on_assignment": True,
+                "notify_on_mention": True,
+                "notify_on_reply": True,
+                "notify_on_status_change": True,
+                "daily_digest": True,
+            }
         }
         result = await self.db.users.insert_one(doc)
         doc["_id"] = result.inserted_id
         return doc
+
+    async def update(self, user_id: ObjectId, patch: dict[str, Any]) -> None:
+        if not patch:
+            return
+        await self.db.users.update_one({"_id": user_id}, {"$set": patch})
 
     async def touch_login(self, user_id: ObjectId, auth_provider: str) -> None:
         await self.db.users.update_one(
@@ -50,7 +62,15 @@ class RefreshTokenRepository:
         self.db = db
 
     async def create(
-        self, *, user_id: ObjectId, token_hash: str, family_id: str, ttl_days: int
+        self,
+        *,
+        user_id: ObjectId,
+        token_hash: str,
+        family_id: str,
+        ttl_days: int,
+        browser: str | None = None,
+        os: str | None = None,
+        ip_address: str | None = None,
     ) -> None:
         now = datetime.now(UTC)
         await self.db.refresh_tokens.insert_one(
@@ -58,6 +78,9 @@ class RefreshTokenRepository:
                 "user_id": user_id,
                 "token_hash": token_hash,
                 "family_id": family_id,
+                "browser": browser,
+                "os": os,
+                "ip_address": ip_address,
                 "issued_at": now,
                 "expires_at": now + timedelta(days=ttl_days),
                 "revoked_at": None,
@@ -82,10 +105,36 @@ class RefreshTokenRepository:
             {"$set": {"revoked_at": datetime.now(UTC)}},
         )
 
+    async def family_belongs_to_user(self, family_id: str, user_id: ObjectId) -> bool:
+        """M-01 ownership check for DELETE /auth/sessions/{family_id}: a family_id is an
+        opaque token, not derived from user_id, so without this a caller could revoke
+        any other user's session family by guessing/observing its id. Matches on
+        user_id + family_id regardless of revoked_at so an already-revoked family a
+        user does own still 204s (idempotent), while a family that was never theirs
+        404s either way - no leakage of whether a given family_id exists at all."""
+        doc = await self.db.refresh_tokens.find_one(
+            {"family_id": family_id, "user_id": user_id}, projection={"_id": 1}
+        )
+        return doc is not None
+
     async def revoke_by_hash(self, token_hash: str) -> None:
         await self.db.refresh_tokens.update_one(
             {"token_hash": token_hash}, {"$set": {"revoked_at": datetime.now(UTC)}}
         )
+
+    async def list_active_families(self, user_id: ObjectId) -> list[dict[str, Any]]:
+        """Returns the most recent refresh token document for each active family."""
+        pipeline = [
+            {"$match": {"user_id": user_id, "revoked_at": None, "expires_at": {"$gt": datetime.now(UTC)}}},
+            {"$sort": {"issued_at": -1}},
+            {"$group": {
+                "_id": "$family_id",
+                "doc": {"$first": "$$ROOT"}
+            }},
+            {"$replaceRoot": {"newRoot": "$doc"}},
+            {"$sort": {"issued_at": -1}}
+        ]
+        return await self.db.refresh_tokens.aggregate(pipeline).to_list(100)
 
 
 class OtpRepository:

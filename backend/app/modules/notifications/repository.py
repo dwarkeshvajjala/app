@@ -15,19 +15,21 @@ class NotificationRepository:
         self.db = db
 
     async def create(
-        self, *, workspace_id: str, user_id: str, type: str, payload_json: dict[str, Any]
+        self, *, workspace_id: str, user_id: str, type: str, payload_json: dict[str, Any], target_route: str | None = None
     ) -> dict[str, Any]:
         doc = {
             "workspace_id": workspace_id,
             "user_id": user_id,
             "type": type,
             "payload_json": payload_json,
+            "target_route": target_route,
             "read_at": None,
             "created_at": datetime.now(UTC),
         }
         result = await self.db.notifications.insert_one(doc)
         doc["_id"] = result.inserted_id
         return doc
+
 
     async def list_for_user(
         self, *, workspace_id: str, user_id: str, limit: int, before: datetime | None

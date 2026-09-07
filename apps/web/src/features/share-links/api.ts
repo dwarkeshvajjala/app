@@ -10,7 +10,7 @@ export function listShareLinks(projectId: string): Promise<ShareLinkOut[]> {
 
 export function createShareLink(
   projectId: string,
-  options: { mode: "snippet" | "proxy"; passcode?: string; expiresAt?: string },
+  options: { mode: "snippet" | "proxy"; passcode?: string; expiresAt?: string; askReviewerName?: boolean; domainRestrictions?: string[]; commentExportPermission?: boolean },
 ): Promise<ShareLinkOut> {
   return apiFetch<ShareLinkOut>(`/api/v1/projects/${projectId}/share-links`, {
     method: "POST",
@@ -18,6 +18,9 @@ export function createShareLink(
       mode: options.mode,
       passcode: options.passcode || null,
       expires_at: options.expiresAt || null,
+      ask_reviewer_name: options.askReviewerName ?? true,
+      domain_restrictions: options.domainRestrictions ?? [],
+      comment_export_permission: options.commentExportPermission ?? false,
     }),
   });
 }

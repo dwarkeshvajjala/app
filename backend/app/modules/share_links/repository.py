@@ -22,6 +22,9 @@ class ShareLinkRepository:
         passcode_hash: str | None,
         expires_at: datetime | None,
         created_by: str,
+        ask_reviewer_name: bool = True,
+        domain_restrictions: list[str] | None = None,
+        comment_export_permission: bool = False,
     ) -> dict[str, Any]:
         doc = {
             "project_id": project_id,
@@ -33,6 +36,9 @@ class ShareLinkRepository:
             "revoked_at": None,
             "created_by": created_by,
             "created_at": datetime.now(UTC),
+            "ask_reviewer_name": ask_reviewer_name,
+            "domain_restrictions": domain_restrictions or [],
+            "comment_export_permission": comment_export_permission,
         }
         result = await self.db.share_links.insert_one(doc)
         doc["_id"] = result.inserted_id
@@ -54,10 +60,12 @@ class ShareLinkRepository:
         # after (e.g. revoke_share_link in share_links/service.py).
         return await self.db.share_links.find_one({"_id": oid})
 
-    async def list_for_project(self, project_id: str) -> list[dict[str, Any]]:
-        # workspace-scope-exempt: project_id is verified against the caller's workspace
-        # in list_share_links (share_links/service.py) before this is called.
-        cursor = self.db.share_links.find({"project_id": project_id}).sort("created_at", -1)
+    async def list_for_project(
+        self, workspace_id: str, project_id: str
+    ) -> list[dict[str, Any]]:
+        cursor = self.db.share_links.find(
+            {"workspace_id": workspace_id, "project_id": project_id}
+        ).sort("created_at", -1)
         return [doc async for doc in cursor]
 
     async def revoke(self, share_link_id: str) -> None:
@@ -105,3 +113,12 @@ class GuestSessionRepository:
         # from a guest token whose claims are cryptographically verified before this is
         # ever called (get_guest_session in core/session.py).
         return await self.db.guest_sessions.find_one({"_id": oid})
+
+    async def touch_last_seen(
+        self, *, workspace_id: str, guest_session_id: str
+    ) -> None:
+        """Extend the 180-day inactivity TTL only after access is re-authorized."""
+        await self.db.guest_sessions.update_one(
+            {"_id": to_object_id(guest_session_id), "workspace_id": workspace_id},
+            {"$set": {"last_seen_at": datetime.now(UTC)}},
+        )

@@ -10,6 +10,9 @@ class ShareLinkCreate(BaseModel):
     mode: ShareLinkMode = "snippet"
     passcode: str | None = Field(default=None, min_length=4, max_length=64)
     expires_at: datetime | None = None
+    ask_reviewer_name: bool = True
+    domain_restrictions: list[str] = Field(default_factory=list)
+    comment_export_permission: bool = False
 
 
 class ShareLinkOut(BaseModel):
@@ -21,6 +24,9 @@ class ShareLinkOut(BaseModel):
     expires_at: datetime | None
     revoked_at: datetime | None
     created_at: datetime
+    ask_reviewer_name: bool = True
+    domain_restrictions: list[str] = Field(default_factory=list)
+    comment_export_permission: bool = False
 
 
 class ReviewResolveOut(BaseModel):
@@ -33,11 +39,21 @@ class ReviewResolveOut(BaseModel):
     # (snippet mode) or Backline's own proxy route (proxy mode) after creating their
     # guest session - it needs the target site's origin to build either destination.
     target_origin: str
+    # M-02: server-computed policy the entry form uses only for its own UX convenience
+    # (show/hide + required attribute on the name field) - the actual requirement is
+    # re-enforced server-side in create_guest_session regardless of what the client
+    # sends (share_links/policy.py.resolve_guest_display_name).
+    ask_reviewer_name: bool = True
 
 
 class GuestSessionCreate(BaseModel):
     share_token: str
-    display_name: str = Field(min_length=1, max_length=100)
+    # M-02: length is validated here; whether a name is *required at all* depends on
+    # the share link's ask_reviewer_name policy, which schemas.py can't see (that's a
+    # DB-resolved flag, not a request field) - service.create_guest_session enforces
+    # "required" server-side against the link's actual policy, never trusting the
+    # client to have honored the ask-name prompt.
+    display_name: str = Field(default="", max_length=100)
     email: EmailStr | None = None
     passcode: str | None = None
 

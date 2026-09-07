@@ -5,6 +5,7 @@ import { useOutletContext } from "react-router-dom";
 
 import { useAuth } from "../auth/AuthContext";
 import { qk } from "../../lib/query-keys";
+import { useDocumentTitle } from "../../lib/use-document-title";
 import * as projectsApi from "../projects/api";
 import * as workspacesApi from "./api";
 import type { WorkspaceOut } from "./api";
@@ -92,6 +93,7 @@ function AddMemberModal({ onInvite, onClose }: AddMemberModalProps) {
 
 export function MembersPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
+  useDocumentTitle('Members');
   const { role: myRole } = useAuth();
   const queryClient = useQueryClient();
 

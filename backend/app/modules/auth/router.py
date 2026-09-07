@@ -13,8 +13,11 @@ from app.modules.auth.schemas import (
     GoogleCallbackRequest,
     OtpRequestRequest,
     OtpVerifyRequest,
+    SessionOut,
     SwitchWorkspaceRequest,
     TokenPairOut,
+    UserOut,
+    UserUpdateRequest,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -37,8 +40,10 @@ def _set_refresh_cookie(response: Response, raw_refresh_token: str) -> None:
 
 
 @router.post("/google/callback", response_model=TokenPairOut)
-async def google_callback(body: GoogleCallbackRequest, response: Response) -> TokenPairOut:
-    issued = await auth_service.login_with_google(get_db(), body.code)
+async def google_callback(body: GoogleCallbackRequest, request: Request, response: Response) -> TokenPairOut:
+    ua = request.headers.get("user-agent")
+    ip = get_client_ip(request)
+    issued = await auth_service.login_with_google(get_db(), body.code, ua=ua, ip=ip)
     _set_refresh_cookie(response, issued.refresh_token)
     return TokenPairOut(access_token=issued.access_token, user=issued.user)
 
@@ -58,20 +63,25 @@ async def otp_request(body: OtpRequestRequest, request: Request) -> None:
 
 
 @router.post("/otp/verify", response_model=TokenPairOut)
-async def otp_verify(body: OtpVerifyRequest, response: Response) -> TokenPairOut:
-    issued = await auth_service.verify_otp(get_db(), body.email, body.code)
+async def otp_verify(body: OtpVerifyRequest, request: Request, response: Response) -> TokenPairOut:
+    ua = request.headers.get("user-agent")
+    ip = get_client_ip(request)
+    issued = await auth_service.verify_otp(get_db(), body.email, body.code, ua=ua, ip=ip)
     _set_refresh_cookie(response, issued.refresh_token)
     return TokenPairOut(access_token=issued.access_token, user=issued.user)
 
 
 @router.post("/refresh", response_model=TokenPairOut)
 async def refresh(
+    request: Request,
     response: Response,
     refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
 ) -> TokenPairOut:
     if refresh_token is None:
         raise AuthenticationError("No refresh token cookie present.")
-    issued = await auth_service.refresh_tokens(get_db(), refresh_token)
+    ua = request.headers.get("user-agent")
+    ip = get_client_ip(request)
+    issued = await auth_service.refresh_tokens(get_db(), refresh_token, ua=ua, ip=ip)
     _set_refresh_cookie(response, issued.refresh_token)
     return TokenPairOut(access_token=issued.access_token, user=issued.user)
 
@@ -94,3 +104,32 @@ async def switch_workspace(
     access_token = await auth_service.switch_workspace(get_db(), session.user_id, body.workspace_id)
     flags = await load_feature_flags(get_db(), body.workspace_id)
     return AccessTokenOut(access_token=access_token, feature_flags=flags)
+
+
+@router.get("/sessions", response_model=list[SessionOut])
+async def list_sessions(
+    session: Session = Depends(get_current_session),
+    refresh_token: str | None = Cookie(default=None, alias=REFRESH_COOKIE_NAME),
+) -> list[SessionOut]:
+    """FD-AUD-011: Lists all active sessions for the current user."""
+    return await auth_service.list_sessions(get_db(), session.user_id, current_refresh_token=refresh_token)
+
+
+@router.delete("/sessions/{family_id}", status_code=204)
+async def revoke_session(
+    family_id: str,
+    session: Session = Depends(get_current_session),
+) -> None:
+    """FD-AUD-011: Revokes a specific session family."""
+    await auth_service.revoke_session_family(get_db(), session.user_id, family_id)
+
+
+@router.patch("/me", response_model=UserOut)
+async def update_me(
+    body: UserUpdateRequest,
+    session: Session = Depends(get_current_session),
+) -> UserOut:
+    """FD-AUD-046: Update user profile and preferences."""
+    return await auth_service.update_user(get_db(), session.user_id, body.model_dump(exclude_unset=True))
+
+

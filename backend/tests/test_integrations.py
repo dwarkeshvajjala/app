@@ -253,6 +253,43 @@ async def test_non_admin_cannot_connect_integration(
     assert resp.status_code == 403
 
 
+async def test_cannot_list_integrations_for_another_workspace(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """M-01: integrations/router.py's list/create endpoints previously had no
+    require_workspace_match - a valid owner token for workspace A could target
+    workspace B's `{workspace_id}` path segment directly."""
+    ctx_a = await create_project_with_guest_session(
+        client, monkeypatch, email="int12a@example.com", code="920015", workspace_name="INT12a"
+    )
+    ctx_b = await create_project_with_guest_session(
+        client, monkeypatch, email="int12b@example.com", code="920016", workspace_name="INT12b"
+    )
+
+    resp = await client.get(
+        f"/api/v1/workspaces/{ctx_b['workspace_id']}/integrations", headers=ctx_a["owner_headers"]
+    )
+    assert resp.status_code == 403
+
+
+async def test_cannot_create_integration_for_another_workspace(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    ctx_a = await create_project_with_guest_session(
+        client, monkeypatch, email="int13a@example.com", code="920017", workspace_name="INT13a"
+    )
+    ctx_b = await create_project_with_guest_session(
+        client, monkeypatch, email="int13b@example.com", code="920018", workspace_name="INT13b"
+    )
+
+    resp = await client.post(
+        f"/api/v1/workspaces/{ctx_b['workspace_id']}/integrations",
+        json={"type": "slack", "webhook_url": "https://hooks.slack.com/services/x"},
+        headers=ctx_a["owner_headers"],
+    )
+    assert resp.status_code == 403
+
+
 async def test_disconnect_integration(client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
     ctx = await create_project_with_guest_session(
         client, monkeypatch, email="int6@example.com", code="920007", workspace_name="INT6"

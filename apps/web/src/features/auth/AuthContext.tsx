@@ -19,6 +19,7 @@ interface AuthContextValue {
   loginWithGoogleCode: (code: string) => Promise<void>;
   switchWorkspace: (workspaceId: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (user: UserOut) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -95,6 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(null);
       setUser(null);
       setStatus("unauthenticated");
+    },
+    updateUser(u) {
+      setUser(u);
     },
   };
 

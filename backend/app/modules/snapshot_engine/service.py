@@ -47,7 +47,7 @@ async def submit_snapshot(
     await resolve_actor_project_access(db, actor, page["project_id"])
 
     revision_repo = RevisionRepository(db)
-    current = await revision_repo.find_current(page_id)
+    current = await revision_repo.find_current(page["workspace_id"], page_id)
 
     if current is not None and current["full_page_hash"] == full_page_hash:
         # 10-Revision-Recovery.md §10.2: identical hash -> discarded, no new revision.
@@ -69,12 +69,12 @@ async def submit_snapshot(
     compressed = gzip.compress(json.dumps(snapshot_payload).encode("utf-8"))
     snapshot_key = f"snapshots/{page['project_id']}/{revision_id}/snapshot.json.gz"
     await upload_bytes(snapshot_key, compressed, "application/gzip")
-    await revision_repo.set_snapshot_key(revision_id, snapshot_key)
+    await revision_repo.set_snapshot_key(page["workspace_id"], revision_id, snapshot_key)
 
     if current is not None:
-        await revision_repo.mark_not_current(str(current["_id"]))
+        await revision_repo.mark_not_current(page["workspace_id"], str(current["_id"]))
 
-    await page_repo.update_latest_revision(page_id, revision_id)
+    await page_repo.update_latest_revision(page["workspace_id"], page_id, revision_id)
 
     actor_type, actor_id = actor_identity(actor)
     await append_event(

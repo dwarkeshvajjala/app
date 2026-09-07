@@ -4,13 +4,19 @@ import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import { qk } from "../../lib/query-keys";
+import { useDocumentTitle } from "../../lib/use-document-title";
+import { useUnsavedChanges } from "../../lib/use-unsaved-changes";
 import * as workspacesApi from "./api";
 import type { WorkspaceOut } from "./api";
 
 export function SettingsPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
+  useDocumentTitle('Settings');
   const queryClient = useQueryClient();
   const [name, setName] = useState(workspace.name);
+  
+  const nameChanged = name.trim().length > 0 && name.trim() !== workspace.name;
+  useUnsavedChanges(nameChanged);
 
   const renameMutation = useMutation({
     mutationFn: (newName: string) => workspacesApi.updateWorkspace(workspace.id, newName),
@@ -18,8 +24,6 @@ export function SettingsPage() {
       queryClient.invalidateQueries({ queryKey: qk.workspaces() });
     },
   });
-
-  const nameChanged = name.trim().length > 0 && name.trim() !== workspace.name;
 
   return (
     <main className="px-6 py-8">
@@ -52,7 +56,8 @@ export function SettingsPage() {
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              className="rounded-md border border-black/10 px-3 py-2 dark:border-white/10 dark:bg-transparent"
+              aria-invalid={!name.trim()}
+              className="rounded-md border border-black/10 px-3 py-2 dark:border-white/10 dark:bg-transparent aria-[invalid=true]:border-red-500 aria-[invalid=true]:focus:ring-red-500"
             />
           </label>
         </div>

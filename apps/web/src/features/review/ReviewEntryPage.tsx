@@ -112,15 +112,18 @@ export function ReviewEntryPage() {
       </div>
 
       <form className="flex flex-col gap-3" onSubmit={handleSubmit}>
-        <label className="flex flex-col gap-1 text-sm">
-          Your name
-          <input
-            required
-            value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
-            className="rounded-md border border-black/10 px-3 py-2 dark:border-white/10 dark:bg-transparent"
-          />
-        </label>
+        {resolved.ask_reviewer_name !== false && (
+          <label className="flex flex-col gap-1 text-sm">
+            Your name
+            <input
+              required
+              autoComplete="name"
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+              className="rounded-md border border-black/10 px-3 py-2 dark:border-white/10 dark:bg-transparent"
+            />
+          </label>
+        )}
 
         {resolved.requires_passcode && (
           <label className="flex flex-col gap-1 text-sm">

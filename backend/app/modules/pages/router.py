@@ -7,7 +7,7 @@ from app.core.rate_limit import actor_rate_limit_key, check_rate_limit
 from app.core.redis_client import get_redis
 from app.core.session import Actor, Session, get_current_actor, require_workspace_context
 from app.modules.pages import service as page_service
-from app.modules.pages.schemas import PageOut, PageRegister
+from app.modules.pages.schemas import PageOut, PageRegister, PageUpdate
 
 router = APIRouter(tags=["pages"])
 
@@ -35,4 +35,36 @@ async def register_page(
     )
     return await page_service.register_page(
         get_db(), actor=actor, project_id=body.project_id, url=body.url, title=body.title
+    )
+
+
+@router.patch("/pages/{page_id}", response_model=PageOut)
+async def update_page(
+    page_id: str,
+    body: PageUpdate,
+    # M-01: dashboard page management (rename/reorder) is a member-only action -
+    # guests must never reach it. `register_page` above stays on get_current_actor
+    # since guest page *registration* (idempotent, widget-driven) is intentionally
+    # separate from staff page *management* here (13-Authentication.md §13.5's
+    # permission matrix has no guest page-mutation row at all).
+    session: Session = Depends(require_permission("project:manage")),
+) -> PageOut:
+    return await page_service.update_page(
+        get_db(),
+        workspace_id=require_workspace_context(session),
+        page_id=page_id,
+        changes=body,
+    )
+
+
+@router.delete("/pages/{page_id}", status_code=204)
+async def delete_page(
+    page_id: str,
+    session: Session = Depends(require_permission("project:manage")),
+) -> None:
+    await page_service.delete_page(
+        get_db(),
+        workspace_id=require_workspace_context(session),
+        page_id=page_id,
+        actor_user_id=session.user_id,
     )

@@ -273,3 +273,37 @@ class DashboardRepository:
         )
         assert doc is not None
         return doc
+
+    # M-08: the three collections behind global search (dashboard/service.py's
+    # search()) were previously queried directly with raw db.* calls from the
+    # service layer, bypassing the repository boundary every other module keeps
+    # (rule 2.1/2.3). Moved here unchanged in query shape - TDR-0013 already fixed
+    # the bounded-search contract itself, this only relocates who executes it.
+
+    async def search_projects(
+        self, workspace_id: str, matcher: dict[str, Any], limit: int
+    ) -> list[dict[str, Any]]:
+        cursor = self.db.projects.find(
+            {"workspace_id": workspace_id, "archived_at": None, "name": matcher},
+            {"name": 1, "project_type": 1},
+        ).limit(limit)
+        return [doc async for doc in cursor]
+
+    async def search_comments(
+        self, pipeline: list[dict[str, Any]], limit: int
+    ) -> list[dict[str, Any]]:
+        return await self.db.comments.aggregate(pipeline).to_list(length=limit)
+
+    async def search_members(
+        self, workspace_id: str, matcher: dict[str, Any], limit: int
+    ) -> list[dict[str, Any]]:
+        memberships = await self.db.memberships.find({"workspace_id": workspace_id}).limit(
+            200
+        ).to_list(200)
+        user_ids = [membership["user_id"] for membership in memberships]
+        object_ids = [oid for user_id in user_ids if (oid := to_object_id(user_id))]
+        cursor = self.db.users.find(
+            {"_id": {"$in": object_ids}, "$or": [{"name": matcher}, {"email": matcher}]},
+            {"name": 1, "email": 1},
+        ).limit(limit)
+        return [doc async for doc in cursor]

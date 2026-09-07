@@ -1,10 +1,21 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import PlainTextResponse
 
 from app.core.db import get_db
 from app.core.permissions import require_permission
 from app.core.session import Session, require_workspace_context, require_workspace_match
+from app.modules.projects import deletion_service
 from app.modules.projects import service as project_service
-from app.modules.projects.schemas import ProjectCreate, ProjectOut, ProjectUpdate
+from app.modules.projects.schemas import (
+    ProjectCreate,
+    ProjectHardDeleteConfirm,
+    ProjectHardDeletePreviewOut,
+    ProjectHardDeleteResult,
+    ProjectOut,
+    ProjectSettingsOut,
+    ProjectSettingsUpdate,
+    ProjectUpdate,
+)
 
 router = APIRouter(tags=["projects"])
 
@@ -90,4 +101,84 @@ async def restore_project(
         project_id=project_id,
         workspace_id=require_workspace_context(session),
         actor_user_id=session.user_id,
+    )
+
+
+@router.patch("/projects/{project_id}/settings", response_model=ProjectSettingsOut)
+async def update_project_settings(
+    project_id: str,
+    body: ProjectSettingsUpdate,
+    session: Session = Depends(require_permission("project:manage")),
+) -> ProjectSettingsOut:
+    """FD-AUD-018: persist the five review-settings flags for a project."""
+    return await project_service.update_project_settings(
+        get_db(),
+        project_id=project_id,
+        workspace_id=require_workspace_context(session),
+        actor_user_id=session.user_id,
+        settings=body,
+    )
+
+
+@router.post("/projects/{project_id}/duplicate", response_model=ProjectOut, status_code=201)
+async def duplicate_project(
+    project_id: str,
+    session: Session = Depends(require_permission("project:manage")),
+) -> ProjectOut:
+    return await project_service.duplicate_project(
+        get_db(),
+        project_id=project_id,
+        workspace_id=require_workspace_context(session),
+        actor_user_id=session.user_id,
+    )
+
+
+@router.post(
+    "/projects/{project_id}/hard-delete/preview",
+    response_model=ProjectHardDeletePreviewOut,
+)
+async def preview_hard_delete_project(
+    project_id: str,
+    session: Session = Depends(require_permission("project:hard_delete")),
+) -> ProjectHardDeletePreviewOut:
+    return await deletion_service.preview_hard_delete(
+        get_db(),
+        project_id=project_id,
+        workspace_id=require_workspace_context(session),
+        actor_user_id=session.user_id,
+    )
+
+
+@router.post(
+    "/projects/{project_id}/hard-delete/confirm",
+    response_model=ProjectHardDeleteResult,
+)
+async def confirm_hard_delete_project(
+    project_id: str,
+    body: ProjectHardDeleteConfirm,
+    session: Session = Depends(require_permission("project:hard_delete")),
+) -> ProjectHardDeleteResult:
+    return await deletion_service.confirm_hard_delete(
+        get_db(),
+        project_id=project_id,
+        workspace_id=require_workspace_context(session),
+        actor_user_id=session.user_id,
+        confirmation=body,
+    )
+
+
+@router.get("/projects/{project_id}/export")
+async def export_project(
+    project_id: str,
+    session: Session = Depends(require_permission("project:manage")),
+) -> PlainTextResponse:
+    csv_content = await project_service.export_project_comments(
+        get_db(),
+        project_id=project_id,
+        workspace_id=require_workspace_context(session),
+    )
+    return PlainTextResponse(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="project_{project_id}_comments.csv"'}
     )

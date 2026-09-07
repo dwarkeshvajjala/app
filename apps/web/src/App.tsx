@@ -1,10 +1,13 @@
 import { AppRouter } from "./app/router";
 import { AppProviders } from "./app/providers";
+import { ToastProvider } from "./components/Toast";
 
 function App() {
   return (
     <AppProviders>
-      <AppRouter />
+      <ToastProvider>
+        <AppRouter />
+      </ToastProvider>
     </AppProviders>
   );
 }

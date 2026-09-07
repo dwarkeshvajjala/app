@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
+import { useDocumentTitle } from "../../lib/use-document-title";
 import { UpgradeToProModal } from "../projects/panel/UpgradeToProModal";
 import type { WorkspaceOut } from "./api";
 
@@ -20,6 +21,7 @@ const FREE_PLAN_FEATURES = [
 // Upgrade flow are the same static shell as every other pro-gated surface in this pass.
 export function BillingPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
+  useDocumentTitle('Billing');
   const [showUpgrade, setShowUpgrade] = useState(false);
   const planLabel = workspace.plan.charAt(0).toUpperCase() + workspace.plan.slice(1);
 

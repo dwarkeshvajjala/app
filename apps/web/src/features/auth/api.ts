@@ -41,3 +41,44 @@ export function logout(): Promise<void> {
 export function refreshSession(): Promise<TokenPairOut> {
   return apiFetch<TokenPairOut>("/api/v1/auth/refresh", { method: "POST" });
 }
+
+export interface UserPreferencesOut {
+  notify_on_assignment: boolean;
+  notify_on_mention: boolean;
+  notify_on_reply: boolean;
+  notify_on_status_change: boolean;
+  daily_digest: boolean;
+}
+
+export interface UserUpdateRequest {
+  name?: string | null;
+  preferences?: UserPreferencesOut | null;
+}
+
+// We override UserOut locally to include preferences since types aren't regenerated yet.
+export type UserOutWithPrefs = UserOut & { preferences: UserPreferencesOut };
+
+export function updateProfile(updates: UserUpdateRequest): Promise<UserOutWithPrefs> {
+  return apiFetch<UserOutWithPrefs>("/api/v1/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  });
+}
+
+export interface SessionOut {
+  id: string;
+  current: boolean;
+  browser: string | null;
+  os: string | null;
+  ip_address: string | null;
+  created_at: string;
+  last_active_at: string;
+}
+
+export function listSessions(): Promise<SessionOut[]> {
+  return apiFetch<SessionOut[]>("/api/v1/auth/sessions", { method: "GET" });
+}
+
+export function revokeSession(familyId: string): Promise<void> {
+  return apiFetch<void>(`/api/v1/auth/sessions/${familyId}`, { method: "DELETE" });
+}

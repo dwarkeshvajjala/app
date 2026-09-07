@@ -263,6 +263,153 @@
         ]
       }
     },
+    "/api/v1/auth/sessions": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "List Sessions",
+        "description": "FD-AUD-011: Lists all active sessions for the current user.",
+        "operationId": "list_sessions_api_v1_auth_sessions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "refresh_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Refresh Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionOut"
+                  },
+                  "title": "Response List Sessions Api V1 Auth Sessions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/sessions/{family_id}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Revoke Session",
+        "description": "FD-AUD-011: Revokes a specific session family.",
+        "operationId": "revoke_session_api_v1_auth_sessions__family_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "family_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Family Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "patch": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Update Me",
+        "description": "FD-AUD-046: Update user profile and preferences.",
+        "operationId": "update_me_api_v1_auth_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/workspaces": {
       "get": {
         "tags": [
@@ -940,6 +1087,260 @@
                 "schema": {
                   "$ref": "#/components/schemas/ProjectOut"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/settings": {
+      "patch": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Update Project Settings",
+        "description": "FD-AUD-018: persist the five review-settings flags for a project.",
+        "operationId": "update_project_settings_api_v1_projects__project_id__settings_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectSettingsUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectSettingsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/duplicate": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Duplicate Project",
+        "operationId": "duplicate_project_api_v1_projects__project_id__duplicate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/hard-delete/preview": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Preview Hard Delete Project",
+        "operationId": "preview_hard_delete_project_api_v1_projects__project_id__hard_delete_preview_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectHardDeletePreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/hard-delete/confirm": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Confirm Hard Delete Project",
+        "operationId": "confirm_hard_delete_project_api_v1_projects__project_id__hard_delete_confirm_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectHardDeleteConfirm"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectHardDeleteResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/export": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Export Project",
+        "operationId": "export_project_api_v1_projects__project_id__export_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -2213,6 +2614,101 @@
         }
       }
     },
+    "/api/v1/pages/{page_id}": {
+      "patch": {
+        "tags": [
+          "pages"
+        ],
+        "summary": "Update Page",
+        "operationId": "update_page_api_v1_pages__page_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Page Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "pages"
+        ],
+        "summary": "Delete Page",
+        "operationId": "delete_page_api_v1_pages__page_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Page Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/pages/{page_id}/snapshots": {
       "post": {
         "tags": [
@@ -2556,6 +3052,69 @@
         }
       }
     },
+    "/api/v1/projects/{project_id}/guest-board": {
+      "get": {
+        "tags": [
+          "comments"
+        ],
+        "summary": "Guest Board",
+        "operationId": "guest_board_api_v1_projects__project_id__guest_board_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "x-guest-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Guest-Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuestBoardOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/comments/{comment_id}/replies": {
       "post": {
         "tags": [
@@ -2789,6 +3348,69 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/comments/{comment_id}/resolve": {
+      "patch": {
+        "tags": [
+          "comments"
+        ],
+        "summary": "Resolve Own Comment",
+        "operationId": "resolve_own_comment_api_v1_comments__comment_id__resolve_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "comment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Comment Id"
+            }
+          },
+          {
+            "name": "x-guest-session",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Guest-Session"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -4268,6 +4890,19 @@
             "type": "array",
             "maxItems": 10,
             "title": "Attachments"
+          },
+          "client_request_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Request Id"
           }
         },
         "type": "object",
@@ -4831,6 +5466,90 @@
         ],
         "title": "GoogleCallbackRequest"
       },
+      "GuestBoardItemOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "todo",
+              "in_progress",
+              "in_review",
+              "blocked",
+              "resolved",
+              "wont_fix"
+            ],
+            "title": "Status"
+          },
+          "layer": {
+            "type": "string",
+            "const": "client",
+            "title": "Layer",
+            "default": "client"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "assignee_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Assignee Names"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "body",
+          "status",
+          "created_at"
+        ],
+        "title": "GuestBoardItemOut",
+        "description": "FD-AUD-042/M-04 'show ticket board to client' - a deliberately client-safe DTO,\nnever the staff board payload (CommentOut) with fields hidden in React (M-02's\nexplicit requirement). due_at/assignee_names are only ever populated by the service\nwhen the project's show_board_to_client setting is on; the endpoint itself is\nunreachable at all when it's off, per the prototype's own wording (\"Off means\nclients see comments and statuses but not due dates, assignees or the board\")."
+      },
+      "GuestBoardOut": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GuestBoardItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "project_id",
+          "items"
+        ],
+        "title": "GuestBoardOut"
+      },
       "GuestSessionCreate": {
         "properties": {
           "share_token": {
@@ -4840,8 +5559,8 @@
           "display_name": {
             "type": "string",
             "maxLength": 100,
-            "minLength": 1,
-            "title": "Display Name"
+            "title": "Display Name",
+            "default": ""
           },
           "email": {
             "anyOf": [
@@ -4869,8 +5588,7 @@
         },
         "type": "object",
         "required": [
-          "share_token",
-          "display_name"
+          "share_token"
         ],
         "title": "GuestSessionCreate"
       },
@@ -5072,7 +5790,12 @@
             "type": "string",
             "enum": [
               "comment_assigned",
-              "integration_disconnected"
+              "comment_reply",
+              "comment_mention",
+              "comment_status_changed",
+              "share_link_created",
+              "integration_disconnected",
+              "deploy_recovery_completed"
             ],
             "title": "Type"
           },
@@ -5080,6 +5803,17 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Payload"
+          },
+          "target_route": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Route"
           },
           "read_at": {
             "anyOf": [
@@ -5167,6 +5901,11 @@
             ],
             "title": "Title"
           },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order",
+            "default": 0
+          },
           "first_seen_at": {
             "type": "string",
             "format": "date-time",
@@ -5227,6 +5966,35 @@
         ],
         "title": "PageRegister"
       },
+      "PageUpdate": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          }
+        },
+        "type": "object",
+        "title": "PageUpdate"
+      },
       "ProjectCreate": {
         "properties": {
           "name": {
@@ -5277,6 +6045,171 @@
           "name"
         ],
         "title": "ProjectCreate"
+      },
+      "ProjectDeletionCounts": {
+        "properties": {
+          "pages": {
+            "type": "integer",
+            "title": "Pages",
+            "default": 0
+          },
+          "project_assets": {
+            "type": "integer",
+            "title": "Project Assets",
+            "default": 0
+          },
+          "comments": {
+            "type": "integer",
+            "title": "Comments",
+            "default": 0
+          },
+          "revisions": {
+            "type": "integer",
+            "title": "Revisions",
+            "default": 0
+          },
+          "revision_diffs": {
+            "type": "integer",
+            "title": "Revision Diffs",
+            "default": 0
+          },
+          "recovery_logs": {
+            "type": "integer",
+            "title": "Recovery Logs",
+            "default": 0
+          },
+          "share_links": {
+            "type": "integer",
+            "title": "Share Links",
+            "default": 0
+          },
+          "guest_sessions": {
+            "type": "integer",
+            "title": "Guest Sessions",
+            "default": 0
+          },
+          "notifications": {
+            "type": "integer",
+            "title": "Notifications",
+            "default": 0
+          },
+          "project_integrations": {
+            "type": "integer",
+            "title": "Project Integrations",
+            "default": 0
+          },
+          "object_keys": {
+            "type": "integer",
+            "title": "Object Keys",
+            "default": 0
+          },
+          "retained_audit_events": {
+            "type": "integer",
+            "title": "Retained Audit Events",
+            "default": 0
+          },
+          "unsafe_object_references": {
+            "type": "integer",
+            "title": "Unsafe Object References",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "ProjectDeletionCounts"
+      },
+      "ProjectHardDeleteConfirm": {
+        "properties": {
+          "correlation_id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Correlation Id"
+          },
+          "project_name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Project Name"
+          },
+          "acknowledge_permanent_deletion": {
+            "type": "boolean",
+            "const": true,
+            "title": "Acknowledge Permanent Deletion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "correlation_id",
+          "project_name",
+          "acknowledge_permanent_deletion"
+        ],
+        "title": "ProjectHardDeleteConfirm"
+      },
+      "ProjectHardDeletePreviewOut": {
+        "properties": {
+          "correlation_id": {
+            "type": "string",
+            "title": "Correlation Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "project_name": {
+            "type": "string",
+            "title": "Project Name"
+          },
+          "archived": {
+            "type": "boolean",
+            "title": "Archived"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/ProjectDeletionCounts"
+          },
+          "retention_notice": {
+            "type": "string",
+            "title": "Retention Notice"
+          }
+        },
+        "type": "object",
+        "required": [
+          "correlation_id",
+          "project_id",
+          "project_name",
+          "archived",
+          "expires_at",
+          "counts",
+          "retention_notice"
+        ],
+        "title": "ProjectHardDeletePreviewOut"
+      },
+      "ProjectHardDeleteResult": {
+        "properties": {
+          "correlation_id": {
+            "type": "string",
+            "title": "Correlation Id"
+          },
+          "status": {
+            "type": "string",
+            "const": "deleted",
+            "title": "Status"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/ProjectDeletionCounts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "correlation_id",
+          "status",
+          "counts"
+        ],
+        "title": "ProjectHardDeleteResult"
       },
       "ProjectOut": {
         "properties": {
@@ -5386,6 +6319,31 @@
           "snippet_installed": {
             "type": "boolean",
             "title": "Snippet Installed"
+          },
+          "capture_device_details": {
+            "type": "boolean",
+            "title": "Capture Device Details",
+            "default": false
+          },
+          "reanchor_on_deploy": {
+            "type": "boolean",
+            "title": "Reanchor On Deploy",
+            "default": false
+          },
+          "reviewer_can_resolve": {
+            "type": "boolean",
+            "title": "Reviewer Can Resolve",
+            "default": false
+          },
+          "show_board_to_client": {
+            "type": "boolean",
+            "title": "Show Board To Client",
+            "default": false
+          },
+          "client_digest_enabled": {
+            "type": "boolean",
+            "title": "Client Digest Enabled",
+            "default": false
           }
         },
         "type": "object",
@@ -5394,6 +6352,68 @@
           "snippet_installed"
         ],
         "title": "ProjectSettingsOut"
+      },
+      "ProjectSettingsUpdate": {
+        "properties": {
+          "capture_device_details": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capture Device Details"
+          },
+          "reanchor_on_deploy": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reanchor On Deploy"
+          },
+          "reviewer_can_resolve": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Can Resolve"
+          },
+          "show_board_to_client": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Show Board To Client"
+          },
+          "client_digest_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Digest Enabled"
+          }
+        },
+        "type": "object",
+        "title": "ProjectSettingsUpdate",
+        "description": "Partial update for project review settings \u2014 omitted fields are unchanged."
       },
       "ProjectStatsOut": {
         "properties": {
@@ -5573,6 +6593,27 @@
             "type": "array",
             "maxItems": 10,
             "title": "Attachments"
+          },
+          "client_request_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Request Id"
+          },
+          "mentioned_user_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Mentioned User Ids"
           }
         },
         "type": "object",
@@ -5611,6 +6652,11 @@
           "target_origin": {
             "type": "string",
             "title": "Target Origin"
+          },
+          "ask_reviewer_name": {
+            "type": "boolean",
+            "title": "Ask Reviewer Name",
+            "default": true
           }
         },
         "type": "object",
@@ -5735,6 +6781,73 @@
         ],
         "title": "SearchResultsOut"
       },
+      "SessionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "current": {
+            "type": "boolean",
+            "title": "Current"
+          },
+          "browser": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Browser"
+          },
+          "os": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Os"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_active_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Active At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "current",
+          "browser",
+          "os",
+          "ip_address",
+          "created_at",
+          "last_active_at"
+        ],
+        "title": "SessionOut",
+        "description": "FD-AUD-011: Represents an active refresh token family for the user.\nM-05: created_at/last_active_at are typed datetimes (Pydantic serializes to a real\nISO-8601 string with timezone on the wire) rather than hand-formatted str fields -\nAPI contracts stay generated/typed end-to-end per 06-Backend-Architecture.md \u00a72.3,\nand the frontend gets a real Date-parseable value instead of an ad hoc string."
+      },
       "ShareLinkCreate": {
         "properties": {
           "mode": {
@@ -5770,6 +6883,23 @@
               }
             ],
             "title": "Expires At"
+          },
+          "ask_reviewer_name": {
+            "type": "boolean",
+            "title": "Ask Reviewer Name",
+            "default": true
+          },
+          "domain_restrictions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Domain Restrictions"
+          },
+          "comment_export_permission": {
+            "type": "boolean",
+            "title": "Comment Export Permission",
+            "default": false
           }
         },
         "type": "object",
@@ -5829,6 +6959,23 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "ask_reviewer_name": {
+            "type": "boolean",
+            "title": "Ask Reviewer Name",
+            "default": true
+          },
+          "domain_restrictions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Domain Restrictions"
+          },
+          "comment_export_permission": {
+            "type": "boolean",
+            "title": "Comment Export Permission",
+            "default": false
           }
         },
         "type": "object",
@@ -6390,6 +7537,16 @@
               }
             ],
             "title": "Avatar Url"
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/UserPreferencesOut",
+            "default": {
+              "notify_on_assignment": true,
+              "notify_on_mention": true,
+              "notify_on_reply": true,
+              "notify_on_status_change": true,
+              "daily_digest": true
+            }
           }
         },
         "type": "object",
@@ -6399,6 +7556,64 @@
           "name"
         ],
         "title": "UserOut"
+      },
+      "UserPreferencesOut": {
+        "properties": {
+          "notify_on_assignment": {
+            "type": "boolean",
+            "title": "Notify On Assignment",
+            "default": true
+          },
+          "notify_on_mention": {
+            "type": "boolean",
+            "title": "Notify On Mention",
+            "default": true
+          },
+          "notify_on_reply": {
+            "type": "boolean",
+            "title": "Notify On Reply",
+            "default": true
+          },
+          "notify_on_status_change": {
+            "type": "boolean",
+            "title": "Notify On Status Change",
+            "default": true
+          },
+          "daily_digest": {
+            "type": "boolean",
+            "title": "Daily Digest",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "UserPreferencesOut"
+      },
+      "UserUpdateRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "preferences": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserPreferencesOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "UserUpdateRequest"
       },
       "ValidationError": {
         "properties": {

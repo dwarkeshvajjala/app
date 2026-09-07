@@ -66,6 +66,23 @@ class ProjectUpdate(BaseModel):
 class ProjectSettingsOut(BaseModel):
     proxy_mode: bool
     snippet_installed: bool
+    # FD-AUD-018 — persisted review settings (2026-09-07)
+    # All five flags default to False so existing documents without these fields
+    # remain readable without a migration (additive backfill strategy per AGENTS.md).
+    capture_device_details: bool = False
+    reanchor_on_deploy: bool = False
+    reviewer_can_resolve: bool = False
+    show_board_to_client: bool = False
+    client_digest_enabled: bool = False
+
+
+class ProjectSettingsUpdate(BaseModel):
+    """Partial update for project review settings — omitted fields are unchanged."""
+    capture_device_details: bool | None = None
+    reanchor_on_deploy: bool | None = None
+    reviewer_can_resolve: bool | None = None
+    show_board_to_client: bool | None = None
+    client_digest_enabled: bool | None = None
 
 
 class ProjectOut(BaseModel):
@@ -81,3 +98,41 @@ class ProjectOut(BaseModel):
     project_type: ProjectType = "website"
     environment: Environment = "live"
     client_id: str | None = None
+
+
+class ProjectDeletionCounts(BaseModel):
+    pages: int = 0
+    project_assets: int = 0
+    comments: int = 0
+    revisions: int = 0
+    revision_diffs: int = 0
+    recovery_logs: int = 0
+    share_links: int = 0
+    guest_sessions: int = 0
+    notifications: int = 0
+    project_integrations: int = 0
+    object_keys: int = 0
+    retained_audit_events: int = 0
+    unsafe_object_references: int = 0
+
+
+class ProjectHardDeletePreviewOut(BaseModel):
+    correlation_id: str
+    project_id: str
+    project_name: str
+    archived: bool
+    expires_at: datetime
+    counts: ProjectDeletionCounts
+    retention_notice: str
+
+
+class ProjectHardDeleteConfirm(BaseModel):
+    correlation_id: str = Field(min_length=36, max_length=36)
+    project_name: str = Field(min_length=1, max_length=200)
+    acknowledge_permanent_deletion: Literal[True]
+
+
+class ProjectHardDeleteResult(BaseModel):
+    correlation_id: str
+    status: Literal["deleted"]
+    counts: ProjectDeletionCounts

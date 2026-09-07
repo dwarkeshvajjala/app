@@ -1,11 +1,13 @@
 import { Button } from "@backline/ui";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import * as shareLinksApi from "../share-links/api";
 import * as workspacesApi from "./api";
 import type { ProjectOut } from "../projects/api";
+import { useUnsavedChanges } from "../../lib/use-unsaved-changes";
+import { useFocusTrap } from "../../lib/use-focus-trap";
 
 function reviewUrl(token: string): string {
   return `${window.location.origin}/review/${token}`;
@@ -34,7 +36,16 @@ export function ShareProjectModal({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"member" | "admin">("member");
   const [copied, setCopied] = useState(false);
+  const [passcode, setPasscode] = useState("");
+  const [domainRestrictionsStr, setDomainRestrictionsStr] = useState("");
+  const [expiration, setExpiration] = useState<"never" | "7" | "30">("never");
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+  
+  const isDirty = email.trim().length > 0 || passcode.trim().length > 0 || domainRestrictionsStr.trim().length > 0;
+  useUnsavedChanges(isDirty);
+  useFocusTrap(dialogRef, true);
 
   useEffect(() => {
     closeButtonRef.current?.focus();
@@ -56,6 +67,22 @@ export function ShareProjectModal({
     onSuccess: () => setEmail(""),
   });
 
+  const createMutation = useMutation({
+    mutationFn: () =>
+      shareLinksApi.createShareLink(project.id, {
+        mode: "proxy",
+        passcode: passcode.trim() || undefined,
+        askReviewerName: true,
+        domainRestrictions: domainRestrictionsStr.split(',').map(s => s.trim()).filter(Boolean),
+        expiresAt: expiration === "never" ? undefined : new Date(Date.now() + Number(expiration) * 24 * 60 * 60 * 1000).toISOString(),
+      }),
+    onSuccess: () => {
+      setPasscode("");
+      setDomainRestrictionsStr("");
+      return queryClient.invalidateQueries({ queryKey: ["project", project.id, "share-links"] });
+    },
+  });
+
   async function copyLink() {
     if (!activeLink) return;
     await navigator.clipboard.writeText(reviewUrl(activeLink.token));
@@ -69,12 +96,18 @@ export function ShareProjectModal({
     inviteMutation.mutate();
   }
 
+  function handleCreateLink(event: React.FormEvent) {
+    event.preventDefault();
+    createMutation.mutate();
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label={`Share ${project.name}`}
@@ -96,14 +129,15 @@ export function ShareProjectModal({
         <form onSubmit={handleInvite} className="flex flex-col gap-2">
           <label className="text-xs font-medium">Invite a teammate</label>
           <div className="flex items-center gap-2">
-            <input
-              type="email"
-              required
-              placeholder="someone@youragency.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="flex-1 rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-transparent"
-            />
+              <input
+                type="email"
+                required
+                placeholder="someone@youragency.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                aria-invalid={!email.trim()}
+                className="flex-1 rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-transparent aria-[invalid=true]:border-red-500 aria-[invalid=true]:focus:ring-red-500"
+              />
             <select
               value={role}
               onChange={(event) => setRole(event.target.value as "member" | "admin")}
@@ -145,11 +179,45 @@ export function ShareProjectModal({
               </Button>
             </div>
           ) : (
-            <p className="text-text-muted text-xs">No active share link for this project.</p>
+            <form onSubmit={handleCreateLink} className="flex flex-col gap-3">
+              <p className="text-text-muted text-xs">No active share link for this project. Create one below.</p>
+              <label className="flex flex-col gap-1 text-xs">
+                Passcode (optional)
+                <input
+                  value={passcode}
+                  onChange={(event) => setPasscode(event.target.value)}
+                  className="rounded-md border border-black/10 px-3 py-1.5 dark:border-white/10 dark:bg-transparent"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs">
+                Domain restrictions (comma-separated, optional)
+                <input
+                  value={domainRestrictionsStr}
+                  onChange={(event) => setDomainRestrictionsStr(event.target.value)}
+                  placeholder="example.com"
+                  className="rounded-md border border-black/10 px-3 py-1.5 dark:border-white/10 dark:bg-transparent"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs">
+                Expiration policy
+                <select
+                  value={expiration}
+                  onChange={(event) => setExpiration(event.target.value as "never" | "7" | "30")}
+                  className="rounded-md border border-black/10 px-2 py-1.5 dark:border-white/10 dark:bg-transparent"
+                >
+                  <option value="never">Never expires</option>
+                  <option value="7">7 days</option>
+                  <option value="30">30 days</option>
+                </select>
+              </label>
+              <Button type="submit" disabled={createMutation.isPending}>
+                Create share link
+              </Button>
+            </form>
           )}
           <Link
             to={`/w/${workspaceSlug}/p/${project.id}/share-links`}
-            className="text-accent-primary text-xs underline"
+            className="text-accent-primary text-xs underline mt-2"
             onClick={onClose}
           >
             Manage share links (passcodes, more links, revoke) →

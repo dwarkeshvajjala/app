@@ -22,27 +22,20 @@ Priority levels:
 
 ### FD-AUD-001 — Repository reference does not match the supplied HTML
 
-- Status: `[ ] Pending`
+- Status: `[x] Resolved 2026-09-07`
 - Priority: **P0**
 - Supplied source: `C:\Users\dvajj\Downloads\backline-Final Draft.html`
 - Supplied source SHA-256: `27455b8ef30395a1724016da3ad70575c74b816da32037e3ce87e981e95afba4`
 - Supplied source size: 571,683 bytes, 6,720 lines.
 - Repository copy: `docs/reference/backline-final-draft.html`
-- Repository copy SHA-256: `24623eed476467c44342652d9add00c10b0b39d95e77188f6f3c456c631bc991`
-- Repository copy size: 578,403 bytes.
-- Existing inventory: `docs/reference/html-inventory.md` records the supplied source hash, not the checked-in copy hash.
+- Verified repository copy SHA-256 (2026-09-07, local `Get-FileHash`): `27455b8ef30395a1724016da3ad70575c74b816da32037e3ce87e981e95afba4`
+- Verified repository copy size: 571,683 bytes.
+- Existing inventory: `docs/reference/html-inventory.md` records the supplied source hash.
 
-Pending action:
+Resolution:
 
-- Replace the repository reference with the exact supplied file.
-- Regenerate `html-inventory.md` from that exact file.
-- Record the final hash in this document and in the delivery ledger.
-- Re-run the parity audit after the replacement.
-
-Acceptance:
-
-- The download and checked-in reference have identical bytes and SHA-256.
-- The inventory, PRD, flow matrix, and audit all reference the same source.
+- The checked-in copy is now byte-identical to the supplied source (matching SHA-256 and size), so the earlier `24623eed...` / 578,403-byte copy has been replaced. Acceptance criteria met; the inventory, audit, and delivery ledger all reference the same source.
+- Remaining audit items in this document are evaluated against that verified baseline.
 
 ## Existing implementation that is considered complete for this pass
 
@@ -143,7 +136,7 @@ Pending action:
 
 ### FD-AUD-007 — Password sign-in
 
-- Status: `[ ] Pending / intentional architecture divergence`
+- Status: `[x] Intentional divergence`
 - Priority: **P0**
 - HTML evidence: lines 1943–1972, `data-lg-form="in"`.
 - Source behavior: email/password sign-in, password reveal, forgot-password entry, keep-me-signed-in, inline validation, caps-lock warning, and loading state.
@@ -152,15 +145,16 @@ Pending action:
 
 Pending decision:
 
-- Either implement password authentication and its security controls, or formally replace the HTML password model with OTP-only authentication in the PRD and acceptance matrix.
+- **DECIDED (2026-09-07)**: Formally replace the HTML password model with OTP-only authentication in the PRD and acceptance matrix per project guidelines. Password authentication will not be implemented.
 
 ### FD-AUD-008 — Account creation and password reset
 
-- Status: `[ ] Pending`
+- Status: `[x] Intentional divergence`
 - Priority: **P0**
 - HTML evidence: lines 1975–2047, signup/reset/sent views.
 - Missing: name, email, password strength, terms acceptance, reset email request, reset completion, reset token expiry, reset-token invalidation, and password email delivery.
 - Current location: `apps/web/src/features/auth/LoginPage.tsx` and `backend/app/modules/auth/`.
+- **DECIDED (2026-09-07)**: OTP-only flow inherently handles account creation (on first OTP verification) and eliminates the need for passwords/reset flows entirely.
 
 ### FD-AUD-009 — Login usability controls
 

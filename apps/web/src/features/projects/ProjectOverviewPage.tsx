@@ -15,15 +15,19 @@ import { ProjectFooter, type CanvasMode } from "./footer/ProjectFooter";
 import type { ViewportOption } from "./footer/ViewportMenu";
 import { ProjectSidePanel } from "./panel/ProjectSidePanel";
 import { AssetReview } from "../assets/AssetReview";
+import { ProjectMenu } from "./ProjectMenu";
+import { ProjectPagesModal } from "./ProjectPagesModal";
 
 export function ProjectOverviewPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
   const { projectId } = useParams<{ projectId: string }>();
   const [showShare, setShowShare] = useState(false);
+  const [showPages, setShowPages] = useState(false);
   const [mode, setMode] = useState<CanvasMode>("comment");
   const [viewport, setViewport] = useState<ViewportOption | null>(null);
   const canvasRef = useRef<HTMLIFrameElement>(null);
   const queryClient = useQueryClient();
+
   // Cross-origin (the canvas is served from the API's own proxy origin, not this
   // dashboard's) - the widget (apps/widget/src/index.ts) posts this once it knows
   // which page it registered, so "show comments on current page only" has something to
@@ -31,6 +35,11 @@ export function ProjectOverviewPage() {
   // (cross-origin), so this only ever reflects the most recent page the widget itself
   // reported - stale until the next full load reports a new one.
   const [currentPageId, setCurrentPageId] = useState<string | null>(null);
+
+  const [iframeStatus, setIframeStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const [retryCount, setRetryCount] = useState(0);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project", projectId],
@@ -86,12 +95,22 @@ export function ProjectOverviewPage() {
   useEffect(() => {
     function onMessage(event: MessageEvent) {
       if (event.source !== canvasRef.current?.contentWindow) return;
-      if (event.data?.type !== "backline:page-registered") return;
-      setCurrentPageId(event.data.pageId as string);
+      if (event.data?.type === "backline:page-registered") {
+        setCurrentPageId(event.data.pageId as string);
+        setIframeStatus("loaded");
+      }
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
+
+  useEffect(() => {
+    setIframeStatus("loading");
+    const timer = setTimeout(() => {
+      setIframeStatus((current) => current === "loading" ? "error" : current);
+    }, 30000);
+    return () => clearTimeout(timer);
+  }, [projectId, retryCount]);
 
   if (isLoading) {
     return <p className="text-text-muted p-6 text-sm">Loading...</p>;
@@ -161,11 +180,18 @@ export function ProjectOverviewPage() {
             Share links
           </Link>
           <button
+            onClick={() => setShowPages(true)}
+            className="text-text-muted text-xs underline"
+          >
+            Pages
+          </button>
+          <button
             onClick={() => setShowShare(true)}
             className="bg-accent-primary rounded-md px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
           >
             Share
           </button>
+          <ProjectMenu project={project} workspaceSlug={workspace.slug} />
         </div>
       </div>
 
@@ -174,21 +200,59 @@ export function ProjectOverviewPage() {
           rather than sharing width with it - the iframe always keeps its full,
           unchanged viewport size, so the reviewed site's own responsive layout never
           reflows just because a reviewer opened a side panel. */}
-      <div className="bg-bg-canvas relative min-h-0 flex-1">
+      <div className="bg-bg-canvas relative min-h-0 flex-1 flex flex-col">
         {iframeSrc ? (
-          <div className="flex h-full items-center justify-center overflow-auto">
-            <iframe
-              ref={canvasRef}
-              src={iframeSrc}
-              title={`${project.name} preview`}
-              className="border-0"
-              style={
-                viewport
-                  ? { width: viewport.width, height: viewport.height, flexShrink: 0 }
-                  : { width: "100%", height: "100%" }
-              }
-            />
-          </div>
+          <>
+            <div className="flex h-10 shrink-0 items-center gap-2 border-b border-black/10 px-4 bg-white dark:bg-[#1C1C21] dark:border-white/10 z-20 shadow-sm">
+              <span className="text-xs text-text-muted font-medium truncate flex-1 flex items-center gap-2">
+                <span className="bg-black/5 dark:bg-white/5 px-2 py-1 rounded text-black dark:text-white flex-1 truncate font-mono">
+                  {canvasUrl}
+                </span>
+              </span>
+              <button onClick={() => setRetryCount(c => c + 1)} className="text-xs font-medium border border-black/10 dark:border-white/10 px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5">
+                Reload Frame
+              </button>
+            </div>
+            <div className="flex flex-1 relative items-center justify-center overflow-auto bg-gray-50 dark:bg-gray-900">
+              {iframeStatus === "loading" && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 dark:bg-black/80">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-primary border-t-transparent"></div>
+                <p className="mt-4 text-sm font-medium text-gray-700 dark:text-gray-300">Loading preview...</p>
+              </div>
+            )}
+            {iframeStatus === "error" && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white dark:bg-gray-900 px-6 text-center">
+                <p className="mb-2 text-sm font-semibold text-red-600">Failed to load preview</p>
+                <p className="mb-6 text-sm text-gray-600 dark:text-gray-400 max-w-md">
+                  The website might be blocking iframe embedding or took too long to respond.
+                </p>
+                <div className="flex gap-4">
+                  <button onClick={() => setRetryCount(c => c + 1)} className="bl-button">Retry</button>
+                  <a href={canvasUrl!} target="_blank" rel="noreferrer" className="bl-button">Open direct link</a>
+                </div>
+              </div>
+            )}
+            <div 
+              style={{
+                width: viewport ? (orientation === "portrait" ? viewport.width : viewport.height) : "100%",
+                height: viewport ? (orientation === "portrait" ? viewport.height : viewport.width) : "100%",
+                flexShrink: 0,
+                transition: "width 0.3s, height 0.3s",
+                transform: `scale(${zoomScale})`,
+                transformOrigin: "center center",
+              }}
+            >
+              <iframe
+                key={retryCount}
+                ref={canvasRef}
+                src={iframeSrc}
+                title={`${project.name} preview`}
+                className="h-full w-full border-0 bg-white shadow-sm ring-1 ring-black/5"
+                onLoad={() => setIframeStatus("loaded")}
+              />
+            </div>
+            </div>
+          </>
         ) : (
           <div className="flex h-full items-center justify-center px-6">
             <p className="text-text-muted max-w-sm text-center text-sm">
@@ -216,6 +280,12 @@ export function ProjectOverviewPage() {
         onModeChange={setMode}
         viewport={viewport}
         onViewportChange={setViewport}
+        orientation={orientation}
+        onOrientationChange={setOrientation}
+        zoomScale={zoomScale}
+        onZoomChange={setZoomScale}
+        iframeStatus={iframeStatus}
+        onReload={() => setRetryCount(c => c + 1)}
       />
 
       {showShare && (
@@ -225,6 +295,12 @@ export function ProjectOverviewPage() {
           workspaceSlug={workspace.slug}
           workspaceName={workspace.name}
           onClose={() => setShowShare(false)}
+        />
+      )}
+      {showPages && (
+        <ProjectPagesModal
+          project={project}
+          onClose={() => setShowPages(false)}
         />
       )}
     </div>

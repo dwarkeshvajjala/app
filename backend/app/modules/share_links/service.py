@@ -10,6 +10,7 @@ from app.core.security import create_guest_token, generate_share_token, hash_sec
 from app.modules.projects import service as project_service
 from app.modules.projects.repository import ProjectRepository
 from app.modules.share_links import events as share_link_events
+from app.modules.share_links.policy import check_domain_restriction, resolve_guest_display_name
 from app.modules.share_links.repository import GuestSessionRepository, ShareLinkRepository
 from app.modules.share_links.schemas import GuestSessionOut, ReviewResolveOut, ShareLinkOut
 
@@ -24,6 +25,9 @@ def _share_link_out(doc: dict[str, Any]) -> ShareLinkOut:
         expires_at=doc["expires_at"],
         revoked_at=doc["revoked_at"],
         created_at=doc["created_at"],
+        ask_reviewer_name=doc.get("ask_reviewer_name", True),
+        domain_restrictions=doc.get("domain_restrictions", []),
+        comment_export_permission=doc.get("comment_export_permission", False),
     )
 
 
@@ -45,6 +49,9 @@ async def create_share_link(
     mode: str,
     passcode: str | None,
     expires_at: datetime | None,
+    ask_reviewer_name: bool = True,
+    domain_restrictions: list[str] | None = None,
+    comment_export_permission: bool = False,
 ) -> ShareLinkOut:
     # Raises NotFoundError if the project doesn't exist or belongs to another workspace.
     await project_service.get_project(db, project_id=project_id, workspace_id=workspace_id)
@@ -58,6 +65,9 @@ async def create_share_link(
         passcode_hash=hash_secret(passcode) if passcode else None,
         expires_at=expires_at,
         created_by=actor_user_id,
+        ask_reviewer_name=ask_reviewer_name,
+        domain_restrictions=domain_restrictions,
+        comment_export_permission=comment_export_permission,
     )
     await append_event(
         db,
@@ -75,7 +85,7 @@ async def list_share_links(
 ) -> list[ShareLinkOut]:
     await project_service.get_project(db, project_id=project_id, workspace_id=workspace_id)
     repo = ShareLinkRepository(db)
-    docs = await repo.list_for_project(project_id)
+    docs = await repo.list_for_project(workspace_id, project_id)
     return [_share_link_out(doc) for doc in docs]
 
 
@@ -125,6 +135,7 @@ async def resolve_share_link(
         mode=link["mode"],
         requires_passcode=link["passcode_hash"] is not None,
         target_origin=project["target_origin"],
+        ask_reviewer_name=link.get("ask_reviewer_name", True),
     )
 
 
@@ -136,12 +147,19 @@ async def create_guest_session(
     email: str | None,
     passcode: str | None,
     ua_fingerprint: str,
+    origin: str | None = None,
+    referer: str | None = None,
 ) -> GuestSessionOut:
     repo = ShareLinkRepository(db)
     link = await repo.find_by_token(share_token)
     if link is None:
         raise NotFoundError("This review link doesn't exist.")
     _ensure_active(link)
+    # M-02: domain_restrictions and ask_reviewer_name enforced server-side, from the
+    # request's own headers - never the client-supplied payload - before a guest
+    # session is minted at all (share_links/policy.py).
+    check_domain_restriction(link, origin, referer)
+    resolved_name = resolve_guest_display_name(link, display_name)
 
     if link["passcode_hash"] is not None:
         supplied = hash_secret(passcode) if passcode else ""
@@ -156,7 +174,7 @@ async def create_guest_session(
     guest_doc = await guest_repo.create(
         share_link_id=str(link["_id"]),
         workspace_id=link["workspace_id"],
-        display_name=display_name,
+        display_name=resolved_name,
         email=email,
         ua_fingerprint=ua_fingerprint,
     )
@@ -170,4 +188,4 @@ async def create_guest_session(
     )
 
     token = create_guest_token(str(guest_doc["_id"]), str(link["_id"]))
-    return GuestSessionOut(guest_session_token=token, display_name=display_name)
+    return GuestSessionOut(guest_session_token=token, display_name=resolved_name)

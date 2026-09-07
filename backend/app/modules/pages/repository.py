@@ -13,13 +13,14 @@ class PageRepository:
         self.db = db
 
     async def find_by_normalized_url(
-        self, project_id: str, url_normalized: str
+        self, workspace_id: str, project_id: str, url_normalized: str
     ) -> dict[str, Any] | None:
-        # workspace-scope-exempt: project_id is a globally-unique id the caller
-        # (register_page) already verified against the actor's workspace via
-        # resolve_actor_project_access before calling this.
         return await self.db.pages.find_one(
-            {"project_id": project_id, "url_normalized": url_normalized}
+            {
+                "workspace_id": workspace_id,
+                "project_id": project_id,
+                "url_normalized": url_normalized,
+            }
         )
 
     async def find_by_id(self, page_id: str) -> dict[str, Any] | None:
@@ -47,15 +48,42 @@ class PageRepository:
         doc["_id"] = result.inserted_id
         return doc
 
-    async def list_for_project(self, project_id: str) -> list[dict[str, Any]]:
-        # workspace-scope-exempt: project_id is verified against the caller's workspace
-        # in list_pages (pages/service.py) before this is called.
-        cursor = self.db.pages.find({"project_id": project_id}).sort("first_seen_at", -1)
+    async def list_for_project(
+        self, workspace_id: str, project_id: str
+    ) -> list[dict[str, Any]]:
+        cursor = self.db.pages.find(
+            {"workspace_id": workspace_id, "project_id": project_id}
+        ).sort("first_seen_at", -1)
         return [doc async for doc in cursor]
 
-    async def update_latest_revision(self, page_id: str, revision_id: str) -> None:
-        # workspace-scope-exempt: page_id was already resolved+access-checked earlier in
-        # the same submit_snapshot call (snapshot_engine/service.py).
+    async def update_latest_revision(
+        self, workspace_id: str, page_id: str, revision_id: str
+    ) -> None:
         await self.db.pages.update_one(
-            {"_id": to_object_id(page_id)}, {"$set": {"latest_revision_id": revision_id}}
+            {"_id": to_object_id(page_id), "workspace_id": workspace_id},
+            {"$set": {"latest_revision_id": revision_id}},
+        )
+
+    async def update(
+        self, workspace_id: str, page_id: str, patch: dict[str, Any]
+    ) -> None:
+        if not patch:
+            return
+        await self.db.pages.update_one(
+            {"_id": to_object_id(page_id), "workspace_id": workspace_id},
+            {"$set": patch},
+        )
+
+    async def reference_counts(self, workspace_id: str, page_id: str) -> dict[str, int]:
+        query = {"workspace_id": workspace_id, "page_id": page_id}
+        return {
+            "comments": await self.db.comments.count_documents(query),
+            "revisions": await self.db.revisions.count_documents(query),
+            "revision_diffs": await self.db.revision_diffs.count_documents(query),
+            "project_assets": await self.db.project_assets.count_documents(query),
+        }
+
+    async def delete(self, workspace_id: str, page_id: str) -> None:
+        await self.db.pages.delete_one(
+            {"_id": to_object_id(page_id), "workspace_id": workspace_id}
         )

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Link, useOutletContext, useSearchParams } from "react-router-dom";
+import { useDocumentTitle } from "../../lib/use-document-title";
 import { Dialog } from "../../components/Dialog";
 import { qk } from "../../lib/query-keys";
 import { timeAgo } from "../../lib/time";
@@ -13,6 +14,7 @@ import { ProjectForm } from "./ProjectForm";
 
 export function ProjectsPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
+  useDocumentTitle(`${workspace.name} — Projects`);
   const cache = useQueryClient();
   const [params, setParams] = useSearchParams();
   const [create, setCreate] = useState(false);

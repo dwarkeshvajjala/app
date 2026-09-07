@@ -4,10 +4,32 @@ import { useNavigate } from "react-router-dom";
 
 import { qk } from "../../lib/query-keys";
 import { searchWorkspace } from "./api";
+import type { SearchResults } from "./api";
+import { useOnClickOutside } from "../../lib/use-click-outside";
+
+type SearchItem = SearchResults["items"][number];
+
+const SECTION_LABELS: Record<string, string> = {
+  project: "Projects",
+  comment: "Comments",
+  ticket: "Tickets",
+  member: "Members",
+};
+
+function groupResults(items: SearchItem[]): Array<{ section: string; items: SearchItem[] }> {
+  const order = ["project", "ticket", "comment", "member"];
+  const byKind: Record<string, SearchItem[]> = {};
+  for (const item of items) {
+    (byKind[item.kind] ??= []).push(item);
+  }
+  return order.filter((k) => byKind[k]?.length).map((k) => ({ section: k, items: byKind[k] }));
+}
 
 export function GlobalSearch({ workspaceId, workspaceSlug }: { workspaceId: string; workspaceSlug: string }) {
   const [query, setQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
   const input = useRef<HTMLInputElement>(null);
+  const popover = useRef<HTMLElement>(null);
   const navigate = useNavigate();
   const activeQuery = query.trim();
   const { data, isFetching } = useQuery({
@@ -16,32 +38,119 @@ export function GlobalSearch({ workspaceId, workspaceSlug }: { workspaceId: stri
     enabled: activeQuery.length > 0,
   });
 
+  // Flatten grouped items for keyboard navigation
+  const flatItems = data?.items ?? [];
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [data]);
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+  useOnClickOutside(containerRef, () => setQuery(""));
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.key === "k" && (event.metaKey || event.ctrlKey)) || (event.key === "/" && document.activeElement?.tagName !== "INPUT")) {
+      if ((event.key === "k" && (event.metaKey || event.ctrlKey)) || (event.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA")) {
         event.preventDefault();
         input.current?.focus();
       }
-      if (event.key === "Escape") { setQuery(""); input.current?.blur(); }
+      if (event.key === "Escape") {
+        setQuery("");
+        input.current?.blur();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  function open(result: NonNullable<typeof data>["items"][number]) {
+  function getResultRoute(result: SearchItem): string {
     const base = `/w/${workspaceSlug}`;
-    if (result.kind === "project") navigate(`${base}/p/${result.project_id}`);
-    else if (result.kind === "member") navigate(`${base}/members`);
-    else navigate(`${base}/tickets?comment_id=${encodeURIComponent(result.id)}`);
+    if (result.kind === "project") return `${base}/p/${result.project_id}`;
+    if (result.kind === "member") return `${base}/members`;
+    // comment and ticket both navigate to the tickets view with the comment selected
+    if (result.project_id) {
+      return `${base}/p/${result.project_id}?ticket=${encodeURIComponent(result.id)}`;
+    }
+    return `${base}/tickets?comment_id=${encodeURIComponent(result.id)}`;
+  }
+
+  function open(result: SearchItem) {
+    navigate(getResultRoute(result));
     setQuery("");
   }
 
-  return <div className="bl-global-search">
-    <label className="bl-search"><span aria-hidden="true">⌕</span><input ref={input} aria-label="Search this workspace" placeholder="Search projects, comments, or people…" value={query} onChange={(event) => setQuery(event.target.value)} /><kbd>⌘K</kbd></label>
-    {activeQuery && <section className="bl-search-popover" aria-label="Search results">
-      {isFetching && <p>Searching…</p>}
-      {!isFetching && data?.items.length === 0 && <p>No results in this workspace.</p>}
-      {data?.items.map((result) => <button key={`${result.kind}-${result.id}`} onClick={() => open(result)}><span><strong>{result.title}</strong><small>{result.subtitle}</small></span><em>{result.kind}</em></button>)}
-    </section>}
-  </div>;
+  function handleInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (!flatItems.length) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex((i) => Math.min(i + 1, flatItems.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((i) => Math.max(i - 1, 0));
+    } else if (event.key === "Enter") {
+      const item = flatItems[activeIndex];
+      if (item) open(item);
+    }
+  }
+
+  const grouped = activeQuery ? groupResults(flatItems) : [];
+
+  return (
+    <div className="bl-global-search" ref={containerRef}>
+      <label className="bl-search">
+        <span aria-hidden="true">⌕</span>
+        <input
+          ref={input}
+          aria-label="Search this workspace"
+          aria-controls="bl-search-results"
+          aria-activedescendant={flatItems[activeIndex] ? `bl-sr-${flatItems[activeIndex].id}` : undefined}
+          placeholder="Search projects, comments, or people…"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={handleInputKeyDown}
+          role="combobox"
+          aria-expanded={!!activeQuery}
+          aria-autocomplete="list"
+        />
+        <kbd>⌘K</kbd>
+      </label>
+      {activeQuery && (
+        <section
+          id="bl-search-results"
+          ref={popover}
+          className="bl-search-popover"
+          aria-label="Search results"
+          role="listbox"
+        >
+          {isFetching && <p>Searching…</p>}
+          {!isFetching && flatItems.length === 0 && <p>No results in this workspace.</p>}
+          {grouped.map(({ section, items }) => (
+            <div key={section} className="bl-search-section">
+              <p className="bl-search-section-label">{SECTION_LABELS[section] ?? section}</p>
+              {items.map((result) => {
+                const flatIdx = flatItems.indexOf(result);
+                return (
+                  <button
+                    key={`${result.kind}-${result.id}`}
+                    id={`bl-sr-${result.id}`}
+                    role="option"
+                    aria-selected={flatIdx === activeIndex}
+                    className={flatIdx === activeIndex ? "is-active" : ""}
+                    onClick={() => open(result)}
+                    tabIndex={-1}
+                  >
+                    <span>
+                      <strong>{result.title}</strong>
+                      <small>{result.subtitle}</small>
+                    </span>
+                    <em>{result.kind}</em>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </section>
+      )}
+    </div>
+  );
 }
