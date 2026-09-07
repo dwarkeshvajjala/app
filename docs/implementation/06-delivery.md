@@ -90,6 +90,11 @@ Date: 2026-09-06. This file tracks actual work; specification text alone is not 
   frontend typecheck/build tasks (cached, existing large-chunk warning).
 - Production rollout/health and an interactive fresh Google sign-in remain to be
   confirmed. No OAuth callback code from the report was replayed.
+- Hotfix `7191804` was pushed to GitHub `main` from an isolated worktree based on
+  `11fea12`; the same 15 tests passed on that exact deployment branch. Unpublished
+  local account/session changes were preserved locally and excluded from the push.
+  Direct production health requests timed out from this machine, and Railway CLI
+  access was unavailable, so deployment success is not claimed.
 
 ## External dependencies and unresolved product decisions
 
