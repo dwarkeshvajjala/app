@@ -1,0 +1,198 @@
+﻿Diagnose log at 2026-09-06T20:28:17Z
+
+AppPath: C:\Program Files\Git\mingw64\bin\git-credential-manager.exe
+InstallDir: C:\Program Files\Git\mingw64\bin\
+Version: 2.7.3+5fa7116896c82164996a609accd1c5ad90fe730a
+
+------------
+Diagnostic: Environment
+Skipped: False
+Success: True
+Exception: None
+Log:
+OSType: Windows
+OSVersion: 10.0 (build 26200)
+Reading environment variables... OK
+ Variables:
+SystemDrive=C:
+ProgramFiles(x86)=C:\Program Files (x86)
+MSYSTEM=MINGW64
+ProgramW6432=C:\Program Files
+PAGER=cat
+ChocolateyInstall=C:\ProgramData\chocolatey
+PROCESSOR_IDENTIFIER=AMD64 Family 23 Model 96 Stepping 1, AuthenticAMD
+TMP=C:\Users\dvajj\AppData\Local\Temp
+CODEX_INTERNAL_ORIGINATOR_OVERRIDE=Codex Desktop
+Path=C:/Program Files/Git/mingw64/libexec/git-core;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Users\dvajj\bin;C:\Users\dvajj\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell;C:\Users\dvajj\.codex\tmp\arg0\codex-arg0qoDZO5;C:\Users\dvajj\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\libheif\libheif\bin;C:\Users\dvajj\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\jxrlib\jxrlib\bin;C:\Users\dvajj\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\poppler\Library\bin;C:\Users\dvajj\.cache\codex-runtimes\codex-primary-runtime\dependencies\bin\override;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files (x86)\Microsoft SQL Server\160\DTS\Binn\;C:\Program Files (x86)\Microsoft SQL Server\160\Tools\Binn\;C:\Program Files\Microsoft SQL Server\160\Tools\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files\Microsoft SQL Server\160\DTS\Binn\;C:\ProgramData\chocolatey\bin;C:\Program Files\dotnet\;C:\Program Files\Git\cmd;C:\Program Files\nodejs\;C:\Users\dvajj\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell;C:\Users\dvajj\AppData\Local\Microsoft\WindowsApps;C:\Program Files\Azure Data Studio\bin;C:\Users\dvajj\AppData\Local\Programs\Ollama;C:\Users\dvajj\AppData\Roaming\npm;C:\Users\dvajj\.dotnet\tools;C:\Users\dvajj\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\dvajj\AppData\Local\Kingsoft\WPS Office\12.1.0.27458\clitool;C:\Users\dvajj\AppData\Local\Microsoft\WinGet\Links;C:\Users\dvajj\AppData\Local\Programs\Antigravity IDE\bin;C:\Users\dvajj\.cache\codex-runtimes\codex-primary-runtime\dependencies\bin\fallback;C:\Users\dvajj\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin;C:\Users\dvajj\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd;C:\Users\dvajj\AppData\Local\OpenAI\Codex\bin\80b8e5c230e43848;C:\Users\dvajj\AppData\Local\OpenAI\Codex\bin\27d6a192e9c98618
+HOMEPATH=\Users\dvajj
+RUST_LOG=warn
+PROCESSOR_REVISION=6001
+TMPDIR=C:\Users\dvajj\AppData\Local\Temp
+TEMP=C:\Users\dvajj\AppData\Local\Temp
+USERPROFILE=C:\Users\dvajj
+CommonProgramFiles(x86)=C:\Program Files (x86)\Common Files
+LOGONSERVER=\\DWARKRSH-PC
+TERM=dumb
+NO_COLOR=1
+PUBLIC=C:\Users\Public
+CODEX_THREAD_ID=01a0778f-2357-7ba3-b2e0-081db3be4568
+CODEX_MCP_NODE_PATH=C:\Users\dvajj\AppData\Local\OpenAI\Codex\runtimes\cua_node\440c4f095d41ea30\bin\node.exe
+GH_PAGER=cat
+OneDrive=C:\Users\dvajj\OneDrive
+PROCESSOR_ARCHITECTURE=AMD64
+CommonProgramFiles=C:\Program Files\Common Files
+windir=C:\WINDOWS
+SystemRoot=C:\WINDOWS
+CODEX_APP_TOOLS_PIPE_PATH=\\.\pipe\codex-browser-use-81f35e49-2edb-4e3c-963e-c07b9ad79094
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S=e7f98a8ce324234ed7f3be8fa39ba54b26e2e8fc79feed2470dcd0871af4a5b3
+ProgramData=C:\ProgramData
+LC_CTYPE=C.UTF-8
+PLINK_PROTOCOL=ssh
+ChocolateyLastPathUpdate=134025137836064649
+CommonProgramW6432=C:\Program Files\Common Files
+USERNAME=dvajj
+GIT_EXEC_PATH=C:/Program Files/Git/mingw64/libexec/git-core
+__COMPAT_LAYER=DetectorsAppHealth
+DriverData=C:\Windows\System32\Drivers\DriverData
+HOMEDRIVE=C:
+WPSCLI_HOME=C:\Users\dvajj\AppData\Local\Kingsoft\WPS Office\12.1.0.27458\clitool
+CODEX_SAGE_BACKFILL_TRACKER_TAB_REUSE=1
+GIT_TRACE2_PARENT_SID=baba2000-1ea7-4fd7-a6a8-cc4add368454
+NUMBER_OF_PROCESSORS=12
+OS=Windows_NT
+CODEX_SESSION_ID=01a0778f-2357-7ba3-b2e0-081db3be4568
+CODEX_PERMISSION_PROFILE=:danger-full-access
+LANG=C.UTF-8
+ComSpec=C:\WINDOWS\system32\cmd.exe
+USERDOMAIN_ROAMINGPROFILE=DWARKRSH-PC
+PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.CPL
+HOME=C:\Users\dvajj
+PSModulePath=C:\Users\dvajj\Documents\PowerShell\Modules;C:\Program Files\PowerShell\Modules;c:\users\dvajj\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\Modules;C:\Program Files\WindowsPowerShell\Modules;C:\WINDOWS\system32\WindowsPowerShell\v1.0\Modules;C:\Program Files (x86)\Microsoft SQL Server\160\Tools\PowerShell\Modules\
+ALLUSERSPROFILE=C:\ProgramData
+ProgramFiles=C:\Program Files
+CODEX_CI=1
+LC_ALL=C.UTF-8
+APPDATA=C:\Users\dvajj\AppData\Roaming
+USERDOMAIN=DWARKRSH-PC
+COMPUTERNAME=DWARKRSH-PC
+LOCALAPPDATA=C:\Users\dvajj\AppData\Local
+GIT_PAGER=cat
+COLORTERM=
+PROCESSOR_LEVEL=23
+LOG_FORMAT=json
+
+
+------------
+Diagnostic: File system
+Skipped: False
+Success: True
+Exception: None
+Log:
+Temporary directory is 'C:\Users\dvajj\AppData\Local\Temp\'...
+Checking basic file I/O...
+Writing to temporary file 'C:\Users\dvajj\AppData\Local\Temp\3eea4273b5257ef1e08ad588'... OK
+Reading from temporary file 'C:\Users\dvajj\AppData\Local\Temp\3eea4273b5257ef1e08ad588'... OK
+Deleting temporary file 'C:\Users\dvajj\AppData\Local\Temp\3eea4273b5257ef1e08ad588'... OK
+Testing IFileSystem instance...
+UserHomePath: C:\Users\dvajj
+UserDataDirectoryPath: C:\Users\dvajj\.gcm
+GetCurrentDirectory(): D:\minute creative\app
+
+------------
+Diagnostic: Networking
+Skipped: False
+Success: True
+Exception: None
+Log:
+Checking networking and HTTP stack...
+Creating HTTP client... OK
+IsNetworkAvailable: True
+Sending HEAD request to http://example.com...Sending HEAD request to https://example.com... OK
+ OK
+Acquiring free TCP port... OK
+Testing local HTTP loopback connections...
+Creating new HTTP listener for http://localhost:57011/... OK
+Waiting for loopback connection... OK
+Writing response... OK
+Waiting for response data... OK
+Loopback connection data OK
+
+------------
+Diagnostic: Git
+Skipped: False
+Success: True
+Exception: None
+Log:
+Getting Git version... OK
+Git version is '2.54.0.windows.1'
+Locating current repository...Git repository at 'D:/minute creative/app/.git'
+ OK
+Listing all Git configuration... OK
+Git configuration:
+file:C:/Program Files/Git/etc/gitconfig	diff.astextplain.textconv=astextplain
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.clean=git-lfs clean -- %f
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.smudge=git-lfs smudge -- %f
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.process=git-lfs filter-process
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.required=true
+file:C:/Program Files/Git/etc/gitconfig	http.sslbackend=schannel
+file:C:/Program Files/Git/etc/gitconfig	core.autocrlf=true
+file:C:/Program Files/Git/etc/gitconfig	core.fscache=true
+file:C:/Program Files/Git/etc/gitconfig	core.symlinks=false
+file:C:/Program Files/Git/etc/gitconfig	pull.rebase=false
+file:C:/Program Files/Git/etc/gitconfig	credential.helper=manager
+file:C:/Program Files/Git/etc/gitconfig	credential.https://dev.azure.com.usehttppath=true
+file:C:/Program Files/Git/etc/gitconfig	init.defaultbranch=master
+file:C:/Users/dvajj/.gitconfig	filter.lfs.clean=git-lfs clean -- %f
+file:C:/Users/dvajj/.gitconfig	filter.lfs.smudge=git-lfs smudge -- %f
+file:C:/Users/dvajj/.gitconfig	filter.lfs.process=git-lfs filter-process
+file:C:/Users/dvajj/.gitconfig	filter.lfs.required=true
+file:C:/Users/dvajj/.gitconfig	user.name=Dwarkesh Vajjala
+file:C:/Users/dvajj/.gitconfig	user.email=contact.dwarkesh@gmail.com
+file:C:/Users/dvajj/.gitconfig	core.editor="C:\Users\dvajj\AppData\Local\Programs\Microsoft VS Code\bin\code" --wait
+file:.git/config	core.repositoryformatversion=0
+file:.git/config	core.filemode=false
+file:.git/config	core.bare=false
+file:.git/config	core.logallrefupdates=true
+file:.git/config	core.symlinks=false
+file:.git/config	core.ignorecase=true
+file:.git/config	remote.origin.url=https://github.com/dwarkeshvajjala/app
+file:.git/config	remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+file:.git/config	branch.main.remote=origin
+file:.git/config	branch.main.merge=refs/heads/main
+
+
+------------
+Diagnostic: Credential storage
+Skipped: False
+Success: True
+Exception: None
+Log:
+ICredentialStore instance is of type: CredentialStore
+Writing test credential... OK
+Reading test credential... OK
+Deleting test credential... OK
+
+------------
+Diagnostic: Microsoft authentication (AAD/MSA)
+Skipped: False
+Success: True
+Exception: None
+Log:
+Broker is not enabled.
+Flow type is: Auto
+Gathering MSAL token cache data... OK
+CacheDirectory: C:\Users\dvajj\AppData\Local\.IdentityService
+CacheFileName: msal.cache
+CacheFilePath: C:\Users\dvajj\AppData\Local\.IdentityService\msal.cache
+Creating cache helper... OK
+Verifying MSAL token cache persistence... OK
+
+------------
+Diagnostic: GitHub API
+Skipped: False
+Success: True
+Exception: None
+Log:
+Using 'https://github.com/' as API target.
+Querying '/meta' endpoint... OK
+
