@@ -76,16 +76,18 @@ AUDIT_BATCH_02_INDEXES: tuple[AdditiveIndex, ...] = (
 
 
 AUDIT_BATCH_03_INDEXES: tuple[AdditiveIndex, ...] = (
-    # M-08 idempotency: backs CommentRepository.find_by_client_request_id's
-    # check-before-create lookup and provides a race-condition backstop (sparse so
-    # documents that never sent a client_request_id - the overwhelming majority of
-    # existing comments - aren't part of the uniqueness constraint at all, the same
-    # pattern DELETION_SUPPORT_INDEXES already uses for events_correlation_id below).
+    # Compound sparse indexes include every document with workspace_id, even when
+    # client_request_id is missing/null. Only real request IDs should be unique.
+    # Use a new name so an existing sparse index cannot cause an options conflict;
+    # never drop an existing index during startup (TDR-0017).
     AdditiveIndex(
         "comments",
         (("workspace_id", 1), ("client_request_id", 1)),
-        "comments_workspace_client_request_id",
-        {"unique": True, "sparse": True},
+        "comments_workspace_client_request_id_strings",
+        {
+            "unique": True,
+            "partialFilterExpression": {"client_request_id": {"$type": "string"}},
+        },
     ),
 )
 
