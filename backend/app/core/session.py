@@ -34,7 +34,7 @@ async def get_current_session(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> Session:
     if credentials is None:
-        raise AuthenticationError("Missing bearer token.")
+        raise AuthenticationError("Authentication required.")
     try:
         claims = decode_access_token(credentials.credentials)
     except InvalidTokenError as exc:
@@ -75,7 +75,7 @@ async def get_current_actor(
         return await get_current_session(credentials)
     if x_guest_session is not None:
         return await get_guest_session(x_guest_session)
-    raise AuthenticationError("Missing bearer token or X-Guest-Session header.")
+    raise AuthenticationError("Authentication required.")
 
 
 def require_workspace_match(session: Session, workspace_id: str) -> None:

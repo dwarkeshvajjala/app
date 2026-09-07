@@ -37,6 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const payload = currentToken ? decodeAccessToken(currentToken) : null;
 
   useEffect(() => {
+    if (status === "authenticated" && !currentToken) {
+      setStatus("unauthenticated");
+      setUser(null);
+    }
+  }, [currentToken, status]);
+
+  useEffect(() => {
     // Access tokens live in memory only (13-Authentication.md §13.6), so a page reload
     // loses them - try to silently restore a session from the httpOnly refresh cookie.
     let cancelled = false;

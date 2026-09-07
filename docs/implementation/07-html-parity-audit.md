@@ -108,17 +108,17 @@ Acceptance:
 
 ### FD-AUD-005 — Global search
 
-- Status: `[ ] Pending`
+- Status: `[~] Partial`
 - Priority: **P0**
 - HTML evidence: lines 2192–2198, `#gSearch`, `#searchPop`, `runSearch()` around line 5250, keyboard handlers around lines 4167–4200.
 - Source behavior: search comments, projects, and people; group results; open a project or thread; support `/` and Cmd/Ctrl+K; escape closes the result panel.
-- Current implementation: project search in `ProjectsPage` and ticket search in `TicketsPage`; no global search endpoint or UI.
-- Missing backend: scoped search service, result schema, indexes, pagination, and permission filtering.
+- Current implementation: the workspace shell provides a scoped search palette with `/`, Cmd/Ctrl+K, and Escape controls. `GET /workspaces/{workspace_id}/search` searches active projects, root comments/tickets, and workspace members after workspace and team-comment permission checks. The projection is intentionally small and all results remain constrained to the active workspace.
+- Search strategy: a bounded, escaped case-insensitive Mongo regex query with workspace-first indexes. This is a safe interim strategy; provider-backed text search remains a scale decision.
 
-Pending action:
+Remaining:
 
-- Add a workspace-scoped search endpoint and Mongo search strategy.
-- Add a global shell search component with keyboard shortcuts and result routing.
+- Group results and route placed comments to the exact project/page/thread rather than the ticket detail view.
+- Add client records once the product decision permits searching client contact data, plus pagination/ranking and a text-search migration for large workspaces.
 
 Acceptance:
 
@@ -548,12 +548,15 @@ Pending action:
 
 ### FD-AUD-049 — Search and notification data model
 
-- Status: `[ ] Pending`
+- Status: `[~] Partial`
 - Priority: **P0**
-- Missing:
+Implemented:
 
-  - Search indexes or a documented bounded-search strategy.
-  - Search result projection across projects, comments, people, and tickets.
+- Workspace-first bounded-search indexes and a documented escaped-regex strategy.
+- Search result projection across active projects, root comments, standalone tickets, and workspace members.
+
+Remaining:
+
   - Mention recipient records and deduplication.
   - Notification target route metadata.
   - Deploy, reply, mention, share, and status notification types.

@@ -62,6 +62,21 @@ class DashboardOut(BaseModel):
     project_stats: list[ProjectStatsOut]
 
 
+class SearchResultOut(BaseModel):
+    """A deliberately small, route-safe projection for the shell search palette."""
+
+    kind: Literal["project", "ticket", "comment", "member"]
+    id: str
+    title: str
+    subtitle: str
+    project_id: str | None = None
+    page_id: str | None = None
+
+
+class SearchResultsOut(BaseModel):
+    items: list[SearchResultOut]
+
+
 class ActivityOut(BaseModel):
     id: str
     type: str

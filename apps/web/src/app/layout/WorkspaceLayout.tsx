@@ -7,6 +7,8 @@ import { useAuth } from "../../features/auth/AuthContext";
 import { qk } from "../../lib/query-keys";
 import { useWorkspaceContext } from "./useWorkspaceContext";
 import { DashboardSidebar } from "./DashboardSidebar";
+import { GlobalSearch } from "../../features/dashboard/GlobalSearch";
+import { NotificationBell } from "../../features/notifications/NotificationBell";
 
 // The dashboard chrome (sidebar + everything under it: project grid, members, billing,
 // settings, usage, mcp) - deliberately NOT used for an open project's own routes
@@ -43,6 +45,7 @@ export function WorkspaceLayout() {
     <div className="bl-app">
       <DashboardSidebar workspace={workspace} onSignOut={() => logout()} />
       <div className="bl-main">
+        <header className="bl-topbar"><GlobalSearch workspaceId={workspace.id} workspaceSlug={workspace.slug} /><NotificationBell /></header>
         <Outlet context={{ workspace }} />
       </div>
     </div>

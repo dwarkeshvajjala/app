@@ -284,6 +284,23 @@ export interface paths {
         patch: operations["update_client_api_v1_workspaces__workspace_id__clients__client_id__patch"];
         trace?: never;
     };
+    "/api/v1/workspaces/{workspace_id}/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search */
+        get: operations["search_api_v1_workspaces__workspace_id__search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspace_id}/tickets": {
         parameters: {
             query?: never;
@@ -955,7 +972,6 @@ export interface components {
             /**
              * Tier
              * @constant
-             * @enum {integer}
              */
             tier: 1;
             dom_fingerprint: components["schemas"]["DomFingerprintIn"];
@@ -1175,14 +1191,18 @@ export interface components {
             /** Due At */
             due_at: string | null;
             /** Anchor */
-            anchor: Record<string, never>;
+            anchor: {
+                [key: string]: unknown;
+            };
             /**
              * Recovery Status
              * @enum {string}
              */
             recovery_status: "ok" | "low_confidence" | "orphaned" | "permanently_orphaned";
             /** Context */
-            context: Record<string, never>;
+            context: {
+                [key: string]: unknown;
+            };
             /** Screenshot Url */
             screenshot_url: string | null;
             /**
@@ -1357,7 +1377,9 @@ export interface components {
              */
             type: "slack" | "clickup" | "trello";
             /** Config Summary */
-            config_summary: Record<string, never>;
+            config_summary: {
+                [key: string]: unknown;
+            };
             /** Connected By */
             connected_by: string;
             /**
@@ -1428,7 +1450,9 @@ export interface components {
              */
             type: "comment_assigned" | "integration_disconnected";
             /** Payload */
-            payload: Record<string, never>;
+            payload: {
+                [key: string]: unknown;
+            };
             /** Read At */
             read_at: string | null;
             /**
@@ -1655,6 +1679,32 @@ export interface components {
             /** Created New */
             created_new: boolean;
         };
+        /**
+         * SearchResultOut
+         * @description A deliberately small, route-safe projection for the shell search palette.
+         */
+        SearchResultOut: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "project" | "ticket" | "comment" | "member";
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Subtitle */
+            subtitle: string;
+            /** Project Id */
+            project_id?: string | null;
+            /** Page Id */
+            page_id?: string | null;
+        };
+        /** SearchResultsOut */
+        SearchResultsOut: {
+            /** Items */
+            items: components["schemas"]["SearchResultOut"][];
+        };
         /** ShareLinkCreate */
         ShareLinkCreate: {
             /**
@@ -1720,9 +1770,13 @@ export interface components {
                 [key: string]: number;
             };
             /** Node Tree */
-            node_tree: Record<string, never>;
+            node_tree: {
+                [key: string]: unknown;
+            };
             /** Nodes Index */
-            nodes_index: Record<string, never>;
+            nodes_index: {
+                [key: string]: unknown;
+            };
             /** Full Page Hash */
             full_page_hash: string;
         };
@@ -1806,14 +1860,18 @@ export interface components {
             /** Due At */
             due_at: string | null;
             /** Anchor */
-            anchor: Record<string, never>;
+            anchor: {
+                [key: string]: unknown;
+            };
             /**
              * Recovery Status
              * @enum {string}
              */
             recovery_status: "ok" | "low_confidence" | "orphaned" | "permanently_orphaned";
             /** Context */
-            context: Record<string, never>;
+            context: {
+                [key: string]: unknown;
+            };
             /** Screenshot Url */
             screenshot_url: string | null;
             /**
@@ -2706,6 +2764,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClientOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_api_v1_workspaces__workspace_id__search_get: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResultsOut"];
                 };
             };
             /** @description Validation Error */

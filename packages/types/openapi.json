@@ -1175,6 +1175,76 @@
         }
       }
     },
+    "/api/v1/workspaces/{workspace_id}/search": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Search",
+        "operationId": "search_api_v1_workspaces__workspace_id__search_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResultsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/workspaces/{workspace_id}/tickets": {
       "get": {
         "tags": [
@@ -3738,9 +3808,6 @@
         "properties": {
           "tier": {
             "type": "integer",
-            "enum": [
-              1
-            ],
             "const": 1,
             "title": "Tier"
           },
@@ -3972,9 +4039,6 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "clickup"
-            ],
             "const": "clickup",
             "title": "Type",
             "default": "clickup"
@@ -4299,6 +4363,7 @@
             "title": "Due At"
           },
           "anchor": {
+            "additionalProperties": true,
             "type": "object",
             "title": "Anchor"
           },
@@ -4313,6 +4378,7 @@
             "title": "Recovery Status"
           },
           "context": {
+            "additionalProperties": true,
             "type": "object",
             "title": "Context"
           },
@@ -4859,6 +4925,7 @@
             "title": "Type"
           },
           "config_summary": {
+            "additionalProperties": true,
             "type": "object",
             "title": "Config Summary"
           },
@@ -5010,6 +5077,7 @@
             "title": "Type"
           },
           "payload": {
+            "additionalProperties": true,
             "type": "object",
             "title": "Payload"
           },
@@ -5594,6 +5662,79 @@
         ],
         "title": "RevisionOut"
       },
+      "SearchResultOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "project",
+              "ticket",
+              "comment",
+              "member"
+            ],
+            "title": "Kind"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "subtitle": {
+            "type": "string",
+            "title": "Subtitle"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Id"
+          },
+          "page_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "id",
+          "title",
+          "subtitle"
+        ],
+        "title": "SearchResultOut",
+        "description": "A deliberately small, route-safe projection for the shell search palette."
+      },
+      "SearchResultsOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResultOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "SearchResultsOut"
+      },
       "ShareLinkCreate": {
         "properties": {
           "mode": {
@@ -5707,9 +5848,6 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "slack"
-            ],
             "const": "slack",
             "title": "Type",
             "default": "slack"
@@ -5746,10 +5884,12 @@
             "title": "Viewport"
           },
           "node_tree": {
+            "additionalProperties": true,
             "type": "object",
             "title": "Node Tree"
           },
           "nodes_index": {
+            "additionalProperties": true,
             "type": "object",
             "title": "Nodes Index"
           },
@@ -5988,6 +6128,7 @@
             "title": "Due At"
           },
           "anchor": {
+            "additionalProperties": true,
             "type": "object",
             "title": "Anchor"
           },
@@ -6002,6 +6143,7 @@
             "title": "Recovery Status"
           },
           "context": {
+            "additionalProperties": true,
             "type": "object",
             "title": "Context"
           },
@@ -6159,9 +6301,6 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "trello"
-            ],
             "const": "trello",
             "title": "Type",
             "default": "trello"
