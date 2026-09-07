@@ -71,6 +71,26 @@ Date: 2026-09-06. This file tracks actual work; specification text alone is not 
   evidence. Detailed file/change/risk evidence is in
   `docs/implementation/audit-batch-02-report.md`.
 
+## 2026-09-07: Login outage from comment request index
+
+- Fixed the Railway startup E11000 reported in the supplied logs: the compound
+  sparse unique index included legacy comments with missing/null request IDs.
+  Startup now creates a uniquely named partial index for string request IDs only.
+  Existing comments and indexes are preserved; workspace-scoped uniqueness remains.
+- Added a dry-run-first inspection/apply command in
+  `backend/scripts/migrate_comment_request_index.py`; see TDR-0017 for rollout and
+  the limitation of installations that still retain the old sparse index.
+- Passed: 15 focused tests covering real MongoDB startup with legacy records,
+  repeated lifespan/preflight requests, scoped uniqueness, existing-index coexistence,
+  Google login persistence/rejection, and security. Tests used isolated local MongoDB
+  on 27027, Redis emulator on 6389 and S3 emulator on 9010; no production fixtures.
+  The initial test attempt hit local S3 region configuration; setting the emulator
+  region to us-east-1 resolved it.
+- Passed: Ruff and mypy on changed Python files; workspace-scoping check; six
+  frontend typecheck/build tasks (cached, existing large-chunk warning).
+- Production rollout/health and an interactive fresh Google sign-in remain to be
+  confirmed. No OAuth callback code from the report was replayed.
+
 ## External dependencies and unresolved product decisions
 
 AI provider authorization/configuration; billing provider/prices/webhook credentials; verified guest domain restrictions; real email delivery credentials; password/2FA/SSO policy. Core local implementation can proceed independently. The HTML's simulated accounts, fake 2FA QR, in-memory credits and checkout toasts must never be copied as working product behavior.
