@@ -19,6 +19,7 @@ interface AuthContextValue {
   loginWithGoogleCode: (code: string) => Promise<void>;
   switchWorkspace: (workspaceId: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (user: UserOut) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -35,6 +36,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const currentToken = getAccessToken();
   const payload = currentToken ? decodeAccessToken(currentToken) : null;
+
+  useEffect(() => {
+    if (status === "authenticated" && !currentToken) {
+      setStatus("unauthenticated");
+      setUser(null);
+    }
+  }, [currentToken, status]);
 
   useEffect(() => {
     // Access tokens live in memory only (13-Authentication.md §13.6), so a page reload
@@ -88,6 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(null);
       setUser(null);
       setStatus("unauthenticated");
+    },
+    updateUser(u) {
+      setUser(u);
     },
   };
 

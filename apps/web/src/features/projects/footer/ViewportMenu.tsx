@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { CommentsIcon, CrownIcon, MonitorIcon } from "../panel/icons";
+import { useOnClickOutside } from "../../../lib/use-click-outside";
 
 export interface ViewportOption {
   name: string;
@@ -40,14 +41,7 @@ export function ViewportMenu({ viewport, onChange, totalComments }: ViewportMenu
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    function onClickOutside(event: MouseEvent) {
-      if (!ref.current?.contains(event.target as Node)) setOpen(false);
-    }
-    document.addEventListener("click", onClickOutside);
-    return () => document.removeEventListener("click", onClickOutside);
-  }, [open]);
+  useOnClickOutside(ref, () => setOpen(false));
 
   function select(option: ViewportOption | null) {
     onChange(option);
@@ -106,6 +100,32 @@ export function ViewportMenu({ viewport, onChange, totalComments }: ViewportMenu
               </button>
             );
           })}
+          <div className="mt-2 border-t border-black/10 px-2 py-2 pt-3 dark:border-white/10">
+            <p className="mb-2 text-xs font-semibold text-text-muted">Custom Size (px)</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                placeholder="Width"
+                className="bl-input w-20 px-2 py-1 text-xs"
+                value={viewport?.name === "Custom" ? viewport.width : ""}
+                onChange={(e) => {
+                  const w = parseInt(e.target.value, 10);
+                  if (w) select({ name: "Custom", width: w, height: viewport?.height || 800 });
+                }}
+              />
+              <span className="text-text-muted">×</span>
+              <input
+                type="number"
+                placeholder="Height"
+                className="bl-input w-20 px-2 py-1 text-xs"
+                value={viewport?.name === "Custom" ? viewport.height : ""}
+                onChange={(e) => {
+                  const h = parseInt(e.target.value, 10);
+                  if (h) select({ name: "Custom", width: viewport?.width || 1200, height: h });
+                }}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

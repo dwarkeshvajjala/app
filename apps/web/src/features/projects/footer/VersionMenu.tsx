@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
+import { useOnClickOutside } from "../../../lib/use-click-outside";
+import { useFocusTrap } from "../../../lib/use-focus-trap";
 import { timeAgo } from "../../../lib/time";
 import { ChevronIcon } from "../panel/icons";
 import { ProFeatureModal } from "../panel/ProFeatureModal";
@@ -21,14 +23,10 @@ export function VersionMenu({ totalComments, createdAt }: VersionMenuProps) {
   const [showPricing, setShowPricing] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    function onClickOutside(event: MouseEvent) {
-      if (!ref.current?.contains(event.target as Node)) setOpen(false);
-    }
-    document.addEventListener("click", onClickOutside);
-    return () => document.removeEventListener("click", onClickOutside);
-  }, [open]);
+  useOnClickOutside(ref, () => setOpen(false));
+  
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(dialogRef, showCopyConfirm);
 
   function handleCopyChoice() {
     setShowCopyConfirm(false);
@@ -72,6 +70,7 @@ export function VersionMenu({ totalComments, createdAt }: VersionMenuProps) {
           onClick={() => setShowCopyConfirm(false)}
         >
           <div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-label="Copy unresolved comments to new version?"

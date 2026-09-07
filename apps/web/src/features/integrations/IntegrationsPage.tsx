@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
+import { useDocumentTitle } from "../../lib/use-document-title";
 import type { WorkspaceOut } from "../workspaces/api";
 import * as integrationsApi from "./api";
 import { buildClickUpAuthUrl } from "./clickup-oauth-url";
@@ -22,6 +23,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 export function IntegrationsPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
+  useDocumentTitle('Integrations');
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 

@@ -6,7 +6,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.core.errors import PermissionDeniedError
 from app.core.session import Actor, GuestSession, Session
 from app.modules.projects import service as project_service
-from app.modules.share_links.repository import ShareLinkRepository
+from app.modules.share_links.repository import GuestSessionRepository, ShareLinkRepository
 
 
 async def resolve_actor_project_access(
@@ -44,4 +44,8 @@ async def resolve_actor_project_access(
         raise PermissionDeniedError("This project is archived.")
 
     guest_workspace_id: str = link["workspace_id"]
+    await GuestSessionRepository(db).touch_last_seen(
+        workspace_id=guest_workspace_id,
+        guest_session_id=guest.guest_session_id,
+    )
     return guest_workspace_id

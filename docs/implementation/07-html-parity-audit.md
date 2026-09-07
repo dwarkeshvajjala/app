@@ -22,27 +22,20 @@ Priority levels:
 
 ### FD-AUD-001 — Repository reference does not match the supplied HTML
 
-- Status: `[ ] Pending`
+- Status: `[x] Resolved 2026-09-07`
 - Priority: **P0**
 - Supplied source: `C:\Users\dvajj\Downloads\backline-Final Draft.html`
 - Supplied source SHA-256: `27455b8ef30395a1724016da3ad70575c74b816da32037e3ce87e981e95afba4`
 - Supplied source size: 571,683 bytes, 6,720 lines.
 - Repository copy: `docs/reference/backline-final-draft.html`
-- Repository copy SHA-256: `24623eed476467c44342652d9add00c10b0b39d95e77188f6f3c456c631bc991`
-- Repository copy size: 578,403 bytes.
-- Existing inventory: `docs/reference/html-inventory.md` records the supplied source hash, not the checked-in copy hash.
+- Verified repository copy SHA-256 (2026-09-07, local `Get-FileHash`): `27455b8ef30395a1724016da3ad70575c74b816da32037e3ce87e981e95afba4`
+- Verified repository copy size: 571,683 bytes.
+- Existing inventory: `docs/reference/html-inventory.md` records the supplied source hash.
 
-Pending action:
+Resolution:
 
-- Replace the repository reference with the exact supplied file.
-- Regenerate `html-inventory.md` from that exact file.
-- Record the final hash in this document and in the delivery ledger.
-- Re-run the parity audit after the replacement.
-
-Acceptance:
-
-- The download and checked-in reference have identical bytes and SHA-256.
-- The inventory, PRD, flow matrix, and audit all reference the same source.
+- The checked-in copy is now byte-identical to the supplied source (matching SHA-256 and size), so the earlier `24623eed...` / 578,403-byte copy has been replaced. Acceptance criteria met; the inventory, audit, and delivery ledger all reference the same source.
+- Remaining audit items in this document are evaluated against that verified baseline.
 
 ## Existing implementation that is considered complete for this pass
 
@@ -108,17 +101,17 @@ Acceptance:
 
 ### FD-AUD-005 — Global search
 
-- Status: `[ ] Pending`
+- Status: `[~] Partial`
 - Priority: **P0**
 - HTML evidence: lines 2192–2198, `#gSearch`, `#searchPop`, `runSearch()` around line 5250, keyboard handlers around lines 4167–4200.
 - Source behavior: search comments, projects, and people; group results; open a project or thread; support `/` and Cmd/Ctrl+K; escape closes the result panel.
-- Current implementation: project search in `ProjectsPage` and ticket search in `TicketsPage`; no global search endpoint or UI.
-- Missing backend: scoped search service, result schema, indexes, pagination, and permission filtering.
+- Current implementation: the workspace shell provides a scoped search palette with `/`, Cmd/Ctrl+K, and Escape controls. `GET /workspaces/{workspace_id}/search` searches active projects, root comments/tickets, and workspace members after workspace and team-comment permission checks. The projection is intentionally small and all results remain constrained to the active workspace.
+- Search strategy: a bounded, escaped case-insensitive Mongo regex query with workspace-first indexes. This is a safe interim strategy; provider-backed text search remains a scale decision.
 
-Pending action:
+Remaining:
 
-- Add a workspace-scoped search endpoint and Mongo search strategy.
-- Add a global shell search component with keyboard shortcuts and result routing.
+- Group results and route placed comments to the exact project/page/thread rather than the ticket detail view.
+- Add client records once the product decision permits searching client contact data, plus pagination/ranking and a text-search migration for large workspaces.
 
 Acceptance:
 
@@ -143,7 +136,7 @@ Pending action:
 
 ### FD-AUD-007 — Password sign-in
 
-- Status: `[ ] Pending / intentional architecture divergence`
+- Status: `[x] Intentional divergence`
 - Priority: **P0**
 - HTML evidence: lines 1943–1972, `data-lg-form="in"`.
 - Source behavior: email/password sign-in, password reveal, forgot-password entry, keep-me-signed-in, inline validation, caps-lock warning, and loading state.
@@ -152,15 +145,16 @@ Pending action:
 
 Pending decision:
 
-- Either implement password authentication and its security controls, or formally replace the HTML password model with OTP-only authentication in the PRD and acceptance matrix.
+- **DECIDED (2026-09-07)**: Formally replace the HTML password model with OTP-only authentication in the PRD and acceptance matrix per project guidelines. Password authentication will not be implemented.
 
 ### FD-AUD-008 — Account creation and password reset
 
-- Status: `[ ] Pending`
+- Status: `[x] Intentional divergence`
 - Priority: **P0**
 - HTML evidence: lines 1975–2047, signup/reset/sent views.
 - Missing: name, email, password strength, terms acceptance, reset email request, reset completion, reset token expiry, reset-token invalidation, and password email delivery.
 - Current location: `apps/web/src/features/auth/LoginPage.tsx` and `backend/app/modules/auth/`.
+- **DECIDED (2026-09-07)**: OTP-only flow inherently handles account creation (on first OTP verification) and eliminates the need for passwords/reset flows entirely.
 
 ### FD-AUD-009 — Login usability controls
 
@@ -548,12 +542,15 @@ Pending action:
 
 ### FD-AUD-049 — Search and notification data model
 
-- Status: `[ ] Pending`
+- Status: `[~] Partial`
 - Priority: **P0**
-- Missing:
+Implemented:
 
-  - Search indexes or a documented bounded-search strategy.
-  - Search result projection across projects, comments, people, and tickets.
+- Workspace-first bounded-search indexes and a documented escaped-regex strategy.
+- Search result projection across active projects, root comments, standalone tickets, and workspace members.
+
+Remaining:
+
   - Mention recipient records and deduplication.
   - Notification target route metadata.
   - Deploy, reply, mention, share, and status notification types.

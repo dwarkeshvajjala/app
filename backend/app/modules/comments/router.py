@@ -14,6 +14,7 @@ from app.modules.comments.schemas import (
     CommentCreate,
     CommentOut,
     CommentUpdate,
+    GuestBoardOut,
     LayerToggleRequest,
     ReanchorRequest,
     ReplyCreate,
@@ -41,6 +42,16 @@ async def list_comments_for_project(
     )
 
 
+# FD-AUD-042/M-04 "show the ticket board to this client". Reachable by both a guest
+# (their share link's own project) and a member (who is always allowed to preview
+# exactly what their client sees) via get_current_actor - comment_service enforces
+# both the workspace/project boundary and the show_board_to_client setting itself,
+# so no separate permission dependency is needed here.
+@router.get("/projects/{project_id}/guest-board", response_model=GuestBoardOut)
+async def guest_board(project_id: str, actor: Actor = Depends(get_current_actor)) -> GuestBoardOut:
+    return await comment_service.list_guest_board(get_db(), project_id=project_id, actor=actor)
+
+
 @router.post("/pages/{page_id}/comments", response_model=CommentOut, status_code=201)
 async def create_comment(
     page_id: str, body: CommentCreate, request: Request, actor: Actor = Depends(get_current_actor)
@@ -63,6 +74,7 @@ async def create_comment(
         screenshot_key=body.screenshot_key,
         capture_status=body.capture_status,
         attachments=body.attachments,
+        client_request_id=body.client_request_id,
     )
 
 
@@ -84,6 +96,8 @@ async def create_reply(
         body=body.body,
         layer=body.layer,
         attachments=body.attachments,
+        client_request_id=body.client_request_id,
+        mentioned_user_ids=body.mentioned_user_ids,
     )
 
 
@@ -125,6 +139,25 @@ async def edit_comment_body(
     return await comment_service.edit_comment(
         get_db(), comment_id=comment_id, actor=actor, body=body.body
     )
+
+
+# FD-AUD-018/M-04 "let reviewers resolve their own comments" - own-author-only,
+# guest-only, gated by the owning project's reviewer_can_resolve setting (see
+# comment_service.resolve_own_comment's docstring and TDR-0015). Deliberately a
+# distinct route from the member-only moderation PATCH /comments/{comment_id} below
+# rather than a status value that endpoint would also have to accept from a guest.
+@router.patch("/comments/{comment_id}/resolve", response_model=CommentOut)
+async def resolve_own_comment(
+    comment_id: str, request: Request, actor: Actor = Depends(get_current_actor)
+) -> CommentOut:
+    settings = get_settings()
+    await check_rate_limit(
+        get_redis(),
+        key=actor_rate_limit_key("comment-create", request, actor),
+        limit=settings.comment_create_rate_limit_per_minute,
+        window_seconds=60,
+    )
+    return await comment_service.resolve_own_comment(get_db(), comment_id=comment_id, actor=actor)
 
 
 @router.delete("/comments/{comment_id}/thread", status_code=204)

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.permissions import require_permission
-from app.core.session import Session, require_workspace_context
+from app.core.session import Session, require_workspace_context, require_workspace_match
 from app.modules.integrations import service as integration_service
 from app.modules.integrations.schemas import (
     CreateClickUpTaskResult,
@@ -20,6 +20,7 @@ async def list_integrations(
     workspace_id: str,
     session: Session = Depends(require_permission("integration:manage")),
 ) -> list[IntegrationOut]:
+    require_workspace_match(session, workspace_id)
     return await integration_service.list_integrations(get_db(), workspace_id)
 
 
@@ -31,6 +32,7 @@ async def create_integration(
     body: IntegrationCreate,
     session: Session = Depends(require_permission("integration:manage")),
 ) -> IntegrationOut:
+    require_workspace_match(session, workspace_id)
     return await integration_service.create_integration(
         get_db(), workspace_id=workspace_id, actor_user_id=session.user_id, body=body
     )

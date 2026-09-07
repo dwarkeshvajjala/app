@@ -1,0 +1,207 @@
+{
+  "captured_at": "2026-09-07T13:17:35.249877+00:00",
+  "seed_rows_per_collection": 2500,
+  "scratch_database": "bl_idx_ev_20840898ded54553ae130da4188bd164",
+  "before": {
+    "notifications_unread": {
+      "stages": [
+        "COLLSCAN",
+        "SORT"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 2500,
+      "total_keys_examined": 0
+    },
+    "share_links_project": {
+      "stages": [
+        "COLLSCAN",
+        "SORT"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 2500,
+      "total_keys_examined": 0
+    },
+    "pages_by_url": {
+      "stages": [
+        "COLLSCAN"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 2500,
+      "total_keys_examined": 0
+    },
+    "revisions_current": {
+      "stages": [
+        "COLLSCAN"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 2500,
+      "total_keys_examined": 0
+    },
+    "revisions_history": {
+      "stages": [
+        "COLLSCAN",
+        "SORT"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 2500,
+      "total_keys_examined": 0
+    },
+    "recovery_history": {
+      "stages": [
+        "COLLSCAN",
+        "SORT"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 2500,
+      "total_keys_examined": 0
+    },
+    "refresh_family_owner": {
+      "stages": [
+        "COLLSCAN"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 2500,
+      "total_keys_examined": 0
+    },
+    "refresh_family_revoke": {
+      "stages": [
+        "COLLSCAN"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 2500,
+      "total_keys_examined": 0
+    },
+    "events_feed": {
+      "stages": [
+        "COLLSCAN",
+        "SORT"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 2500,
+      "total_keys_examined": 0
+    },
+    "events_feed_filtered": {
+      "stages": [
+        "COLLSCAN",
+        "SORT"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 2500,
+      "total_keys_examined": 0
+    },
+    "otp_active": {
+      "stages": [
+        "COLLSCAN",
+        "SORT"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 2500,
+      "total_keys_examined": 0
+    }
+  },
+  "after": {
+    "notifications_unread": {
+      "stages": [
+        "FETCH",
+        "IXSCAN",
+        "SORT_MERGE"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 1,
+      "total_keys_examined": 1
+    },
+    "share_links_project": {
+      "stages": [
+        "FETCH",
+        "IXSCAN"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 1,
+      "total_keys_examined": 1
+    },
+    "pages_by_url": {
+      "stages": [
+        "FETCH",
+        "IXSCAN"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 1,
+      "total_keys_examined": 1
+    },
+    "revisions_current": {
+      "stages": [
+        "FETCH",
+        "IXSCAN"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 1,
+      "total_keys_examined": 1
+    },
+    "revisions_history": {
+      "stages": [
+        "FETCH",
+        "IXSCAN"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 1,
+      "total_keys_examined": 1
+    },
+    "recovery_history": {
+      "stages": [
+        "FETCH",
+        "IXSCAN"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 1,
+      "total_keys_examined": 1
+    },
+    "refresh_family_owner": {
+      "stages": [
+        "FETCH",
+        "IXSCAN"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 1,
+      "total_keys_examined": 1
+    },
+    "refresh_family_revoke": {
+      "stages": [
+        "FETCH",
+        "IXSCAN"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 1,
+      "total_keys_examined": 1
+    },
+    "events_feed": {
+      "stages": [
+        "FETCH",
+        "IXSCAN"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 1,
+      "total_keys_examined": 1
+    },
+    "events_feed_filtered": {
+      "stages": [
+        "FETCH",
+        "IXSCAN"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 1,
+      "total_keys_examined": 1
+    },
+    "otp_active": {
+      "stages": [
+        "FETCH",
+        "IXSCAN",
+        "SORT"
+      ],
+      "n_returned": 1,
+      "total_docs_examined": 1,
+      "total_keys_examined": 2
+    }
+  },
+  "guest_last_seen_ttl_seconds": 15552000,
+  "existing_indexes_were_dropped": false
+}

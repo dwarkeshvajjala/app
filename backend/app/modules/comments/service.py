@@ -19,6 +19,8 @@ from app.modules.comments.schemas import (
     CommentOut,
     CommentUpdate,
     ContextIn,
+    GuestBoardItemOut,
+    GuestBoardOut,
 )
 from app.modules.notifications import service as notification_service
 from app.modules.pages.repository import PageRepository
@@ -196,6 +198,20 @@ async def _resolve_page_and_access(
     return page
 
 
+def _redact_context(context: ContextIn, *, capture_device_details: bool) -> dict[str, Any]:
+    """FD-AUD-018/M-04 'Capture browser and device details' - "Attaches OS, viewport
+    and the element selector to every comment." The anchor's own DOM fingerprint
+    (the actual "element selector" used for recovery/positioning) is intentionally
+    never touched here - anchor and snapshot node identity must share one hash
+    implementation regardless of this cosmetic telemetry setting (constraint 2.7);
+    only the browser/OS/device/viewport metadata this project's settings actually
+    describe is gated. `url` is kept either way - it identifies which page the
+    comment was left on, not a device fingerprint."""
+    if capture_device_details:
+        return context.model_dump()
+    return {"url": context.url, "browser": "", "os": "", "device_type": "", "viewport": {}}
+
+
 async def create_comment(
     db: AsyncIOMotorDatabase[dict[str, Any]],
     *,
@@ -208,8 +224,25 @@ async def create_comment(
     screenshot_key: str | None,
     capture_status: str,
     attachments: list[AttachmentIn] | None = None,
+    client_request_id: str | None = None,
 ) -> CommentOut:
     page = await _resolve_page_and_access(db, actor, page_id)
+
+    # M-08 idempotency: a retried POST with the same caller-generated key replays the
+    # original comment instead of creating a duplicate - same check-before-create shape
+    # as pages/service.py's register_page idempotency-by-normalized-url.
+    if client_request_id is not None:
+        existing = await CommentRepository(db).find_by_client_request_id(
+            page["workspace_id"], client_request_id
+        )
+        if existing is not None:
+            return await _comment_out(db, existing)
+
+    project = await ProjectRepository(db).find_by_id(page["project_id"])
+    capture_device_details = bool(
+        project is not None
+        and project.get("settings_json", {}).get("capture_device_details", False)
+    )
 
     # Guest-authored comments always default to layer=client, never overridable by the
     # guest themselves (12-API-WebSocket.md §12.4).
@@ -230,10 +263,11 @@ async def create_comment(
         "anchor": anchor.model_dump(),
         "recovery_status": "ok",
         "consecutive_orphaned_revisions": 0,
-        "context_json": context.model_dump(),
+        "context_json": _redact_context(context, capture_device_details=capture_device_details),
         "attachments": [a.model_dump() for a in (attachments or [])],
         "screenshot_key": screenshot_key,
         "capture_status": capture_status,
+        "client_request_id": client_request_id,
         "created_at": datetime.now(UTC),
         "edited_at": None,
     }
@@ -272,6 +306,8 @@ async def create_reply(
     body: str,
     layer: str,
     attachments: list[AttachmentIn] | None = None,
+    client_request_id: str | None = None,
+    mentioned_user_ids: list[str] | None = None,
 ) -> CommentOut:
     repo = CommentRepository(db)
     parent = await repo.find_by_id(parent_id)
@@ -289,6 +325,13 @@ async def create_reply(
         # Treated as not-found, not forbidden, so a crafted request can't be used to
         # confirm that a team-only comment exists on a page a guest can see.
         raise NotFoundError("Comment not found.")
+
+    if client_request_id is not None:
+        existing_reply = await repo.find_by_client_request_id(
+            parent["workspace_id"], client_request_id
+        )
+        if existing_reply is not None:
+            return await _comment_out(db, existing_reply)
 
     effective_layer = "client" if is_guest else layer
 
@@ -311,6 +354,7 @@ async def create_reply(
         "attachments": [a.model_dump() for a in (attachments or [])],
         "screenshot_key": None,
         "capture_status": "ok",
+        "client_request_id": client_request_id,
         "created_at": datetime.now(UTC),
         "edited_at": None,
     }
@@ -342,6 +386,53 @@ async def create_reply(
         event_type="comment.created",
         comment_id=comment_out.id,
     )
+
+    # M-06: notify the thread's stakeholders - the parent comment's own author (when
+    # a member; a guest author has no notification inbox) and its current assignees -
+    # excluding whoever just posted this reply. This applies uniformly regardless of
+    # layer: a team-layer thread's participants are already members (guests can never
+    # reach one, enforced above), and a client-layer thread's participants are still
+    # members even when a guest posts the reply - the module's own membership guard
+    # (notifications/service.py's _create_and_broadcast) refuses a non-member id
+    # either way, so this can never notify a guest.
+    reply_author_name = await _resolve_author_name(db, created)
+    actor_member_id = actor.user_id if isinstance(actor, Session) else ""
+    reply_recipients = set(
+        parent.get("assignee_ids", [parent["assignee_id"]] if parent.get("assignee_id") else [])
+    )
+    if parent["author_type"] == "member" and parent.get("author_member_id"):
+        reply_recipients.add(parent["author_member_id"])
+    for recipient_id in reply_recipients:
+        await notification_service.notify_comment_reply(
+            db,
+            workspace_id=parent["workspace_id"],
+            project_id=parent_page["project_id"],
+            parent_comment_id=parent_id,
+            reply_author_name=reply_author_name,
+            recipient_user_id=recipient_id,
+            actor_user_id=actor_member_id,
+        )
+
+    # M-06/M-15: @mentions from the composer's own picker selection (stable member
+    # ids - see ReplyCreate.mentioned_user_ids's docstring for why this isn't parsed
+    # out of `body` instead). Unknown/foreign ids are silently ignored, not an error -
+    # the id list is client-supplied and must be re-validated, never trusted blind.
+    from app.modules.workspaces.repository import MembershipRepository
+
+    for member_id in dict.fromkeys(mentioned_user_ids or []):
+        if not await MembershipRepository(db).find(
+            workspace_id=parent["workspace_id"], user_id=member_id
+        ):
+            continue
+        await notification_service.notify_comment_mention(
+            db,
+            workspace_id=parent["workspace_id"],
+            project_id=parent_page["project_id"],
+            comment_id=str(created["_id"]),
+            mentioned_user_id=member_id,
+            actor_name=reply_author_name,
+            actor_user_id=actor_member_id,
+        )
     return comment_out
 
 
@@ -587,7 +678,7 @@ async def list_comments_for_project(
     if project is None or project["workspace_id"] != workspace_id:
         raise NotFoundError("Project not found.")
 
-    pages = await PageRepository(db).list_for_project(project_id)
+    pages = await PageRepository(db).list_for_project(workspace_id, project_id)
     page_ids = [str(page["_id"]) for page in pages]
     if not page_ids:
         return []
@@ -612,6 +703,9 @@ async def update_comment(
     existing = await repo.find_by_id(comment_id)
     if existing is None or existing["workspace_id"] != workspace_id:
         raise NotFoundError("Comment not found.")
+    page = await PageRepository(db).find_by_id(existing["page_id"])
+    assert page is not None
+    project_id = page["project_id"]
 
     patch: dict[str, Any] = {}
     if body is not None:
@@ -685,20 +779,40 @@ async def update_comment(
         await notification_service.notify_comment_assigned(
             db,
             workspace_id=workspace_id,
+            project_id=project_id,
             comment_id=comment_id,
             assignee_user_id=assigned_user_id,
             actor_user_id=actor_user_id,
         )
 
+    if status_changed:
+        # M-06: notify whoever has a stake in this comment - its current assignees
+        # plus its own author when that author is a member (a guest author has no
+        # notification inbox; notify_comment_status_changed's own membership guard
+        # would also refuse a guest id, this just avoids the pointless lookup).
+        # Excludes the actor themselves (handled inside the notify function too).
+        final_assignees = patch.get("assignee_ids", previous_assignees)
+        status_recipients = set(final_assignees)
+        if existing["author_type"] == "member" and existing.get("author_member_id"):
+            status_recipients.add(existing["author_member_id"])
+        for recipient_id in status_recipients:
+            await notification_service.notify_comment_status_changed(
+                db,
+                workspace_id=workspace_id,
+                project_id=project_id,
+                comment_id=comment_id,
+                new_status=patch["status"],
+                recipient_user_id=recipient_id,
+                actor_user_id=actor_user_id,
+            )
+
     updated = await repo.find_by_id(comment_id)
     assert updated is not None
     comment_out = await _comment_out(db, updated)
-    page = await PageRepository(db).find_by_id(updated["page_id"])
-    assert page is not None
     await _broadcast_comment_event(
         event_type="comment.updated",
         workspace_id=workspace_id,
-        project_id=page["project_id"],
+        project_id=project_id,
         comment=comment_out,
     )
     if status_changed:
@@ -732,6 +846,140 @@ async def _notify_guest_comment_resolved(
         guest_name=guest_doc["display_name"],
         comment_body=comment_doc["body"],
     )
+
+
+async def resolve_own_comment(
+    db: AsyncIOMotorDatabase[dict[str, Any]], *, comment_id: str, actor: Actor
+) -> CommentOut:
+    """FD-AUD-018/M-04 "let reviewers resolve their own comments" - narrow, additive
+    exception to 13-Authentication.md §13.5's guest permission matrix (documented in
+    TDR-0015, since that spec text is otherwise an unconditional "never" for guest
+    status changes). Scoped tightly on every axis so this can't become general guest
+    moderation:
+      - guest actors only (a member already has PATCH /comments/{id} for this)
+      - the comment's own author only (_require_own_comment, same check delete/edit use)
+      - the owning project's reviewer_can_resolve setting must be on
+      - one direction only: -> resolved. A guest can never reopen, reassign, or
+        change any other field through this endpoint.
+    """
+    if not isinstance(actor, GuestSession):
+        raise PermissionDeniedError("Only a guest reviewer resolves their own comment this way.")
+
+    repo = CommentRepository(db)
+    existing = await repo.find_by_id(comment_id)
+    if existing is None or existing.get("deleted_at") is not None:
+        raise NotFoundError("Comment not found.")
+    _require_own_comment(existing, actor)
+
+    page = await PageRepository(db).find_by_id(existing["page_id"])
+    if page is None:
+        raise NotFoundError("Page not found.")
+    workspace_id = await resolve_actor_project_access(db, actor, page["project_id"])
+
+    project = await ProjectRepository(db).find_by_id(page["project_id"])
+    if project is None or not project.get("settings_json", {}).get("reviewer_can_resolve", False):
+        raise PermissionDeniedError(
+            "This project does not let reviewers resolve their own comments."
+        )
+
+    if existing["status"] == "resolved":
+        return await _comment_out(db, existing)  # idempotent no-op, not an error
+
+    await repo.update(
+        comment_id, {"status": "resolved", "waiting_on_ids": [], "waiting_on_client": False}
+    )
+    await append_event(
+        db,
+        workspace_id=workspace_id,
+        type=comment_events.COMMENT_UPDATED,
+        actor_type="guest",
+        actor_id=actor.guest_session_id,
+        payload={"comment_id": comment_id, "status": "resolved", "resolved_by": "reviewer"},
+    )
+
+    updated = await repo.find_by_id(comment_id)
+    assert updated is not None
+    comment_out = await _comment_out(db, updated)
+    await _broadcast_comment_event(
+        event_type="comment.updated",
+        workspace_id=workspace_id,
+        project_id=page["project_id"],
+        comment=comment_out,
+    )
+    await _dispatch_integration_event(
+        db,
+        workspace_id=workspace_id,
+        event_type="comment.status_changed",
+        comment_id=comment_id,
+    )
+    # Same M-06 stakeholder notification status changes always trigger - a guest
+    # resolving their own comment is still a status change assignees/authors care
+    # about. The comment's own author is this same guest, so there's nothing to
+    # notify there; only assignees are relevant.
+    assignees = existing.get(
+        "assignee_ids", [existing["assignee_id"]] if existing.get("assignee_id") else []
+    )
+    for recipient_id in assignees:
+        await notification_service.notify_comment_status_changed(
+            db,
+            workspace_id=workspace_id,
+            project_id=page["project_id"],
+            comment_id=comment_id,
+            new_status="resolved",
+            recipient_user_id=recipient_id,
+            actor_user_id="",
+        )
+    return comment_out
+
+
+async def list_guest_board(
+    db: AsyncIOMotorDatabase[dict[str, Any]], *, project_id: str, actor: Actor
+) -> GuestBoardOut:
+    """FD-AUD-042/M-04 "show the ticket board to this client". A deliberately
+    client-safe DTO built from scratch (GuestBoardItemOut), never the staff
+    CommentOut/board payload with fields hidden in React (M-02's explicit
+    requirement). The endpoint itself is unreachable at all when the project's
+    show_board_to_client setting is off - matching the prototype's own wording
+    ("Off means clients see comments and statuses but not due dates, assignees or
+    the board"), so there is no partial/degraded response to design for."""
+    workspace_id = await resolve_actor_project_access(db, actor, project_id)
+    project = await ProjectRepository(db).find_by_id(project_id)
+    if project is None:
+        raise NotFoundError("Project not found.")
+    if not project.get("settings_json", {}).get("show_board_to_client", False):
+        raise PermissionDeniedError(
+            "The ticket board is not shared with reviewers on this project."
+        )
+
+    pages = await PageRepository(db).list_for_project(workspace_id, project_id)
+    page_ids = [str(page["_id"]) for page in pages]
+    if not page_ids:
+        return GuestBoardOut(project_id=project_id, items=[])
+
+    docs = await CommentRepository(db).list_client_layer_for_project(workspace_id, page_ids)
+    name_cache: dict[str, str] = {}
+    items = []
+    for doc in docs:
+        assignee_ids = doc.get(
+            "assignee_ids", [doc["assignee_id"]] if doc.get("assignee_id") else []
+        )
+        names = []
+        for user_id in assignee_ids:
+            if user_id not in name_cache:
+                user = await UserRepository(db).find_by_id(user_id)
+                name_cache[user_id] = user["name"] if user else "Former member"
+            names.append(name_cache[user_id])
+        items.append(
+            GuestBoardItemOut(
+                id=str(doc["_id"]),
+                body=doc["body"],
+                status=doc["status"],
+                created_at=doc["created_at"],
+                due_at=doc.get("due_at"),
+                assignee_names=names,
+            )
+        )
+    return GuestBoardOut(project_id=project_id, items=items)
 
 
 async def toggle_layer(

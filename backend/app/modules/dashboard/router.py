@@ -9,6 +9,7 @@ from app.modules.dashboard import service
 from app.modules.dashboard.schemas import (
     ActivityListOut,
     DashboardOut,
+    SearchResultsOut,
     TicketCreate,
     TicketFilters,
     TicketListOut,
@@ -16,6 +17,17 @@ from app.modules.dashboard.schemas import (
 )
 
 router = APIRouter(tags=["dashboard"])
+
+
+@router.get("/workspaces/{workspace_id}/search", response_model=SearchResultsOut)
+async def search(
+    workspace_id: str,
+    q: str = Query(min_length=1, max_length=200),
+    limit: int = Query(default=20, ge=1, le=50),
+    session: Session = Depends(require_permission("comment:view_team")),
+) -> SearchResultsOut:
+    require_workspace_match(session, workspace_id)
+    return await service.search(get_db(), workspace_id, q, limit)
 
 
 @router.get("/workspaces/{workspace_id}/tickets", response_model=TicketListOut)

@@ -276,10 +276,13 @@ async function init(config: BacklineConfig): Promise<void> {
         if (openThread?.topId === topId) openThread = null;
       },
       onReply: async (body, attachments) => {
+        // M-08 idempotency: one key per reply attempt (each call here is a distinct
+        // logical reply, unlike the composer's one-key-per-pin case above).
+        const clientRequestId = crypto.randomUUID();
         const created = await api.request<CommentRecord>(`/api/v1/comments/${topId}/replies`, {
           method: "POST",
           guestToken: guest.guestSessionToken,
-          body: JSON.stringify({ body, layer: "client", attachments }),
+          body: JSON.stringify({ body, layer: "client", attachments, client_request_id: clientRequestId }),
         });
         threadMessages.set(topId, [...(threadMessages.get(topId) ?? []), created]);
         controls.setMessages(buildMessages(topId));
@@ -486,6 +489,13 @@ async function init(config: BacklineConfig): Promise<void> {
     };
     const untrack = trackPinPosition(pin, () => target, offset);
 
+    // M-08 idempotency: generated once per pin/composer, not inside the submit
+    // callback, so a future retry affordance on this same composer (UX-AUD-027 is
+    // still pending) can resend the identical key instead of minting a new one -
+    // the backend replays the original comment for a repeated key rather than
+    // creating a duplicate (comments/repository.py's find_by_client_request_id).
+    const clientRequestId = crypto.randomUUID();
+
     const controls = openComposer(
       shadow,
       x,
@@ -527,6 +537,7 @@ async function init(config: BacklineConfig): Promise<void> {
               screenshot_key: screenshotKey,
               capture_status: screenshotKey ? "ok" : "failed",
               attachments,
+              client_request_id: clientRequestId,
             }),
           });
           ownCommentIds.add(created.id);

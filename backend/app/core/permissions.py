@@ -26,6 +26,7 @@ PERMISSIONS: dict[str, frozenset[Role]] = {
     "member:remove": frozenset({Role.OWNER, Role.ADMIN}),
     "member:role_change": frozenset({Role.OWNER, Role.ADMIN}),
     "project:manage": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER}),
+    "project:hard_delete": frozenset({Role.OWNER, Role.ADMIN}),
     "share_link:manage": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER}),
     "integration:manage": frozenset({Role.OWNER, Role.ADMIN}),
     "comment:view_client": frozenset({Role.OWNER, Role.ADMIN, Role.MEMBER, Role.GUEST}),

@@ -109,3 +109,29 @@ async def download_bytes(key: str) -> bytes:
         return body
 
     return await asyncio.to_thread(_download)
+
+
+async def list_object_keys(prefixes: list[str]) -> list[str]:
+    """Enumerate private objects under already-authorized project prefixes."""
+    settings = get_settings()
+
+    def _list() -> list[str]:
+        client = _make_client()
+        keys: set[str] = set()
+        paginator = client.get_paginator("list_objects_v2")
+        for prefix in prefixes:
+            for page in paginator.paginate(Bucket=settings.r2_bucket_name, Prefix=prefix):
+                keys.update(str(item["Key"]) for item in page.get("Contents", []))
+        return sorted(keys)
+
+    return await asyncio.to_thread(_list)
+
+
+async def delete_object(key: str) -> None:
+    """Idempotently remove one object; S3 DELETE succeeds when the key is absent."""
+    settings = get_settings()
+
+    def _delete() -> None:
+        _make_client().delete_object(Bucket=settings.r2_bucket_name, Key=key)
+
+    await asyncio.to_thread(_delete)

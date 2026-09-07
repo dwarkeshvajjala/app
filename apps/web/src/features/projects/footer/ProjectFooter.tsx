@@ -20,6 +20,12 @@ interface ProjectFooterProps {
   onModeChange: (mode: CanvasMode) => void;
   viewport: ViewportOption | null;
   onViewportChange: (viewport: ViewportOption | null) => void;
+  orientation?: "portrait" | "landscape";
+  onOrientationChange?: (orientation: "portrait" | "landscape") => void;
+  zoomScale?: number;
+  onZoomChange?: (scale: number) => void;
+  iframeStatus?: "loading" | "loaded" | "error";
+  onReload?: () => void;
 }
 
 // Mirrors the reference's bottom bar. Version history, page approval, and private
@@ -36,6 +42,12 @@ export function ProjectFooter({
   onModeChange,
   viewport,
   onViewportChange,
+  orientation,
+  onOrientationChange,
+  zoomScale,
+  onZoomChange,
+  iframeStatus,
+  onReload,
 }: ProjectFooterProps) {
   const [showShare, setShowShare] = useState(false);
   const [approvalPaywall, setApprovalPaywall] = useState(false);
@@ -51,6 +63,31 @@ export function ProjectFooter({
           onChange={onViewportChange}
           totalComments={totalComments}
         />
+        {viewport && onOrientationChange && (
+          <button
+            onClick={() => onOrientationChange(orientation === "portrait" ? "landscape" : "portrait")}
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-black/10 dark:border-white/10 text-xs font-medium"
+            title="Toggle orientation"
+          >
+            {orientation === "portrait" ? "◫" : "▯"}
+          </button>
+        )}
+        {onZoomChange && zoomScale !== undefined && (
+          <div className="flex items-center gap-1 rounded-lg border border-black/10 px-1 py-0.5 dark:border-white/10">
+            <button onClick={() => onZoomChange(Math.max(0.25, zoomScale - 0.25))} className="w-6 h-6 flex items-center justify-center text-xs hover:bg-black/5 dark:hover:bg-white/5 rounded">-</button>
+            <span className="text-xs font-medium w-10 text-center">{Math.round(zoomScale * 100)}%</span>
+            <button onClick={() => onZoomChange(Math.min(3, zoomScale + 0.25))} className="w-6 h-6 flex items-center justify-center text-xs hover:bg-black/5 dark:hover:bg-white/5 rounded">+</button>
+          </div>
+        )}
+        {onReload && (
+          <button
+            onClick={onReload}
+            className="flex items-center gap-1.5 rounded-lg border border-black/10 px-2.5 py-1.5 text-xs font-medium dark:border-white/10"
+            title="Reload preview"
+          >
+            <span className={iframeStatus === "loading" ? "animate-spin" : ""}>↻</span>
+          </button>
+        )}
         <button
           onClick={() => setShowShare(true)}
           className="flex items-center gap-1.5 rounded-lg border border-black/10 px-2.5 py-1.5 text-xs font-medium dark:border-white/10"

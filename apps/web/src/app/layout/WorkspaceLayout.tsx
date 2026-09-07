@@ -7,6 +7,9 @@ import { useAuth } from "../../features/auth/AuthContext";
 import { qk } from "../../lib/query-keys";
 import { useWorkspaceContext } from "./useWorkspaceContext";
 import { DashboardSidebar } from "./DashboardSidebar";
+import { GlobalSearch } from "../../features/dashboard/GlobalSearch";
+import { NotificationBell } from "../../features/notifications/NotificationBell";
+import { useConnectionStore } from "../../stores/connectionStore";
 
 // The dashboard chrome (sidebar + everything under it: project grid, members, billing,
 // settings, usage, mcp) - deliberately NOT used for an open project's own routes
@@ -23,6 +26,8 @@ export function WorkspaceLayout() {
   useWSEvent("comment.created", refresh);
   useWSEvent("comment.updated", refresh);
   useWSEvent("comment.deleted", refresh);
+
+  const connStatus = useConnectionStore((s) => s.status);
 
   if (result.status === "loading") {
     return <p className="text-text-muted p-6 text-sm">Loading workspace...</p>;
@@ -43,6 +48,18 @@ export function WorkspaceLayout() {
     <div className="bl-app">
       <DashboardSidebar workspace={workspace} onSignOut={() => logout()} />
       <div className="bl-main">
+        <header className="bl-topbar"><GlobalSearch workspaceId={workspace.id} workspaceSlug={workspace.slug} /><NotificationBell /></header>
+        {connStatus !== "connected" && (
+          <div
+            className={`bl-conn-banner ${connStatus === "reconnecting" ? "reconnecting" : "offline"}`}
+            aria-live="polite"
+            role="status"
+          >
+            {connStatus === "reconnecting"
+              ? "Reconnecting to Backline…"
+              : "You are offline. Changes may not be saved."}
+          </div>
+        )}
         <Outlet context={{ workspace }} />
       </div>
     </div>

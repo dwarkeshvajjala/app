@@ -36,3 +36,15 @@ class RecoveryLogRepository:
         result = await self.db.recovery_logs.insert_one(doc)
         doc["_id"] = result.inserted_id
         return doc
+
+    async def list_for_comment(
+        self, *, workspace_id: str, comment_id: str, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        cursor = (
+            self.db.recovery_logs.find(
+                {"workspace_id": workspace_id, "comment_id": comment_id}
+            )
+            .sort("created_at", -1)
+            .limit(limit)
+        )
+        return [doc async for doc in cursor]

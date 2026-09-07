@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, datetime
 from typing import Any
 
@@ -6,14 +7,17 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.core.errors import ValidationError
 from app.core.events import append_event
 from app.core.session import Session
+from app.modules.comments import events as comment_events
 from app.modules.comments.repository import CommentRepository
 from app.modules.comments.service import _broadcast_comment_event, _comment_out
-from app.modules.dashboard.repository import DashboardRepository
+from app.modules.dashboard.repository import DashboardRepository, root_pipeline
 from app.modules.dashboard.schemas import (
     ActivityListOut,
     ActivityOut,
     DashboardOut,
     ProjectStatsOut,
+    SearchResultOut,
+    SearchResultsOut,
     TicketCreate,
     TicketFilters,
     TicketListOut,
@@ -21,6 +25,80 @@ from app.modules.dashboard.schemas import (
 )
 from app.modules.projects.service import get_project
 from app.modules.workspaces.repository import MembershipRepository
+
+
+async def search(
+    db: AsyncIOMotorDatabase[dict[str, Any]], workspace_id: str, query: str, limit: int
+) -> SearchResultsOut:
+    """Search only documents already constrained to the caller's active workspace.
+
+    Regex search is intentionally bounded until a Mongo/Atlas text-search service is
+    selected.  This makes the data exposure rule explicit and keeps the shell useful
+    for small workspaces without depending on a provider-specific index.
+    """
+    needle = re.escape(query.strip())
+    if not needle:
+        return SearchResultsOut(items=[])
+    matcher = {"$regex": needle, "$options": "i"}
+    each_limit = min(limit, 20)
+    items: list[SearchResultOut] = []
+    repo = DashboardRepository(db)
+
+    projects = await repo.search_projects(workspace_id, matcher, each_limit)
+    items.extend(
+        SearchResultOut(
+            kind="project", id=str(project["_id"]), title=project["name"],
+            subtitle=f"{project.get('project_type', 'website').title()} project",
+            project_id=str(project["_id"]),
+        )
+        for project in projects
+    )
+
+    pipeline = root_pipeline(workspace_id)
+    pipeline.extend(
+        [
+            {
+                "$match": {
+                    "$or": [
+                        {"body": matcher},
+                        {"_project.name": matcher},
+                        {"_page.title": matcher},
+                    ]
+                }
+            },
+            {"$sort": {"created_at": -1, "_id": -1}},
+            {"$limit": each_limit},
+        ]
+    )
+    comments = await repo.search_comments(pipeline, each_limit)
+    for comment in comments:
+        kind = "ticket" if comment.get("is_standalone") else "comment"
+        title = comment["body"].strip().replace("\n", " ")[:140] or "Untitled comment"
+        items.append(
+            SearchResultOut(
+                kind=kind,
+                id=str(comment["_id"]),
+                title=title,
+                subtitle=(
+                    f"{comment['_project']['name']} · "
+                    f"{comment['_page'].get('title') or 'Untitled page'}"
+                ),
+                project_id=comment["_page"]["project_id"],
+                page_id=comment["page_id"],
+            )
+        )
+
+    users = await repo.search_members(workspace_id, matcher, each_limit)
+    items.extend(
+        SearchResultOut(
+            kind="member",
+            id=str(user["_id"]),
+            title=user.get("name") or user["email"],
+            subtitle=user["email"],
+        )
+        for user in users
+    )
+    return SearchResultsOut(items=items[:limit])
 
 
 async def list_tickets(
@@ -149,7 +227,7 @@ async def create_ticket(
     await append_event(
         db,
         workspace_id=workspace_id,
-        type="comment.created",
+        type=comment_events.COMMENT_CREATED,
         actor_type="member",
         actor_id=actor.user_id,
         payload={"comment_id": comment.id, "project_id": project_id},
@@ -166,6 +244,7 @@ async def create_ticket(
         await notify_comment_assigned(
             db,
             workspace_id=workspace_id,
+            project_id=project_id,
             comment_id=comment.id,
             assignee_user_id=assignee,
             actor_user_id=actor.user_id,

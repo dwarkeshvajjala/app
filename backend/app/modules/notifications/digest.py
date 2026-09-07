@@ -5,15 +5,21 @@ from typing import Any
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.email import send_email
-from app.core.mongo_utils import to_object_id
 from app.modules.auth.repository import UserRepository
-from app.modules.workspaces.repository import MembershipRepository
+from app.modules.comments.repository import CommentRepository
+from app.modules.pages.repository import PageRepository
+from app.modules.projects.repository import ProjectRepository
+from app.modules.workspaces.repository import MembershipRepository, WorkspaceRepository
 
 # 17.6: "Instant or daily digest (member-configurable per workspace, default: daily)."
 # Only the daily digest is implemented this milestone - a per-member instant/daily
 # preference needs its own settings UI and a schema field on `memberships`, which is a
 # real, separate piece of scope deliberately deferred (docs/tdr/0009), not half-built
 # here. Every member currently gets the daily digest; there is no instant mode yet.
+#
+# M-08: this module previously issued raw db.* calls directly instead of going through
+# each collection's repository (rule 2.1 violation) - every query below now goes
+# through the same repository classes the rest of the app uses.
 
 
 async def _project_name_for_page(
@@ -21,10 +27,10 @@ async def _project_name_for_page(
 ) -> str:
     if page_id in cache:
         return cache[page_id]
-    page = await db.pages.find_one({"_id": to_object_id(page_id)})
+    page = await PageRepository(db).find_by_id(page_id)
     name = "Unknown project"
     if page is not None:
-        project = await db.projects.find_one({"_id": to_object_id(page["project_id"])})
+        project = await ProjectRepository(db).find_by_id(page["project_id"])
         if project is not None:
             name = str(project["name"])
     cache[page_id] = name
@@ -48,21 +54,16 @@ async def run_digest_for_workspace(
     workspace_id = str(workspace_doc["_id"])
     since = workspace_doc.get("last_digest_sent_at")
     now = datetime.now(UTC)
+    workspace_repo = WorkspaceRepository(db)
 
     if since is None:
-        await db.workspaces.update_one(
-            {"_id": workspace_doc["_id"]}, {"$set": {"last_digest_sent_at": now}}
-        )
+        await workspace_repo.set_last_digest_sent_at(workspace_id, now)
         return 0
 
-    comments = await db.comments.find(
-        {"workspace_id": workspace_id, "deleted_at": None, "created_at": {"$gt": since}}
-    ).to_list(length=None)
+    comments = await CommentRepository(db).list_since_for_workspace(workspace_id, since)
 
     if not comments:
-        await db.workspaces.update_one(
-            {"_id": workspace_doc["_id"]}, {"$set": {"last_digest_sent_at": now}}
-        )
+        await workspace_repo.set_last_digest_sent_at(workspace_id, now)
         return 0
 
     project_name_cache: dict[str, str] = {}
@@ -83,14 +84,12 @@ async def run_digest_for_workspace(
             continue
         await send_email(to=user_doc["email"], subject=subject, html=html)
 
-    await db.workspaces.update_one(
-        {"_id": workspace_doc["_id"]}, {"$set": {"last_digest_sent_at": now}}
-    )
+    await workspace_repo.set_last_digest_sent_at(workspace_id, now)
     return len(comments)
 
 
 async def run_daily_digests(db: AsyncIOMotorDatabase[dict[str, Any]]) -> dict[str, int]:
-    workspaces = await db.workspaces.find({}).to_list(length=None)
+    workspaces = await WorkspaceRepository(db).list_all()
     results = {}
     for workspace_doc in workspaces:
         count = await run_digest_for_workspace(db, workspace_doc)

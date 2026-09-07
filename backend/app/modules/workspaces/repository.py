@@ -47,6 +47,18 @@ class WorkspaceRepository:
             patch["name"] = name
         await self.db.workspaces.update_one({"_id": ObjectId(workspace_id)}, {"$set": patch})
 
+    async def list_all(self) -> list[dict[str, Any]]:
+        """M-08: notifications/digest.py's run_daily_digests previously iterated
+        `db.workspaces.find({})` directly (rule 2.1 violation) - moved here unchanged
+        in shape. Every workspace, no pagination: this only ever runs from the daily
+        cron job, not a request path."""
+        return [doc async for doc in self.db.workspaces.find({})]
+
+    async def set_last_digest_sent_at(self, workspace_id: str, when: datetime) -> None:
+        await self.db.workspaces.update_one(
+            {"_id": to_object_id(workspace_id)}, {"$set": {"last_digest_sent_at": when}}
+        )
+
 
 class MembershipRepository:
     """`memberships` - 11-Database.md §11.3. `workspace_id`/`user_id` are stored as

@@ -64,8 +64,19 @@ async def websocket_endpoint(
             return
         channel = f"project:{link['project_id']}:client"
         workspace_id = link["workspace_id"]
-        guest_doc = await GuestSessionRepository(db).find_by_id(actor.guest_session_id)
-        presence_display_name = guest_doc["display_name"] if guest_doc else "Guest"
+        guest_repo = GuestSessionRepository(db)
+        guest_doc = await guest_repo.find_by_id(actor.guest_session_id)
+        if (
+            guest_doc is None
+            or guest_doc["workspace_id"] != workspace_id
+            or guest_doc["share_link_id"] != actor.share_link_id
+        ):
+            await websocket.close(code=4403)
+            return
+        await guest_repo.touch_last_seen(
+            workspace_id=workspace_id, guest_session_id=actor.guest_session_id
+        )
+        presence_display_name = guest_doc["display_name"]
 
     await manager.connect(channel, websocket)
 

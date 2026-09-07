@@ -14,6 +14,10 @@ export function ShareLinksPage() {
 
   const [mode, setMode] = useState<"snippet" | "proxy">("snippet");
   const [passcode, setPasscode] = useState("");
+  const [askReviewerName, setAskReviewerName] = useState(true);
+  const [domainRestrictionsStr, setDomainRestrictionsStr] = useState("");
+  const [commentExportPermission, setCommentExportPermission] = useState(false);
+  const [expiration, setExpiration] = useState<"never" | "7" | "30">("never");
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -26,9 +30,17 @@ export function ShareLinksPage() {
 
   const createMutation = useMutation({
     mutationFn: () =>
-      shareLinksApi.createShareLink(projectId!, { mode, passcode: passcode || undefined }),
+      shareLinksApi.createShareLink(projectId!, {
+        mode,
+        passcode: passcode || undefined,
+        askReviewerName,
+        domainRestrictions: domainRestrictionsStr.split(',').map(s => s.trim()).filter(Boolean),
+        commentExportPermission,
+        expiresAt: expiration === "never" ? undefined : new Date(Date.now() + Number(expiration) * 24 * 60 * 60 * 1000).toISOString(),
+      }),
     onSuccess: () => {
       setPasscode("");
+      setDomainRestrictionsStr("");
       return queryClient.invalidateQueries({ queryKey });
     },
     onError: (err: unknown) => {
@@ -132,6 +144,40 @@ export function ShareLinksPage() {
             className="rounded-md border border-black/10 px-3 py-2 dark:border-white/10 dark:bg-transparent"
           />
         </label>
+        
+        <label className="flex items-center gap-2 text-sm mt-2">
+          <input type="checkbox" checked={askReviewerName} onChange={(e) => setAskReviewerName(e.target.checked)} />
+          Ask reviewer for their name
+        </label>
+        
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={commentExportPermission} onChange={(e) => setCommentExportPermission(e.target.checked)} />
+          Allow guests to export comments
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm mt-2">
+          Domain restrictions (comma-separated, optional)
+          <input
+            value={domainRestrictionsStr}
+            onChange={(event) => setDomainRestrictionsStr(event.target.value)}
+            placeholder="example.com, myagency.com"
+            className="rounded-md border border-black/10 px-3 py-2 dark:border-white/10 dark:bg-transparent"
+          />
+        </label>
+        
+        <label className="flex flex-col gap-1 text-sm mt-2">
+          Expiration policy
+          <select
+            value={expiration}
+            onChange={(event) => setExpiration(event.target.value as "never" | "7" | "30")}
+            className="rounded-md border border-black/10 px-3 py-2 dark:border-white/10 dark:bg-transparent"
+          >
+            <option value="never">Never expires</option>
+            <option value="7">7 days</option>
+            <option value="30">30 days</option>
+          </select>
+        </label>
+
         {error && <p className="text-recovery-orphaned text-sm">{error}</p>}
         <Button type="submit" disabled={createMutation.isPending}>
           Create share link

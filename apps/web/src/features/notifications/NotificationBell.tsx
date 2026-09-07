@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { useWSEvent } from "../../app/WSProvider";
 import { useAuth } from "../auth/AuthContext";
@@ -9,13 +10,25 @@ import type { NotificationOut } from "./api";
 const UNREAD_COUNT_KEY = ["notifications", "unread-count"];
 const LIST_KEY = ["notifications", "list"];
 
+// Map notification types to human-readable descriptions (FD-AUD-006)
 function describe(notification: NotificationOut): string {
-  const payload = notification.payload as { integration_type?: string };
-  switch (notification.type) {
+  const payload = notification.payload as Record<string, string>;
+  const type = notification.type as string;
+  switch (type) {
     case "comment_assigned":
       return "You were assigned a comment";
+    case "comment_reply":
+      return `${payload.actor_name || "Someone"} replied to a comment`;
+    case "comment_mention":
+      return `${payload.actor_name || "Someone"} mentioned you in a comment`;
+    case "comment_status_changed":
+      return `A comment was marked ${payload.new_status || "updated"}`;
+    case "share_link_created":
+      return "A new share link was created for a project";
     case "integration_disconnected":
       return `Your ${payload.integration_type ?? ""} integration was disconnected after repeated delivery failures`;
+    case "deploy_recovery_completed":
+      return "Comment anchors were re-mapped after a deploy";
     default:
       return "New notification";
   }
@@ -25,6 +38,8 @@ export function NotificationBell() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const { data: unread } = useQuery({
     queryKey: UNREAD_COUNT_KEY,
@@ -53,22 +68,36 @@ export function NotificationBell() {
     ),
   );
 
-  async function handleMarkRead(id: string) {
-    await notificationsApi.markRead(id);
-    invalidate();
-  }
-
   async function handleMarkAllRead() {
     await notificationsApi.markAllRead();
     invalidate();
   }
 
+  async function handleClickNotification(notification: NotificationOut) {
+    // Mark as read then navigate to target_route if provided
+    if (!notification.read_at) {
+      await notificationsApi.markRead(notification.id);
+      invalidate();
+    }
+    const route = (notification as NotificationOut & { target_route?: string }).target_route;
+    if (route) {
+      setOpen(false);
+      navigate(route);
+    }
+  }
+
+  // Close on outside click
+  function handleToggle() {
+    setOpen((v) => !v);
+  }
+
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={handleToggle}
         className="relative rounded-md p-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/10"
-        aria-label="Notifications"
+        aria-label={`Notifications${unread && unread > 0 ? `, ${unread} unread` : ""}`}
+        aria-expanded={open}
       >
         🔔
         {!!unread && unread > 0 && (
@@ -79,33 +108,62 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="bg-bg-surface absolute right-0 z-10 mt-2 w-80 rounded-md border border-black/10 shadow-lg dark:border-white/10">
-          <div className="flex items-center justify-between border-b border-black/10 px-3 py-2 dark:border-white/10">
-            <span className="text-sm font-medium">Notifications</span>
-            <button
-              onClick={handleMarkAllRead}
-              className="text-text-muted text-xs underline"
-            >
-              Mark all read
-            </button>
-          </div>
-          <ul className="max-h-80 overflow-y-auto">
-            {(notifications ?? []).length === 0 && (
-              <li className="text-text-muted p-3 text-sm">No notifications yet.</li>
-            )}
-            {(notifications ?? []).map((notification) => (
-              <li
-                key={notification.id}
-                className={`cursor-pointer border-b border-black/5 px-3 py-2 text-sm last:border-0 dark:border-white/5 ${
-                  notification.read_at ? "text-text-muted" : "font-medium"
-                }`}
-                onClick={() => !notification.read_at && handleMarkRead(notification.id)}
+        <>
+          {/* Backdrop for outside-click close */}
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 9 }}
+            aria-hidden="true"
+            onClick={() => setOpen(false)}
+          />
+          <div
+            className="bg-bg-surface absolute right-0 z-10 mt-2 w-80 rounded-md border border-black/10 shadow-lg dark:border-white/10"
+            style={{ zIndex: 10 }}
+            role="dialog"
+            aria-label="Notifications"
+          >
+            <div className="flex items-center justify-between border-b border-black/10 px-3 py-2 dark:border-white/10">
+              <span className="text-sm font-medium">Notifications</span>
+              <button
+                onClick={handleMarkAllRead}
+                className="text-text-muted text-xs underline"
               >
-                {describe(notification)}
-              </li>
-            ))}
-          </ul>
-        </div>
+                Mark all read
+              </button>
+            </div>
+            <ul className="max-h-80 overflow-y-auto" role="list">
+              {(notifications ?? []).length === 0 && (
+                <li className="text-text-muted p-3 text-sm">No notifications yet.</li>
+              )}
+              {(notifications ?? []).map((notification) => {
+                const route = (notification as NotificationOut & { target_route?: string }).target_route;
+                return (
+                  <li
+                    key={notification.id}
+                    className={[
+                      "bl-notif-item border-b border-black/5 px-3 py-2.5 text-sm last:border-0 dark:border-white/5",
+                      !notification.read_at ? "unread" : "text-text-muted",
+                    ].join(" ")}
+                    onClick={() => handleClickNotification(notification)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        void handleClickNotification(notification);
+                      }
+                    }}
+                    aria-label={`${describe(notification)}${route ? " — click to view" : ""}`}
+                  >
+                    <div>{describe(notification)}</div>
+                    {route && (
+                      <span className="bl-notif-route">{route}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </>
       )}
     </div>
   );
