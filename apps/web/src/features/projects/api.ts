@@ -34,3 +34,22 @@ export function updateProject(projectId: string, patch: Schemas["ProjectUpdate"]
 export function restoreProject(projectId: string) {
   return apiFetch<ProjectOut>(`/api/v1/projects/${projectId}/restore`, { method: "POST" });
 }
+
+export function duplicateProject(projectId: string) {
+  return apiFetch<ProjectOut>(`/api/v1/projects/${projectId}/duplicate`, { method: "POST" });
+}
+
+export interface ProjectSettingsUpdate {
+  capture_device_details?: boolean;
+  reanchor_on_deploy?: boolean;
+  reviewer_can_resolve?: boolean;
+  show_board_to_client?: boolean;
+  client_digest_enabled?: boolean;
+}
+
+export function updateProjectSettings(projectId: string, settings: ProjectSettingsUpdate) {
+  return apiFetch<Schemas["ProjectSettingsOut"]>(`/api/v1/projects/${projectId}/settings`, {
+    method: "PATCH",
+    body: JSON.stringify(settings),
+  });
+}

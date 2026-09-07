@@ -89,12 +89,26 @@ class CommentCreate(BaseModel):
     screenshot_key: str | None = None
     capture_status: Literal["ok", "failed"] = "ok"
     attachments: list[AttachmentIn] = Field(default_factory=list, max_length=10)
+    # M-08 idempotency: optional caller-generated key so a retried POST (flaky mobile
+    # network, per 16-Dashboard.md §16.2's device concerns) replays the original
+    # comment instead of creating a duplicate. Uniqueness is per-workspace
+    # (core/indexes.py's comments_client_request_id), not global, so two different
+    # workspaces' guests can't collide on the same client-generated UUID.
+    client_request_id: str | None = Field(default=None, min_length=1, max_length=100)
 
 
 class ReplyCreate(BaseModel):
     body: str = Field(min_length=1, max_length=10_000)
     layer: Layer = "client"
     attachments: list[AttachmentIn] = Field(default_factory=list, max_length=10)
+    client_request_id: str | None = Field(default=None, min_length=1, max_length=100)
+    # M-06/M-15: the composer's mention picker (MentionsInput.tsx) already knows
+    # exactly which members it inserted a token for - sent explicitly rather than
+    # re-parsed out of `body` server-side, since display names aren't unique or
+    # stable (a rename, or two members sharing a name, would misfire a text-match
+    # extractor). Each id is validated as a real workspace member before any
+    # notification fires; unknown/foreign ids are silently ignored, not an error.
+    mentioned_user_ids: list[str] = Field(default_factory=list, max_length=20)
 
 
 class CommentBodyEdit(BaseModel):
@@ -152,3 +166,25 @@ class CommentOut(BaseModel):
     waiting_on_ids: list[str] = Field(default_factory=list)
     waiting_on_client: bool = False
     is_standalone: bool = False
+
+
+class GuestBoardItemOut(BaseModel):
+    """FD-AUD-042/M-04 'show ticket board to client' - a deliberately client-safe DTO,
+    never the staff board payload (CommentOut) with fields hidden in React (M-02's
+    explicit requirement). due_at/assignee_names are only ever populated by the service
+    when the project's show_board_to_client setting is on; the endpoint itself is
+    unreachable at all when it's off, per the prototype's own wording ("Off means
+    clients see comments and statuses but not due dates, assignees or the board")."""
+
+    id: str
+    body: str
+    status: Status
+    layer: Literal["client"] = "client"
+    created_at: datetime
+    due_at: datetime | None = None
+    assignee_names: list[str] = Field(default_factory=list)
+
+
+class GuestBoardOut(BaseModel):
+    project_id: str
+    items: list[GuestBoardItemOut]

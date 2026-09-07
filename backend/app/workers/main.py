@@ -17,6 +17,7 @@ from app.core.config import get_settings
 from app.workers.integrations import dispatch_integration_event_job
 from app.workers.notifications import send_daily_digests_job, send_guest_resolved_email_job
 from app.workers.recovery import run_recovery_pipeline_job
+from app.workers.storage_gc import resume_project_hard_delete_job
 
 
 class WorkerSettings:
@@ -25,6 +26,7 @@ class WorkerSettings:
         dispatch_integration_event_job,
         send_guest_resolved_email_job,
         send_daily_digests_job,
+        resume_project_hard_delete_job,
     ]
     # 17.6: daily digest, once a day at 09:00 server time. Also runnable directly via
     # modules/notifications/digest.py's run_daily_digests(db) for tests/manual triggers

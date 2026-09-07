@@ -45,6 +45,9 @@ async def create_share_link(
         mode=body.mode,
         passcode=body.passcode,
         expires_at=body.expires_at,
+        ask_reviewer_name=body.ask_reviewer_name,
+        domain_restrictions=body.domain_restrictions,
+        comment_export_permission=body.comment_export_permission,
     )
 
 
@@ -95,4 +98,8 @@ async def create_guest_session(body: GuestSessionCreate, request: Request) -> Gu
         email=body.email,
         passcode=body.passcode,
         ua_fingerprint=ua_fingerprint,
+        # M-02: read directly from the request the browser actually sent - never a
+        # client-payload field a guest could freely spoof.
+        origin=request.headers.get("origin"),
+        referer=request.headers.get("referer"),
     )

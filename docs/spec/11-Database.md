@@ -185,6 +185,9 @@ Referenced by `13-Authentication.md` §13.1/§13.6 but not enumerated in the ori
 ```
 Indexes: `{ token_hash: 1 }` unique; `{ user_id: 1 }`; TTL on `expires_at` (Mongo TTL index - once expired, both the row and its ability to authenticate are gone).
 
+Additive hot-path indexes: `{ user_id: 1, family_id: 1 }` for session-family ownership
+and `{ family_id: 1, revoked_at: 1 }` for retry-safe family revocation.
+
 **Rotation/theft-detection note:** `POST /auth/refresh` looks up by `token_hash`. If the row is `revoked_at`-set (already rotated once), every other non-revoked token sharing that `family_id` is revoked immediately (`13-Authentication.md` §13.6's "reuse of an already-rotated token immediately revokes the whole session family").
 
 ## 11.15 `otp_codes`
@@ -201,7 +204,37 @@ Referenced by `13-Authentication.md` §13.2, not enumerated in the original coll
 ```
 Indexes: `{ email: 1, created_at: -1 }`; TTL on `expires_at`.
 
-## 11.16 Key Aggregations
+Additive active-code lookup index:
+`{ email: 1, consumed_at: 1, expires_at: 1, created_at: -1 }`.
+
+## 11.16 Additive hot-path indexes
+
+The original indexes remain in place. Current repository filters/sorts additionally use:
+
+- notifications: `{ workspace_id: 1, user_id: 1, read_at: 1, created_at: -1 }`;
+- share links: `{ workspace_id: 1, project_id: 1, created_at: -1 }`;
+- pages: `{ workspace_id: 1, project_id: 1, url_normalized: 1 }` unique;
+- revisions: `{ workspace_id: 1, page_id: 1, captured_at: -1 }` and
+  `{ workspace_id: 1, page_id: 1, is_current: 1 }`;
+- recovery logs: `{ workspace_id: 1, comment_id: 1, created_at: -1 }`;
+- events: `{ workspace_id: 1, created_at: -1, _id: -1 }` and
+  `{ workspace_id: 1, type: 1, created_at: -1, _id: -1 }`.
+
+Guest sessions keep the 180-day `last_seen_at` TTL. Authorized guest project activity
+touches `last_seen_at`, so it represents inactivity rather than merely creation age.
+
+## 11.17 Destructive-operation coordination
+
+`deletion_plans` stores the workspace/project/user-scoped dry-run correlation ID,
+dependency counts and graph signature, enumerated object keys, status and a one-hour
+confirmation expiry. A `purge_after` TTL removes unconfirmed plans; confirmation clears
+that deadline while work is active and completion sets it to 30 days. This prevents a
+storage outage from erasing retry state. `object_gc_tombstones` stores bucket/key,
+workspace/project, correlation ID, retry status/attempts/error and deletion timestamps.
+Bucket/key is
+unique. See TDR-0014.
+
+## 11.18 Key Aggregations
 
 **Kanban board counts per project** (drives the board header without a separate count query per column):
 ```python

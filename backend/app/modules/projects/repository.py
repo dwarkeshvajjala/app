@@ -67,6 +67,19 @@ class ProjectRepository:
             {"$set": {**patch, "updated_at": datetime.now(UTC)}},
         )
 
+    async def update_settings(
+        self, workspace_id: str, project_id: str, settings_patch: dict[str, Any]
+    ) -> None:
+        """M-08: was a raw `db.projects.update_one` call made directly from
+        projects/service.py (rule 2.1 violation) - moved here unchanged in shape.
+        `settings_patch` keys are bare field names (e.g. "capture_device_details");
+        this method owns turning them into "settings_json.<field>" dot-notation."""
+        set_ops = {f"settings_json.{k}": v for k, v in settings_patch.items()}
+        await self.db.projects.update_one(
+            {"workspace_id": workspace_id, "_id": to_object_id(project_id)},
+            {"$set": {**set_ops, "updated_at": datetime.now(UTC)}},
+        )
+
     async def update(self, project_id: str, *, name: str | None, target_origin: str | None) -> None:
         patch: dict[str, Any] = {"updated_at": datetime.now(UTC)}
         if name is not None:

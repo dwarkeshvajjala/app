@@ -76,6 +76,48 @@ class CommentRepository:
         cursor = self.db.comments.find(query).sort("created_at", 1)
         return [doc async for doc in cursor]
 
+    async def list_client_layer_for_project(
+        self, workspace_id: str, page_ids: list[str]
+    ) -> list[dict[str, Any]]:
+        """FD-AUD-042/M-04 guest board data source - same shape as list_for_project but
+        restricted to layer == "client", the same hard-coded filter
+        list_for_guest_session already uses per page. The caller (comment_service's
+        list_guest_board) is responsible for checking show_board_to_client before
+        calling this - this method only enforces the layer boundary, not the project
+        setting."""
+        query: dict[str, Any] = {
+            "workspace_id": workspace_id,
+            "page_id": {"$in": page_ids},
+            "layer": "client",
+            "deleted_at": None,
+        }
+        cursor = self.db.comments.find(query).sort("created_at", 1)
+        return [doc async for doc in cursor]
+
+    async def list_since_for_workspace(
+        self, workspace_id: str, since: datetime
+    ) -> list[dict[str, Any]]:
+        """M-08: notifications/digest.py's run_digest_for_workspace previously queried
+        `db.comments.find(...)` directly (rule 2.1 violation) - moved here unchanged in
+        shape. Deliberately includes both layers: every recipient is a workspace
+        member (digest recipients come from MembershipRepository), and members are
+        already entitled to see both layers under this workspace's access model
+        (there is no project ACL - every member sees every project, per M-01's
+        recorded decision). This must never be reused for a client-facing digest
+        without adding a layer filter first."""
+        query: dict[str, Any] = {"workspace_id": workspace_id, "created_at": {"$gt": since}}
+        return [doc async for doc in self.db.comments.find(query)]
+
+    async def find_by_client_request_id(
+        self, workspace_id: str, client_request_id: str
+    ) -> dict[str, Any] | None:
+        """M-08 idempotency lookup - mirrors pages/repository.py's
+        find_by_normalized_url check-before-create pattern rather than relying on
+        catching a duplicate-key error as the primary path."""
+        return await self.db.comments.find_one(
+            {"workspace_id": workspace_id, "client_request_id": client_request_id}
+        )
+
     async def list_replies(self, parent_id: str) -> list[dict[str, Any]]:
         """Every non-deleted reply to one comment - used by delete_thread
         (comments/service.py) to find what a "delete this whole thread" cascades to."""

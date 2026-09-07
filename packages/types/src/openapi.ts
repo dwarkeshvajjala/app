@@ -106,6 +106,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sessions
+         * @description FD-AUD-011: Lists all active sessions for the current user.
+         */
+        get: operations["list_sessions_api_v1_auth_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/sessions/{family_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Session
+         * @description FD-AUD-011: Revokes a specific session family.
+         */
+        delete: operations["revoke_session_api_v1_auth_sessions__family_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Me
+         * @description FD-AUD-046: Update user profile and preferences.
+         */
+        patch: operations["update_me_api_v1_auth_me_patch"];
+        trace?: never;
+    };
     "/api/v1/workspaces": {
         parameters: {
             query?: never;
@@ -242,6 +302,94 @@ export interface paths {
         put?: never;
         /** Restore Project */
         post: operations["restore_project_api_v1_projects__project_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Project Settings
+         * @description FD-AUD-018: persist the five review-settings flags for a project.
+         */
+        patch: operations["update_project_settings_api_v1_projects__project_id__settings_patch"];
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Duplicate Project */
+        post: operations["duplicate_project_api_v1_projects__project_id__duplicate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/hard-delete/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Hard Delete Project */
+        post: operations["preview_hard_delete_project_api_v1_projects__project_id__hard_delete_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/hard-delete/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Hard Delete Project */
+        post: operations["confirm_hard_delete_project_api_v1_projects__project_id__hard_delete_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Project */
+        get: operations["export_project_api_v1_projects__project_id__export_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -507,6 +655,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/pages/{page_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Page */
+        delete: operations["delete_page_api_v1_pages__page_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Page */
+        patch: operations["update_page_api_v1_pages__page_id__patch"];
+        trace?: never;
+    };
     "/api/v1/pages/{page_id}/snapshots": {
         parameters: {
             query?: never;
@@ -576,6 +742,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/guest-board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Guest Board */
+        get: operations["guest_board_api_v1_projects__project_id__guest_board_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/comments/{comment_id}/replies": {
         parameters: {
             query?: never;
@@ -626,6 +809,23 @@ export interface paths {
         head?: never;
         /** Edit Comment Body */
         patch: operations["edit_comment_body_api_v1_comments__comment_id__body_patch"];
+        trace?: never;
+    };
+    "/api/v1/comments/{comment_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Resolve Own Comment */
+        patch: operations["resolve_own_comment_api_v1_comments__comment_id__resolve_patch"];
         trace?: never;
     };
     "/api/v1/comments/{comment_id}/thread": {
@@ -1156,6 +1356,8 @@ export interface components {
             capture_status: "ok" | "failed";
             /** Attachments */
             attachments?: components["schemas"]["AttachmentIn"][];
+            /** Client Request Id */
+            client_request_id?: string | null;
         };
         /** CommentOut */
         CommentOut: {
@@ -1342,11 +1544,56 @@ export interface components {
             /** Code */
             code: string;
         };
+        /**
+         * GuestBoardItemOut
+         * @description FD-AUD-042/M-04 'show ticket board to client' - a deliberately client-safe DTO,
+         *     never the staff board payload (CommentOut) with fields hidden in React (M-02's
+         *     explicit requirement). due_at/assignee_names are only ever populated by the service
+         *     when the project's show_board_to_client setting is on; the endpoint itself is
+         *     unreachable at all when it's off, per the prototype's own wording ("Off means
+         *     clients see comments and statuses but not due dates, assignees or the board").
+         */
+        GuestBoardItemOut: {
+            /** Id */
+            id: string;
+            /** Body */
+            body: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "todo" | "in_progress" | "in_review" | "blocked" | "resolved" | "wont_fix";
+            /**
+             * Layer
+             * @default client
+             * @constant
+             */
+            layer: "client";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Due At */
+            due_at?: string | null;
+            /** Assignee Names */
+            assignee_names?: string[];
+        };
+        /** GuestBoardOut */
+        GuestBoardOut: {
+            /** Project Id */
+            project_id: string;
+            /** Items */
+            items: components["schemas"]["GuestBoardItemOut"][];
+        };
         /** GuestSessionCreate */
         GuestSessionCreate: {
             /** Share Token */
             share_token: string;
-            /** Display Name */
+            /**
+             * Display Name
+             * @default
+             */
             display_name: string;
             /** Email */
             email?: string | null;
@@ -1448,11 +1695,13 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "comment_assigned" | "integration_disconnected";
+            type: "comment_assigned" | "comment_reply" | "comment_mention" | "comment_status_changed" | "share_link_created" | "integration_disconnected" | "deploy_recovery_completed";
             /** Payload */
             payload: {
                 [key: string]: unknown;
             };
+            /** Target Route */
+            target_route?: string | null;
             /** Read At */
             read_at: string | null;
             /**
@@ -1490,6 +1739,11 @@ export interface components {
             /** Title */
             title: string | null;
             /**
+             * Sort Order
+             * @default 0
+             */
+            sort_order: number;
+            /**
              * First Seen At
              * Format: date-time
              */
@@ -1505,6 +1759,13 @@ export interface components {
             url: string;
             /** Title */
             title?: string | null;
+        };
+        /** PageUpdate */
+        PageUpdate: {
+            /** Title */
+            title?: string | null;
+            /** Sort Order */
+            sort_order?: number | null;
         };
         /** ProjectCreate */
         ProjectCreate: {
@@ -1529,6 +1790,116 @@ export interface components {
             environment: "live" | "staging";
             /** Client Id */
             client_id?: string | null;
+        };
+        /** ProjectDeletionCounts */
+        ProjectDeletionCounts: {
+            /**
+             * Pages
+             * @default 0
+             */
+            pages: number;
+            /**
+             * Project Assets
+             * @default 0
+             */
+            project_assets: number;
+            /**
+             * Comments
+             * @default 0
+             */
+            comments: number;
+            /**
+             * Revisions
+             * @default 0
+             */
+            revisions: number;
+            /**
+             * Revision Diffs
+             * @default 0
+             */
+            revision_diffs: number;
+            /**
+             * Recovery Logs
+             * @default 0
+             */
+            recovery_logs: number;
+            /**
+             * Share Links
+             * @default 0
+             */
+            share_links: number;
+            /**
+             * Guest Sessions
+             * @default 0
+             */
+            guest_sessions: number;
+            /**
+             * Notifications
+             * @default 0
+             */
+            notifications: number;
+            /**
+             * Project Integrations
+             * @default 0
+             */
+            project_integrations: number;
+            /**
+             * Object Keys
+             * @default 0
+             */
+            object_keys: number;
+            /**
+             * Retained Audit Events
+             * @default 0
+             */
+            retained_audit_events: number;
+            /**
+             * Unsafe Object References
+             * @default 0
+             */
+            unsafe_object_references: number;
+        };
+        /** ProjectHardDeleteConfirm */
+        ProjectHardDeleteConfirm: {
+            /** Correlation Id */
+            correlation_id: string;
+            /** Project Name */
+            project_name: string;
+            /**
+             * Acknowledge Permanent Deletion
+             * @constant
+             */
+            acknowledge_permanent_deletion: true;
+        };
+        /** ProjectHardDeletePreviewOut */
+        ProjectHardDeletePreviewOut: {
+            /** Correlation Id */
+            correlation_id: string;
+            /** Project Id */
+            project_id: string;
+            /** Project Name */
+            project_name: string;
+            /** Archived */
+            archived: boolean;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            counts: components["schemas"]["ProjectDeletionCounts"];
+            /** Retention Notice */
+            retention_notice: string;
+        };
+        /** ProjectHardDeleteResult */
+        ProjectHardDeleteResult: {
+            /** Correlation Id */
+            correlation_id: string;
+            /**
+             * Status
+             * @constant
+             */
+            status: "deleted";
+            counts: components["schemas"]["ProjectDeletionCounts"];
         };
         /** ProjectOut */
         ProjectOut: {
@@ -1576,6 +1947,47 @@ export interface components {
             proxy_mode: boolean;
             /** Snippet Installed */
             snippet_installed: boolean;
+            /**
+             * Capture Device Details
+             * @default false
+             */
+            capture_device_details: boolean;
+            /**
+             * Reanchor On Deploy
+             * @default false
+             */
+            reanchor_on_deploy: boolean;
+            /**
+             * Reviewer Can Resolve
+             * @default false
+             */
+            reviewer_can_resolve: boolean;
+            /**
+             * Show Board To Client
+             * @default false
+             */
+            show_board_to_client: boolean;
+            /**
+             * Client Digest Enabled
+             * @default false
+             */
+            client_digest_enabled: boolean;
+        };
+        /**
+         * ProjectSettingsUpdate
+         * @description Partial update for project review settings — omitted fields are unchanged.
+         */
+        ProjectSettingsUpdate: {
+            /** Capture Device Details */
+            capture_device_details?: boolean | null;
+            /** Reanchor On Deploy */
+            reanchor_on_deploy?: boolean | null;
+            /** Reviewer Can Resolve */
+            reviewer_can_resolve?: boolean | null;
+            /** Show Board To Client */
+            show_board_to_client?: boolean | null;
+            /** Client Digest Enabled */
+            client_digest_enabled?: boolean | null;
         };
         /** ProjectStatsOut */
         ProjectStatsOut: {
@@ -1639,6 +2051,10 @@ export interface components {
             layer: "client" | "team";
             /** Attachments */
             attachments?: components["schemas"]["AttachmentIn"][];
+            /** Client Request Id */
+            client_request_id?: string | null;
+            /** Mentioned User Ids */
+            mentioned_user_ids?: string[];
         };
         /** ReviewResolveOut */
         ReviewResolveOut: {
@@ -1660,6 +2076,11 @@ export interface components {
             requires_passcode: boolean;
             /** Target Origin */
             target_origin: string;
+            /**
+             * Ask Reviewer Name
+             * @default true
+             */
+            ask_reviewer_name: boolean;
         };
         /** RevisionOut */
         RevisionOut: {
@@ -1705,6 +2126,36 @@ export interface components {
             /** Items */
             items: components["schemas"]["SearchResultOut"][];
         };
+        /**
+         * SessionOut
+         * @description FD-AUD-011: Represents an active refresh token family for the user.
+         *     M-05: created_at/last_active_at are typed datetimes (Pydantic serializes to a real
+         *     ISO-8601 string with timezone on the wire) rather than hand-formatted str fields -
+         *     API contracts stay generated/typed end-to-end per 06-Backend-Architecture.md §2.3,
+         *     and the frontend gets a real Date-parseable value instead of an ad hoc string.
+         */
+        SessionOut: {
+            /** Id */
+            id: string;
+            /** Current */
+            current: boolean;
+            /** Browser */
+            browser: string | null;
+            /** Os */
+            os: string | null;
+            /** Ip Address */
+            ip_address: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Active At
+             * Format: date-time
+             */
+            last_active_at: string;
+        };
         /** ShareLinkCreate */
         ShareLinkCreate: {
             /**
@@ -1717,6 +2168,18 @@ export interface components {
             passcode?: string | null;
             /** Expires At */
             expires_at?: string | null;
+            /**
+             * Ask Reviewer Name
+             * @default true
+             */
+            ask_reviewer_name: boolean;
+            /** Domain Restrictions */
+            domain_restrictions?: string[];
+            /**
+             * Comment Export Permission
+             * @default false
+             */
+            comment_export_permission: boolean;
         };
         /** ShareLinkOut */
         ShareLinkOut: {
@@ -1742,6 +2205,18 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Ask Reviewer Name
+             * @default true
+             */
+            ask_reviewer_name: boolean;
+            /** Domain Restrictions */
+            domain_restrictions?: string[];
+            /**
+             * Comment Export Permission
+             * @default false
+             */
+            comment_export_permission: boolean;
         };
         /** SlackIntegrationCreate */
         SlackIntegrationCreate: {
@@ -1965,6 +2440,50 @@ export interface components {
             name: string;
             /** Avatar Url */
             avatar_url?: string | null;
+            /**
+             * @default {
+             *       "notify_on_assignment": true,
+             *       "notify_on_mention": true,
+             *       "notify_on_reply": true,
+             *       "notify_on_status_change": true,
+             *       "daily_digest": true
+             *     }
+             */
+            preferences: components["schemas"]["UserPreferencesOut"];
+        };
+        /** UserPreferencesOut */
+        UserPreferencesOut: {
+            /**
+             * Notify On Assignment
+             * @default true
+             */
+            notify_on_assignment: boolean;
+            /**
+             * Notify On Mention
+             * @default true
+             */
+            notify_on_mention: boolean;
+            /**
+             * Notify On Reply
+             * @default true
+             */
+            notify_on_reply: boolean;
+            /**
+             * Notify On Status Change
+             * @default true
+             */
+            notify_on_status_change: boolean;
+            /**
+             * Daily Digest
+             * @default true
+             */
+            daily_digest: boolean;
+        };
+        /** UserUpdateRequest */
+        UserUpdateRequest: {
+            /** Name */
+            name?: string | null;
+            preferences?: components["schemas"]["UserPreferencesOut"] | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -2189,6 +2708,99 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccessTokenOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sessions_api_v1_auth_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                refresh_token?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_session_api_v1_auth_sessions__family_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                family_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_me_api_v1_auth_me_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserOut"];
                 };
             };
             /** @description Validation Error */
@@ -2632,6 +3244,169 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_project_settings_api_v1_projects__project_id__settings_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    duplicate_project_api_v1_projects__project_id__duplicate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_hard_delete_project_api_v1_projects__project_id__hard_delete_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectHardDeletePreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_hard_delete_project_api_v1_projects__project_id__hard_delete_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectHardDeleteConfirm"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectHardDeleteResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_project_api_v1_projects__project_id__export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -3286,6 +4061,70 @@ export interface operations {
             };
         };
     };
+    delete_page_api_v1_pages__page_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_page_api_v1_pages__page_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PageUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     submit_snapshot_api_v1_pages__page_id__snapshots_post: {
         parameters: {
             query?: never;
@@ -3461,6 +4300,39 @@ export interface operations {
             };
         };
     };
+    guest_board_api_v1_projects__project_id__guest_board_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-guest-session"?: string | null;
+            };
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestBoardOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_reply_api_v1_comments__comment_id__replies_post: {
         parameters: {
             query?: never;
@@ -3580,6 +4452,39 @@ export interface operations {
                 "application/json": components["schemas"]["CommentBodyEdit"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_own_comment_api_v1_comments__comment_id__resolve_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-guest-session"?: string | null;
+            };
+            path: {
+                comment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

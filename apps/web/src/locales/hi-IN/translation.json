@@ -1,0 +1,21 @@
+{
+  "auth.login.title": "बैकलाइन में साइन इन करें",
+  "auth.login.email": "ईमेल पता",
+  "auth.login.submit": "ईमेल से साइन इन करें",
+  "auth.login.google": "Google के साथ साइन इन करें",
+  "auth.login.magicLinkSent": "साइन इन करने के लिए अपने ईमेल में मैजिक लिंक जांचें।",
+  "workspacePicker.title": "आपके कार्यस्थान",
+  "workspacePicker.newWorkspace": "नया कार्यस्थान",
+  "workspacePicker.select": "कार्यस्थान चुनें",
+  "sidebar.projects": "प्रोजेक्ट्स",
+  "sidebar.tickets": "टिकट",
+  "sidebar.clients": "ग्राहक",
+  "sidebar.activity": "गतिविधि",
+  "sidebar.newProject": "नया प्रोजेक्ट",
+  "sidebar.apps": "वेब ऐप",
+  "sidebar.mobile": "मोबाइल",
+  "sidebar.imagePdf": "छवि और पीडीएफ",
+  "account.profile": "प्रोफ़ाइल सेटिंग्स",
+  "account.language": "भाषा (Language)",
+  "account.signOut": "साइन आउट"
+}

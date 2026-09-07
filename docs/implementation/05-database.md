@@ -24,6 +24,20 @@ Root comments and standalone tickets share one source of truth; replies are neve
 
 Index creation stays idempotent at startup. Add indexes; do not drop existing ones without an explain-plan comparison. Counts use aggregation before object-storage URL signing; list projections should avoid large anchor/snapshot blobs. Pagination applies before enriching author/page/project metadata. Never claim a speedup without measurements.
 
+Audit batch 02 adds the hot-path shapes for notification unread counts, scoped
+share-link lists, page URL lookup, revision current/history reads, recovery history,
+refresh-token families, event feeds and active OTP lookup. The existing guest-session
+`last_seen_at` TTL remains and authorized activity now refreshes it. The default index
+migration command is a read-only dry-run; `--apply` creates missing indexes without
+dropping or renaming existing ones.
+
 ## Migration and rollback
 
 Read defaults make additive deployment safe. Provide an explicit idempotent dry-run-first backfill for new fields if needed; retain old fields and status values. Rollout: backup → staging index creation/backfill → API with old-compatible fields → regenerated frontend/widget → targeted tenant/privacy checks. Rollback frontend first; retained old fields let prior API readers continue working. Do not execute a backfill against production automatically. Test databases must be explicitly local/isolated; inspect settings without exposing secrets before any destructive test fixture runs.
+
+Permanent project deletion follows TDR-0014: dry-run and graph signature, explicit
+confirmation on an archived project, object tombstones/GC, dependency-ordered Mongo
+deletion and one correlation-ID summary event. Individual page deletion blocks while
+review history or an asset references the page. Unconfirmed plans expire after one hour;
+confirmed in-progress plans keep their resume state until completion, then purge after
+30 days.

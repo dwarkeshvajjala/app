@@ -25,6 +25,17 @@ import { ProjectLayout } from "./layout/ProjectLayout";
 import { WorkspaceLayout } from "./layout/WorkspaceLayout";
 import { NotFoundPage } from "../features/pages/NotFoundPage";
 
+import { ScrollToTop } from "../lib/ScrollToTop";
+
+function RootLayout() {
+  return (
+    <>
+      <ScrollToTop />
+      <Outlet />
+    </>
+  );
+}
+
 function RequireAuth() {
   const { status } = useAuth();
 
@@ -40,23 +51,26 @@ function RequireAuth() {
 // Full route tree (05-Frontend-Architecture.md §5.2) fills in as later milestones
 // add the board/page-detail screens.
 const router = createBrowserRouter([
-  { path: "/login", element: <LoginPage /> },
-  { path: "/auth/callback", element: <AuthCallbackPage /> },
-  { path: "/integrations/clickup/callback", element: <ClickUpOAuthCallbackPage /> },
-  // Guest reviewer entry - no dashboard chrome, no member auth (05-Frontend-Architecture.md §5.2).
-  { path: "/review/:shareToken", element: <ReviewEntryPage /> },
   {
-    element: <RequireAuth />,
+    element: <RootLayout />,
     children: [
-      { path: "/", element: <WorkspacePickerPage /> },
+      { path: "/login", element: <LoginPage /> },
+      { path: "/auth/callback", element: <AuthCallbackPage /> },
+      { path: "/integrations/clickup/callback", element: <ClickUpOAuthCallbackPage /> },
+      // Guest reviewer entry - no dashboard chrome, no member auth (05-Frontend-Architecture.md §5.2).
+      { path: "/review/:shareToken", element: <ReviewEntryPage /> },
       {
-        path: "/w/:workspaceSlug",
-        element: <WorkspaceLayout />,
+        element: <RequireAuth />,
         children: [
-          { index: true, element: <ProjectsPage /> },
-          { path: "tickets", element: <TicketsPage /> },
-          { path: "clients", element: <ClientsPage /> },
-          { path: "activity", element: <ActivityPage /> },
+          { path: "/", element: <WorkspacePickerPage /> },
+          {
+            path: "/w/:workspaceSlug",
+            element: <WorkspaceLayout />,
+            children: [
+              { index: true, element: <ProjectsPage /> },
+              { path: "tickets", element: <TicketsPage /> },
+              { path: "clients", element: <ClientsPage /> },
+              { path: "activity", element: <ActivityPage /> },
           {
             path: "apps",
             element: (
@@ -104,9 +118,11 @@ const router = createBrowserRouter([
           { path: "share-links", element: <ShareLinksPage /> },
         ],
       },
+      { path: "*", element: <NotFoundPage /> },
     ],
   },
-  { path: "*", element: <NotFoundPage /> },
+  ]
+  }
 ]);
 
 export function AppRouter() {

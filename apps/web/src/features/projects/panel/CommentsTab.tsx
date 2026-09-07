@@ -239,9 +239,16 @@ export function CommentsTab({ projectId, canvasRef, currentPageId }: CommentsTab
   // showing everything. Not a multi-select toggle: with 4 statuses, "tap one to see just
   // that bucket" is the more useful click for triaging than gradually excluding buckets.
   const [activeStatus, setActiveStatus] = useState<CommentStatus | null>(null);
+  const [hideResolved, setHideResolved] = useState(false);
   const [layerFilter, setLayerFilter] = useState<LayerFilter>("all");
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [currentPageOnly, setCurrentPageOnly] = useState(false);
+  const [activeTags, setActiveTags] = useState<string[]>([]);
+  const [activeDeviceTypes, setActiveDeviceTypes] = useState<string[]>([]);
+  const [activeBrowsers, setActiveBrowsers] = useState<string[]>([]);
+  const [activeAssignees, setActiveAssignees] = useState<string[]>([]);
+  const [displayMode, setDisplayMode] = useState<"comfortable" | "compact">("comfortable");
+  const [groupBy, setGroupBy] = useState<"none" | "page">("none");
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const sortMenuRef = useRef<HTMLDivElement>(null);
@@ -288,9 +295,14 @@ export function CommentsTab({ projectId, canvasRef, currentPageId }: CommentsTab
   }, [allThreads]);
 
   const filteredThreads = allThreads.filter((c) => {
+    if (hideResolved && c.status === "resolved") return false;
     if (activeStatus && c.status !== activeStatus) return false;
     if (layerFilter !== "all" && c.layer !== layerFilter) return false;
     if (currentPageOnly && c.page_id !== currentPageId) return false;
+    if (activeTags.length > 0 && !activeTags.some(t => c.tags?.includes(t as any))) return false;
+    if (activeDeviceTypes.length > 0 && !activeDeviceTypes.includes(c.context?.device_type as string)) return false;
+    if (activeBrowsers.length > 0 && !activeBrowsers.includes(c.context?.browser as string)) return false;
+    if (activeAssignees.length > 0 && !activeAssignees.some(a => c.assignee_id === a || c.assignee_ids?.includes(a))) return false;
     return true;
   });
 
@@ -321,12 +333,6 @@ export function CommentsTab({ projectId, canvasRef, currentPageId }: CommentsTab
       new URL(API_BASE_URL).origin,
     );
   }
-
-  const layerLabel: Record<LayerFilter, string> = {
-    all: "All comments",
-    client: "Client-visible only",
-    team: "Team-only",
-  };
 
   return (
     <div className="flex flex-col gap-3 p-4">
@@ -413,42 +419,123 @@ export function CommentsTab({ projectId, canvasRef, currentPageId }: CommentsTab
           >
             <FilterIcon width={13} height={13} />
             Filter
+            {(() => {
+              const count = (layerFilter !== "all" ? 1 : 0) + activeTags.length + activeDeviceTypes.length + activeBrowsers.length + activeAssignees.length;
+              return count > 0 ? <span className="bg-accent-primary text-white rounded-full px-1.5 py-0.5 text-[9px] leading-none">{count}</span> : null;
+            })()}
           </button>
           {showFilterMenu && (
-            <div className="bg-bg-surface absolute top-8 left-0 z-10 w-48 rounded-md border border-black/10 py-1 shadow-lg dark:border-white/10 dark:bg-[#14141A]">
-              {(["all", "client", "team"] as LayerFilter[]).map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => {
-                    setLayerFilter(filter);
-                    setShowFilterMenu(false);
-                  }}
-                  className={`hover:bg-bg-canvas block w-full px-3 py-1.5 text-left text-sm ${
-                    layerFilter === filter ? "text-accent-primary font-medium" : ""
-                  }`}
+            <div className="bg-bg-surface absolute top-8 left-0 z-10 w-64 rounded-md border border-black/10 p-3 shadow-lg dark:border-white/10 dark:bg-[#14141A] flex flex-col gap-3">
+              <label className="flex flex-col gap-1 text-xs font-medium">
+                Layer
+                <select
+                  value={layerFilter}
+                  onChange={(e) => setLayerFilter(e.target.value as LayerFilter)}
+                  className="rounded border border-black/10 px-2 py-1 dark:border-white/10 dark:bg-transparent"
                 >
-                  {layerLabel[filter]}
-                </button>
-              ))}
+                  <option value="all">All layers</option>
+                  <option value="client">Client visible</option>
+                  <option value="team">Team only</option>
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1 text-xs font-medium">
+                Tags
+                <select
+                  multiple
+                  size={3}
+                  value={activeTags}
+                  onChange={(e) => setActiveTags(Array.from(e.target.selectedOptions).map(o => o.value))}
+                  className="rounded border border-black/10 px-2 py-1 dark:border-white/10 dark:bg-transparent"
+                >
+                  {["Bug", "Copy", "Design", "Responsive", "Content", "Accessibility"].map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1 text-xs font-medium">
+                Browsers
+                <select
+                  multiple
+                  size={2}
+                  value={activeBrowsers}
+                  onChange={(e) => setActiveBrowsers(Array.from(e.target.selectedOptions).map(o => o.value))}
+                  className="rounded border border-black/10 px-2 py-1 dark:border-white/10 dark:bg-transparent"
+                >
+                  {Array.from(new Set(allThreads.map(c => c.context?.browser as string).filter(Boolean))).map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                type="button"
+                className="text-xs text-text-muted hover:text-text-primary text-left"
+                onClick={() => {
+                  setLayerFilter("all");
+                  setActiveTags([]);
+                  setActiveDeviceTypes([]);
+                  setActiveBrowsers([]);
+                  setActiveAssignees([]);
+                }}
+              >
+                Clear all filters
+              </button>
             </div>
           )}
         </div>
       </div>
 
-      <label
-        className={`flex items-center gap-2 text-xs ${
-          currentPageId ? "text-text-primary" : "text-text-muted"
-        }`}
-        title={currentPageId ? undefined : "Load a page in the canvas first"}
-      >
-        <input
-          type="checkbox"
-          checked={currentPageOnly}
-          disabled={!currentPageId}
-          onChange={(event) => setCurrentPageOnly(event.target.checked)}
-        />
-        Show comments on current page only
-      </label>
+      <div className="flex flex-col gap-2 border-b border-black/10 pb-3 dark:border-white/10">
+        <label
+          className={`flex items-center gap-2 text-xs ${
+            currentPageId ? "text-text-primary" : "text-text-muted"
+          }`}
+          title={currentPageId ? undefined : "Load a page in the canvas first"}
+        >
+          <input
+            type="checkbox"
+            checked={currentPageOnly}
+            disabled={!currentPageId}
+            onChange={(event) => setCurrentPageOnly(event.target.checked)}
+          />
+          Show comments on current page only
+        </label>
+        <label className="flex items-center gap-2 text-xs text-text-primary">
+          <input
+            type="checkbox"
+            checked={hideResolved}
+            onChange={(event) => setHideResolved(event.target.checked)}
+          />
+          Hide resolved threads
+        </label>
+      </div>
+
+      <div className="flex items-center gap-4 border-b border-black/10 pb-3 dark:border-white/10">
+        <label className="flex items-center gap-2 text-xs">
+          Display:
+          <select
+            value={displayMode}
+            onChange={(e) => setDisplayMode(e.target.value as any)}
+            className="rounded border border-black/10 px-2 py-1 dark:border-white/10 dark:bg-transparent"
+          >
+            <option value="comfortable">Comfortable</option>
+            <option value="compact">Compact</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-xs">
+          Group by:
+          <select
+            value={groupBy}
+            onChange={(e) => setGroupBy(e.target.value as any)}
+            className="rounded border border-black/10 px-2 py-1 dark:border-white/10 dark:bg-transparent"
+          >
+            <option value="none">None</option>
+            <option value="page">Page</option>
+          </select>
+        </label>
+      </div>
 
       {isLoading && <p className="text-text-muted text-sm">Loading...</p>}
       {!isLoading && allThreads.length === 0 && (
@@ -458,16 +545,46 @@ export function CommentsTab({ projectId, canvasRef, currentPageId }: CommentsTab
         <p className="text-text-muted text-sm">No comments match the current filters.</p>
       )}
 
-      <div className="flex flex-col gap-2">
-        {sortedThreads.map((comment) => (
-          <CommentRow
-            key={comment.id}
-            comment={comment}
-            projectId={projectId}
-            sequenceNumber={sequenceByCommentId.get(comment.id) ?? 0}
-            onNavigate={navigateToComment}
-          />
-        ))}
+      <div className={`flex flex-col ${displayMode === 'compact' ? 'gap-0' : 'gap-2'}`}>
+        {(() => {
+          if (groupBy === 'none') {
+            return sortedThreads.map((comment) => (
+              <CommentRow
+                key={comment.id}
+                comment={comment}
+                projectId={projectId}
+                sequenceNumber={sequenceByCommentId.get(comment.id) ?? 0}
+                onNavigate={navigateToComment}
+              />
+            ));
+          } else {
+            // Group by page
+            const groups = new Map<string, typeof sortedThreads>();
+            for (const comment of sortedThreads) {
+              const p = comment.page_id;
+              if (!groups.has(p)) groups.set(p, []);
+              groups.get(p)!.push(comment);
+            }
+            return Array.from(groups.entries()).map(([pageId, comments]) => (
+              <div key={pageId} className="mb-4">
+                <h3 className="text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">
+                  Page ID: {pageId}
+                </h3>
+                <div className={`flex flex-col ${displayMode === 'compact' ? 'gap-0' : 'gap-2'}`}>
+                  {comments.map((comment) => (
+                    <CommentRow
+                      key={comment.id}
+                      comment={comment}
+                      projectId={projectId}
+                      sequenceNumber={sequenceByCommentId.get(comment.id) ?? 0}
+                      onNavigate={navigateToComment}
+                    />
+                  ))}
+                </div>
+              </div>
+            ));
+          }
+        })()}
       </div>
     </div>
   );

@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import type { PointerEvent } from "react";
 import { Link } from "react-router-dom";
 import * as pdfjs from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
@@ -31,16 +30,163 @@ export function AssetReview({ projectId, title, guest, workspaceSlug }: { projec
   async function refresh() { await cache.invalidateQueries({ queryKey: ['asset-comments', asset?.page_id] }); if (!guest) { await cache.invalidateQueries({ queryKey: qk.projectComments(projectId) }); await cache.invalidateQueries({ queryKey: ['workspace'] }); } }
   const post = useMutation({ mutationFn: () => api.createAssetComment(projectId, asset!.id, { body: body.trim(), region: draft!, tags: [tag], layer }, guest), onSuccess: async (comment) => { setBody(""); setDraft(null); setSelected(comment.id); await refresh(); } });
   const replyMutation = useMutation({ mutationFn: () => api.replyToComment(selected, reply.trim(), selectedComment?.layer ?? 'client', guest), onSuccess: async () => { setReply(""); await refresh(); } });
+  const reanchorMutation = useMutation({ mutationFn: ({ commentId, region }: { commentId: string, region: api.Region }) => api.reanchorComment(commentId, { region }), onSuccess: refresh });
   const upload = useMutation({ mutationFn: async (files: FileList) => { for (const file of Array.from(files)) await api.uploadAsset(projectId, file); }, onSettled: () => cache.invalidateQueries({ queryKey: ['assets', projectId] }) });
-  function point(e: PointerEvent<HTMLDivElement>) { const rect = e.currentTarget.getBoundingClientRect(); return { x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)), y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height)) }; }
-  function down(e: PointerEvent<HTMLDivElement>) { if (!commentMode || !asset || (e.target as HTMLElement).closest('button')) return; e.preventDefault(); start.current = point(e); e.currentTarget.setPointerCapture(e.pointerId); setDraft({ ...start.current, width: 0, height: 0, page_number: page }); setSelected(""); }
-  function move(e: PointerEvent<HTMLDivElement>) { if (!start.current) return; const p = point(e), s = start.current; setDraft({ x: Math.min(s.x,p.x), y: Math.min(s.y,p.y), width: Math.abs(p.x-s.x), height: Math.abs(p.y-s.y), page_number: page }); }
-  return <main className="bl-review"><header className="bl-review-head">{workspaceSlug && <Link className="bl-quiet" to={`/w/${workspaceSlug}`}>← Projects</Link>}<h1>{title}</h1>{workspaceSlug && <Link className="bl-quiet" to={`/w/${workspaceSlug}/p/${projectId}/share-links`}>Share</Link>}<span className="bl-chip">{guest ? 'Guest review' : 'Team workspace'}</span></header>
-    <div className="bl-review-tools"><select className="bl-select" aria-label="Review file" value={asset?.id ?? ''} onChange={(e) => { setAssetId(e.target.value); setPage(1); setDraft(null); setSelected(''); }}>{assets.data?.map((a) => <option key={a.id} value={a.id}>{a.filename}</option>)}</select>{asset && asset.page_count > 1 && <><button className="bl-quiet" disabled={page === 1} onClick={() => { setPage(page - 1); setDraft(null); setSelected(''); }}>Previous page</button><span className="bl-mono">{page} / {asset.page_count}</span><button className="bl-quiet" disabled={page === asset.page_count} onClick={() => { setPage(page + 1); setDraft(null); setSelected(''); }}>Next page</button></>}<div className="bl-segment"><button aria-pressed={!commentMode} onClick={() => { setCommentMode(false); setDraft(null); }}>View</button><button aria-pressed={commentMode} onClick={() => setCommentMode(true)}>Comment</button></div>{!guest && <label className="bl-quiet">{upload.isPending ? "Uploading…" : "Add files"}<input type="file" aria-label="Add project files" disabled={upload.isPending} multiple hidden accept="image/png,image/jpeg,image/webp,image/gif,application/pdf" onChange={(e) => { if (e.target.files) upload.mutate(e.target.files); }} /></label>}</div>
+  const [zoomScale, setZoomScale] = useState(1);
+  const [rotation, setRotation] = useState(0);
+
+  // Drag state for moving/resizing existing comments
+  const [draggingComment, setDraggingComment] = useState<{ id: string, type: 'move' | 'resize', startRegion: api.Region, startPoint: { x: number, y: number } } | null>(null);
+  const [tempRegion, setTempRegion] = useState<{ id: string, region: api.Region } | null>(null);
+
+  function point(e: React.PointerEvent<HTMLElement>) { const rect = e.currentTarget.getBoundingClientRect(); return { x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)), y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height)) }; }
+  
+  function handleContainerDown(e: React.PointerEvent<HTMLDivElement>) { 
+    if (!commentMode || !asset || (e.target as HTMLElement).closest('button')) return; 
+    e.preventDefault(); 
+    start.current = point(e); 
+    e.currentTarget.setPointerCapture(e.pointerId); 
+    setDraft({ ...start.current, width: 0, height: 0, page_number: page }); 
+    setSelected(""); 
+  }
+  
+  function handleContainerMove(e: React.PointerEvent<HTMLDivElement>) { 
+    if (draggingComment) {
+      const p = point(e);
+      const { startRegion, startPoint, type } = draggingComment;
+      const dx = p.x - startPoint.x;
+      const dy = p.y - startPoint.y;
+      
+      let newRegion = { ...startRegion };
+      if (type === 'move') {
+        newRegion.x = Math.max(0, Math.min(1 - (newRegion.width || 0), startRegion.x + dx));
+        newRegion.y = Math.max(0, Math.min(1 - (newRegion.height || 0), startRegion.y + dy));
+      } else if (type === 'resize') {
+        newRegion.width = Math.max(0, Math.min(1 - newRegion.x, startRegion.width! + dx));
+        newRegion.height = Math.max(0, Math.min(1 - newRegion.y, startRegion.height! + dy));
+      }
+      setTempRegion({ id: draggingComment.id, region: newRegion });
+      return;
+    }
+
+    if (!start.current) return; 
+    const p = point(e), s = start.current; 
+    setDraft({ x: Math.min(s.x,p.x), y: Math.min(s.y,p.y), width: Math.abs(p.x-s.x), height: Math.abs(p.y-s.y), page_number: page }); 
+  }
+
+  function handleContainerUp() {
+    if (draggingComment && tempRegion) {
+      reanchorMutation.mutate({ commentId: tempRegion.id, region: tempRegion.region });
+      setDraggingComment(null);
+      setTempRegion(null);
+    }
+    start.current = null;
+  }
+
+  function handleContainerCancel() {
+    setDraggingComment(null);
+    setTempRegion(null);
+    start.current = null;
+    setDraft(null);
+  }
+  return <main className="bl-review">
+    <header className="bl-review-head">{workspaceSlug && <Link className="bl-quiet" to={`/w/${workspaceSlug}`}>← Projects</Link>}<h1>{title}</h1>{workspaceSlug && <Link className="bl-quiet" to={`/w/${workspaceSlug}/p/${projectId}/share-links`}>Share</Link>}<span className="bl-chip">{guest ? 'Guest review' : 'Team workspace'}</span></header>
+    {guest && <div style={{ background: '#fff3cd', color: '#856404', padding: '0.5rem 1rem', fontSize: '0.875rem', borderBottom: '1px solid #ffeeba', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}><strong>Restricted Mode:</strong> You are viewing this project as a guest. Some features may be limited by the workspace owner.</div>}
+    <div className="bl-review-tools"><select className="bl-select" aria-label="Review file" value={asset?.id ?? ''} onChange={(e) => { setAssetId(e.target.value); setPage(1); setDraft(null); setSelected(''); setZoomScale(1); setRotation(0); }}>{assets.data?.map((a) => <option key={a.id} value={a.id}>{a.filename}</option>)}</select>{asset && asset.page_count > 1 && <><button className="bl-quiet" disabled={page === 1} onClick={() => { setPage(page - 1); setDraft(null); setSelected(''); }}>Previous page</button><span className="bl-mono">{page} / {asset.page_count}</span><button className="bl-quiet" disabled={page === asset.page_count} onClick={() => { setPage(page + 1); setDraft(null); setSelected(''); }}>Next page</button></>}
+      {asset && (
+        <div className="bl-segment" style={{ marginLeft: "auto", marginRight: "1rem" }}>
+          <button title="Rotate left" onClick={() => setRotation(r => (r - 90) % 360)}>↺</button>
+          <button title="Rotate right" onClick={() => setRotation(r => (r + 90) % 360)}>↻</button>
+          <button title="Zoom out" onClick={() => setZoomScale(s => Math.max(0.25, s - 0.25))}>-</button>
+          <span className="bl-mono" style={{ padding: "0 0.5rem" }}>{Math.round(zoomScale * 100)}%</span>
+          <button title="Zoom in" onClick={() => setZoomScale(s => Math.min(4, s + 0.25))}>+</button>
+          <button title="Reset" onClick={() => { setZoomScale(1); setRotation(0); }}>Reset</button>
+          <a href={asset.url} download={asset.filename} target="_blank" rel="noreferrer" className="bl-quiet ml-2" style={{ textDecoration: 'none' }}>Download</a>
+        </div>
+      )}
+      <div className="bl-segment"><button aria-pressed={!commentMode} onClick={() => { setCommentMode(false); setDraft(null); }}>View</button><button aria-pressed={commentMode} onClick={() => setCommentMode(true)}>Comment</button></div>{!guest && <label className="bl-quiet">{upload.isPending ? "Uploading…" : "Add files"}<input type="file" aria-label="Add project files" disabled={upload.isPending} multiple hidden accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,image/svg+xml" onChange={(e) => { if (e.target.files) upload.mutate(e.target.files); }} /></label>}</div>
     {[assets.error?.message, comments.error?.message, upload.error?.message].filter(Boolean).map((error) => <p key={error} className="bl-error" role="alert">{error}</p>)}
-    <div className="bl-review-body"><section className="bl-asset-stage">{asset ? <><p className="bl-mono">{commentMode ? 'Click to pin a comment, or drag to select a region.' : 'Viewing document'}</p><div className={`bl-asset-sheet ${commentMode ? 'commenting' : ''}`} onPointerDown={down} onPointerMove={move} onPointerUp={() => { start.current = null; }} onPointerCancel={() => { start.current = null; setDraft(null); }}>
+    <div className="bl-review-body"><section className="bl-asset-stage">{asset ? <><p className="bl-mono">{commentMode ? 'Click to pin a comment, or drag to select a region. Drag existing pins to move them.' : 'Viewing document'}</p><div className={`bl-asset-sheet ${commentMode ? 'commenting' : ''}`} style={{ transform: `scale(${zoomScale}) rotate(${rotation}deg)`, transformOrigin: "center center", transition: "transform 0.2s" }} onPointerDown={handleContainerDown} onPointerMove={handleContainerMove} onPointerUp={handleContainerUp} onPointerCancel={handleContainerCancel}>
       {asset.content_type === 'application/pdf' ? <PdfCanvas url={asset.url} pageNumber={page} /> : <img draggable={false} src={asset.url} alt={asset.filename} />}
-      {roots.map((comment, i) => { const region = (comment.anchor as unknown as { region: api.Region }).region; return <button key={comment.id} className={`bl-asset-pin ${selected === comment.id ? 'selected' : ''}`} style={{ left: `${region.x*100}%`, top: `${region.y*100}%`, width: region.width ? `${region.width*100}%` : undefined, height: region.height ? `${region.height*100}%` : undefined, borderColor: STATUS_COLORS[comment.status] }} aria-label={`Comment ${i+1}: ${comment.body}`} onClick={() => { setSelected(comment.id); setDraft(null); }}><span style={{ background: STATUS_COLORS[comment.status] }}>{i+1}</span></button>; })}
+      {roots.map((comment, i) => { 
+        const region = tempRegion?.id === comment.id ? tempRegion.region : (comment.anchor as unknown as { region: api.Region }).region; 
+        return (
+          <div 
+            key={comment.id} 
+            className={`bl-asset-pin-container ${selected === comment.id ? 'selected' : ''}`}
+            style={{ 
+              position: 'absolute',
+              left: `${region.x*100}%`, 
+              top: `${region.y*100}%`, 
+              width: region.width ? `${region.width*100}%` : undefined, 
+              height: region.height ? `${region.height*100}%` : undefined, 
+            }}
+          >
+            <button 
+              className="bl-asset-pin"
+              style={{ borderColor: STATUS_COLORS[comment.status] }} 
+              aria-label={`Comment ${i+1}: ${comment.body}`} 
+              onClick={() => { setSelected(comment.id); setDraft(null); }}
+              onPointerDown={(e) => {
+                if (!commentMode) return;
+                e.preventDefault();
+                e.stopPropagation();
+                const container = e.currentTarget.closest('.bl-asset-sheet') as HTMLDivElement;
+                container.setPointerCapture(e.pointerId);
+                const rect = container.getBoundingClientRect();
+                const startPoint = { 
+                  x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)), 
+                  y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height)) 
+                };
+                setDraggingComment({ id: comment.id, type: 'move', startRegion: region, startPoint });
+                setTempRegion({ id: comment.id, region });
+              }}
+            >
+              <span style={{ background: STATUS_COLORS[comment.status] }}>{i+1}</span>
+            </button>
+            {commentMode && region.width && region.height && (
+              <div
+                className="bl-asset-pin-resize-handle"
+                style={{
+                  position: 'absolute',
+                  right: -5,
+                  bottom: -5,
+                  width: 10,
+                  height: 10,
+                  background: 'white',
+                  border: '1px solid black',
+                  cursor: 'nwse-resize',
+                  zIndex: 10
+                }}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const container = e.currentTarget.closest('.bl-asset-sheet') as HTMLDivElement;
+                  container.setPointerCapture(e.pointerId);
+                  const rect = container.getBoundingClientRect();
+                  const startPoint = { 
+                    x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)), 
+                    y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height)) 
+                  };
+                  setDraggingComment({ id: comment.id, type: 'resize', startRegion: region, startPoint });
+                  setTempRegion({ id: comment.id, region });
+                }}
+              />
+            )}
+            {region.width && region.height && (
+              <div 
+                className="bl-asset-pin-border" 
+                style={{ 
+                  position: 'absolute', 
+                  inset: 0, 
+                  border: `2px solid ${STATUS_COLORS[comment.status]}`, 
+                  pointerEvents: 'none' 
+                }} 
+              />
+            )}
+          </div>
+        ); 
+      })}
       {draft && <div className="bl-draft-region" style={{ left: `${draft.x*100}%`, top: `${draft.y*100}%`, width: draft.width ? `${draft.width*100}%` : 20, height: draft.height ? `${draft.height*100}%` : 20 }} />}
     </div><button className="bl-quiet" onClick={() => { setDraft({ x: .5, y: .5, width: 0, height: 0, page_number: page }); setSelected(''); }}>Add a comment at the center</button></> : <div className="bl-empty"><h2>{assets.isLoading ? 'Loading files…' : 'No files yet'}</h2><p>{guest ? 'The team has not uploaded a file yet.' : 'Add images or a PDF to begin the review.'}</p></div>}</section>
     <aside className="bl-review-comments"><header><h2>Comments <span className="bl-count">{roots.length}</span></h2></header>{draft && <form className="bl-form" onSubmit={(e) => { e.preventDefault(); post.mutate(); }}><label>New comment<textarea className="bl-input" autoFocus required rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder="What needs to change here?" /></label><select className="bl-select" aria-label="Comment tag" value={tag} onChange={(e) => setTag(e.target.value as typeof tag)}>{TAGS.map((t) => <option key={t}>{t}</option>)}</select>{!guest && <select className="bl-select" aria-label="Comment visibility" value={layer} onChange={(e) => setLayer(e.target.value as typeof layer)}><option value="client">Client visible</option><option value="team">Team only</option></select>}{post.error && <p className="bl-error" role="alert">{post.error.message}</p>}<div className="bl-form-actions"><button className="bl-quiet" type="button" onClick={() => setDraft(null)}>Cancel</button><button className="bl-button" disabled={post.isPending || !body.trim()}>Post comment</button></div></form>}

@@ -6,8 +6,8 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.errors import ValidationError
 from app.core.events import append_event
-from app.core.mongo_utils import to_object_id
 from app.core.session import Session
+from app.modules.comments import events as comment_events
 from app.modules.comments.repository import CommentRepository
 from app.modules.comments.service import _broadcast_comment_event, _comment_out
 from app.modules.dashboard.repository import DashboardRepository, root_pipeline
@@ -42,11 +42,9 @@ async def search(
     matcher = {"$regex": needle, "$options": "i"}
     each_limit = min(limit, 20)
     items: list[SearchResultOut] = []
+    repo = DashboardRepository(db)
 
-    projects = await db.projects.find(
-        {"workspace_id": workspace_id, "archived_at": None, "name": matcher},
-        {"name": 1, "project_type": 1},
-    ).limit(each_limit).to_list(length=each_limit)
+    projects = await repo.search_projects(workspace_id, matcher, each_limit)
     items.extend(
         SearchResultOut(
             kind="project", id=str(project["_id"]), title=project["name"],
@@ -72,7 +70,7 @@ async def search(
             {"$limit": each_limit},
         ]
     )
-    comments = await db.comments.aggregate(pipeline).to_list(length=each_limit)
+    comments = await repo.search_comments(pipeline, each_limit)
     for comment in comments:
         kind = "ticket" if comment.get("is_standalone") else "comment"
         title = comment["body"].strip().replace("\n", " ")[:140] or "Untitled comment"
@@ -90,16 +88,7 @@ async def search(
             )
         )
 
-    memberships = await db.memberships.find({"workspace_id": workspace_id}).limit(200).to_list(200)
-    user_ids = [membership["user_id"] for membership in memberships]
-    object_ids = [object_id for user_id in user_ids if (object_id := to_object_id(user_id))]
-    users = await db.users.find(
-        {
-            "_id": {"$in": object_ids},
-            "$or": [{"name": matcher}, {"email": matcher}],
-        },
-        {"name": 1, "email": 1},
-    ).limit(each_limit).to_list(each_limit)
+    users = await repo.search_members(workspace_id, matcher, each_limit)
     items.extend(
         SearchResultOut(
             kind="member",
@@ -238,7 +227,7 @@ async def create_ticket(
     await append_event(
         db,
         workspace_id=workspace_id,
-        type="comment.created",
+        type=comment_events.COMMENT_CREATED,
         actor_type="member",
         actor_id=actor.user_id,
         payload={"comment_id": comment.id, "project_id": project_id},
@@ -255,6 +244,7 @@ async def create_ticket(
         await notify_comment_assigned(
             db,
             workspace_id=workspace_id,
+            project_id=project_id,
             comment_id=comment.id,
             assignee_user_id=assignee,
             actor_user_id=actor.user_id,

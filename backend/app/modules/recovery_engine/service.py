@@ -98,7 +98,7 @@ async def run_recovery_pipeline(
         return {"skipped": 1}
 
     revision_repo = RevisionRepository(db)
-    new_revision = await revision_repo.find_current(page_id)
+    new_revision = await revision_repo.find_current(page["workspace_id"], page_id)
     if new_revision is None or str(new_revision["_id"]) != revision_id:
         # The page's current revision has already moved on again by the time this job
         # ran (e.g. two snapshots submitted back to back) - a later job run will cover
@@ -108,7 +108,9 @@ async def run_recovery_pipeline(
     if new_revision.get("snapshot_key") is None:
         return {"skipped": 1}
 
-    previous_revision = await revision_repo.find_previous(page_id, exclude_revision_id=revision_id)
+    previous_revision = await revision_repo.find_previous(
+        page["workspace_id"], page_id, exclude_revision_id=revision_id
+    )
     if previous_revision is None or previous_revision.get("snapshot_key") is None:
         # This new revision is the page's first ever - nothing existed before it for
         # any comment to have been anchored against.

@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import "./lib/i18n";
 import App from "./App.tsx";
 import { GlobalErrorFallback } from "./app/GlobalErrorFallback.tsx";
 

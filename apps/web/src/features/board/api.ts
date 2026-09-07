@@ -24,10 +24,19 @@ export function createReply(
   commentId: string,
   body: string,
   layer: CommentLayer,
+  attachments?: Schemas["AttachmentIn"][],
+  mentionedUserIds?: string[],
 ): Promise<CommentOut> {
   return apiFetch<CommentOut>(`/api/v1/comments/${commentId}/replies`, {
     method: "POST",
-    body: JSON.stringify({ body, layer }),
+    body: JSON.stringify({ body, layer, attachments, mentioned_user_ids: mentionedUserIds }),
+  });
+}
+
+export function createUpload(projectId: string, contentType: string): Promise<Schemas["UploadOut"]> {
+  return apiFetch<Schemas["UploadOut"]>("/api/v1/uploads", {
+    method: "POST",
+    body: JSON.stringify({ project_id: projectId, content_type: contentType }),
   });
 }
 

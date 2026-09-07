@@ -4,7 +4,8 @@
 
 ```
 r2://backline-prod/
-  screenshots/{workspace_id}/{project_id}/{comment_id}.jpg
+  screenshots/{workspace_id}/{project_id}/{uuid4}.jpg
+  uploads/{workspace_id}/{project_id}/{uuid4}.{ext}             # generalized comment uploads
   snapshots/{project_id}/{revision_id}/snapshot.json.gz
   snapshots/{project_id}/{revision_id}/crops/{node_id}.png     # Tier 3 visual fingerprint, v-next
   exports/{workspace_id}/{export_id}.zip                        # v-next data export feature
@@ -20,6 +21,11 @@ r2://backline-prod/
 - Screenshots: compressed to JPEG (quality 80) client-side before upload where the browser supports `OffscreenCanvas`/`toBlob` quality control, to keep upload size and R2 storage cost down.
 - Snapshots: gzip-compressed JSON; lifecycle rule deletes snapshot blobs for revisions older than the 5 most recent per page **once** no comment references that revision as its `snapshot_ref` - comments that still point at an old revision keep it alive (never delete a snapshot a live comment's anchor depends on).
 - CDN caching: screenshot signed-GET responses set `Cache-Control` short (5 min) since URLs are signed and rotate; snapshot blobs (fetched only by backend jobs, never browser-cached) have no CDN caching concern.
+- Destructive cleanup: confirmed project hard-delete writes durable bucket/key
+  tombstones, retries idempotent object deletion through Arq, and does not delete Mongo
+  dependents until every project object is deleted. Accepted project prefixes include
+  both `screenshots/` and `uploads/` UUID layouts so legacy/current uploads remain
+  cleanable. See TDR-0014.
 
 ## 18.4 Environments & Provisioning
 

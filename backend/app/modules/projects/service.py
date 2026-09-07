@@ -1,13 +1,20 @@
+import csv
+import io
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.core.errors import NotFoundError, ValidationError
+from app.core.errors import ConflictError, NotFoundError, ValidationError
 from app.core.events import append_event
 from app.modules.clients.repository import ClientRepository
 from app.modules.projects import events as project_events
 from app.modules.projects.repository import ProjectRepository
-from app.modules.projects.schemas import ProjectOut, ProjectSettingsOut, ProjectUpdate
+from app.modules.projects.schemas import (
+    ProjectOut,
+    ProjectSettingsOut,
+    ProjectSettingsUpdate,
+    ProjectUpdate,
+)
 
 
 def _project_out(doc: dict[str, Any]) -> ProjectOut:
@@ -101,6 +108,8 @@ async def get_project(
     doc = await repo.find_by_id(project_id)
     if doc is None or doc["workspace_id"] != workspace_id:
         raise NotFoundError("Project not found.")
+    if doc.get("hard_delete_status") == "deleting":
+        raise ConflictError("Permanent deletion is in progress for this project.")
     return _project_out(doc)
 
 
@@ -191,3 +200,158 @@ async def restore_project(
         payload={"project_id": project_id},
     )
     return await get_project(db, project_id=project_id, workspace_id=workspace_id)
+
+
+async def update_project_settings(
+    db: AsyncIOMotorDatabase[dict[str, Any]],
+    *,
+    project_id: str,
+    workspace_id: str,
+    actor_user_id: str,
+    settings: ProjectSettingsUpdate,
+) -> ProjectSettingsOut:
+    """FD-AUD-018: persist the five review-settings flags.
+
+    Uses $set with dot-notation paths so we only overwrite fields that were
+    explicitly included in the request; proxy_mode and snippet_installed are
+    managed by separate code paths and must not be cleared here.
+    """
+    existing = await get_project(db, project_id=project_id, workspace_id=workspace_id)
+    patch = settings.model_dump(exclude_unset=True)
+    if not patch:
+        return existing.settings
+
+    await ProjectRepository(db).update_settings(workspace_id, project_id, patch)
+    await append_event(
+        db,
+        workspace_id=workspace_id,
+        type="project.settings_updated",
+        actor_type="member",
+        actor_id=actor_user_id,
+        payload={"project_id": project_id, **patch},
+    )
+    updated = await get_project(db, project_id=project_id, workspace_id=workspace_id)
+    return updated.settings
+
+
+async def duplicate_project(
+    db: AsyncIOMotorDatabase[dict[str, Any]],
+    *,
+    project_id: str,
+    workspace_id: str,
+    actor_user_id: str,
+) -> ProjectOut:
+    # 1. Fetch original project
+    original = await get_project(db, project_id=project_id, workspace_id=workspace_id)
+    
+    # 2. Create the duplicated project
+    new_project = await create_project(
+        db,
+        workspace_id=workspace_id,
+        actor_user_id=actor_user_id,
+        name=original.name + " (Copy)",
+        target_origin=original.target_origin,
+        project_type=original.project_type,
+        environment=original.environment,
+        client_id=original.client_id,
+    )
+    
+    # 3. Copy project settings (excluding proxy_mode and snippet_installed maybe, or copy all)
+    settings_patch = ProjectSettingsUpdate(
+        capture_device_details=original.settings.capture_device_details,
+        reanchor_on_deploy=original.settings.reanchor_on_deploy,
+        reviewer_can_resolve=original.settings.reviewer_can_resolve,
+        show_board_to_client=original.settings.show_board_to_client,
+        client_digest_enabled=original.settings.client_digest_enabled,
+    )
+    await update_project_settings(
+        db, 
+        project_id=new_project.id, 
+        workspace_id=workspace_id, 
+        actor_user_id=actor_user_id, 
+        settings=settings_patch
+    )
+    
+    # 4. The accepted duplicate scope is metadata/settings only for now. Pages,
+    # comments, and history are deliberately not copied.
+    
+    await append_event(
+        db,
+        workspace_id=workspace_id,
+        type="project.duplicated",
+        actor_type="member",
+        actor_id=actor_user_id,
+        payload={"source_project_id": project_id, "new_project_id": new_project.id},
+    )
+    return await get_project(db, project_id=new_project.id, workspace_id=workspace_id)
+
+
+_CSV_FORMULA_LEAD_CHARS = ("=", "+", "-", "@")
+
+
+def _csv_safe_cell(value: str) -> str:
+    """Neutralizes spreadsheet formula injection (OWASP CSV injection): a cell whose
+    text starts with =, +, -, or @ is interpreted as a formula by Excel/Sheets when
+    the exported file is later opened. Prefixing with a single quote keeps the
+    visible text intact but stops it from being evaluated - the M-09 acceptance test
+    this satisfies is literally "CSV formula payloads remain inert." Comment bodies
+    and author names are both attacker-reachable (a guest reviewer authors both), so
+    both need this, not just one."""
+    text = str(value)
+    if text and text[0] in _CSV_FORMULA_LEAD_CHARS:
+        return "'" + text
+    return text
+
+
+async def export_project_comments(
+    db: AsyncIOMotorDatabase[dict[str, Any]],
+    *,
+    project_id: str,
+    workspace_id: str,
+) -> str:
+    """M-08: this previously returned a header-only stub - no comments were ever
+    fetched. The caller (`GET /projects/{id}/export`) already enforces
+    `project:manage` (member-only) + workspace scope; this function's own
+    get_project call re-confirms the project belongs to this workspace before
+    exporting anything from it."""
+    await get_project(db, project_id=project_id, workspace_id=workspace_id)
+
+    # Deferred import: comments.service transitively imports notifications.service,
+    # which imports workspaces.repository - no cycle back to projects.service today,
+    # but this mirrors create_project's existing share_link_service import above
+    # rather than risk one as this module's import graph grows.
+    from app.modules.auth.repository import UserRepository
+    from app.modules.comments.service import list_comments_for_project
+
+    comments = await list_comments_for_project(db, project_id=project_id, workspace_id=workspace_id)
+
+    name_cache: dict[str, str] = {}
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        [
+            "id", "layer", "status", "priority", "author_name", "body",
+            "assignees", "due_at", "created_at",
+        ]
+    )
+    for comment in comments:
+        assignee_names = []
+        for user_id in comment.assignee_ids:
+            if user_id not in name_cache:
+                user = await UserRepository(db).find_by_id(user_id)
+                name_cache[user_id] = user["name"] if user else "Former member"
+            assignee_names.append(name_cache[user_id])
+        writer.writerow(
+            [
+                comment.id,
+                comment.layer,
+                comment.status,
+                comment.priority,
+                _csv_safe_cell(comment.author_name),
+                _csv_safe_cell(comment.body),
+                "; ".join(assignee_names),
+                comment.due_at.isoformat() if comment.due_at else "",
+                comment.created_at.isoformat(),
+            ]
+        )
+    return output.getvalue()
