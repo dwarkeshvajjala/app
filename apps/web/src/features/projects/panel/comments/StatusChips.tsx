@@ -19,40 +19,31 @@ export function StatusChips({
   onStatusChipClick,
 }: StatusChipsProps) {
   return (
-    <>
+    <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">
           Comments ({filteredCount}
           {filteredCount !== totalCount ? ` of ${totalCount}` : ""})
         </h3>
-        <button
-          onClick={onSelectAll}
-          className="text-accent-primary text-xs font-medium hover:underline"
-        >
-          Select all
+        <button type="button" onClick={onSelectAll} className="bl-text-link">
+          {activeStatus ? "Clear" : "Select all"}
         </button>
       </div>
 
-      <div className="text-text-muted text-[10px] font-semibold tracking-wide uppercase">
-        Status
-      </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="bl-status-grid" role="group" aria-label="Filter by status">
         {STATUS_ORDER.map((status) => {
           const meta = STATUS_META[status];
           const isActive = activeStatus === status;
-          const isShown = activeStatus === null || isActive;
           return (
             <button
               key={status}
+              type="button"
               onClick={() => onStatusChipClick(status)}
-              aria-pressed={isShown}
-              data-active={isActive}
-              className={`flex items-center justify-between gap-2 rounded-lg border-2 px-2.5 py-2 text-xs font-medium ${meta.fill} ${
-                isActive ? "border-text-primary dark:border-white" : meta.border
-              }`}
+              aria-pressed={isActive}
+              className="bl-status-chip"
             >
-              <span className="flex items-center gap-1.5">
-                <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
+              <span>
+                <span className="bl-status-dot" style={{ background: meta.color }} />
                 {meta.label}
               </span>
               <span>{statusCounts[status]}</span>
@@ -60,6 +51,6 @@ export function StatusChips({
           );
         })}
       </div>
-    </>
+    </div>
   );
 }

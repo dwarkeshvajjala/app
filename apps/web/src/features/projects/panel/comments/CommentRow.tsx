@@ -1,23 +1,43 @@
-import { Avatar } from "@backline/ui";
+import { Avatar, LayerBadge, RecoveryBadge } from "@backline/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import * as boardApi from "../../../board/api";
 import type { CommentOut, CommentStatus } from "../../../board/api";
 import { qk } from "../../../../lib/query-keys";
+import { renderWithMentions } from "../../../../lib/mentions";
 import { timeAgo } from "../../../../lib/time";
+import { isClosed } from "../../../../lib/workflow";
+import type { MemberOut } from "../../../workspaces/api";
 import { MonitorIcon } from "../icons";
-import { STATUS_META, STATUS_ORDER } from "./types";
+import { PRIORITY_META, STATUS_META, STATUS_ORDER, commentDeviceType, dueMeta } from "./types";
 
 export interface CommentRowProps {
   comment: CommentOut;
   projectId: string;
   sequenceNumber: number;
+  replyCount: number;
+  members: MemberOut[];
   onNavigate: (commentId: string) => void;
+  onOpenThread: (commentId: string) => void;
   selected?: boolean;
 }
 
-export function CommentRow({ comment, projectId, sequenceNumber, onNavigate, selected = false }: CommentRowProps) {
+function memberName(members: MemberOut[], userId: string): string {
+  const member = members.find((m) => m.user_id === userId);
+  return member?.name || member?.email || "Unassigned member";
+}
+
+export function CommentRow({
+  comment,
+  projectId,
+  sequenceNumber,
+  replyCount,
+  members,
+  onNavigate,
+  onOpenThread,
+  selected = false,
+}: CommentRowProps) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -29,8 +49,15 @@ export function CommentRow({ comment, projectId, sequenceNumber, onNavigate, sel
     function onClickOutside(event: MouseEvent) {
       if (!menuRef.current?.contains(event.target as Node)) setShowMenu(false);
     }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setShowMenu(false);
+    }
     document.addEventListener("click", onClickOutside);
-    return () => document.removeEventListener("click", onClickOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("click", onClickOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [showMenu]);
 
   const resolveMutation = useMutation({
@@ -52,6 +79,15 @@ export function CommentRow({ comment, projectId, sequenceNumber, onNavigate, sel
   });
 
   const meta = STATUS_META[comment.status];
+  const priority = comment.priority ? PRIORITY_META[comment.priority] : null;
+  const due = dueMeta(comment.due_at, isClosed(comment.status));
+  const assigneeIds = comment.assignee_ids?.length
+    ? comment.assignee_ids
+    : comment.assignee_id
+      ? [comment.assignee_id]
+      : [];
+  const deviceType = commentDeviceType(comment);
+  const orphaned = comment.recovery_status !== "ok";
 
   return (
     <div
@@ -65,41 +101,39 @@ export function CommentRow({ comment, projectId, sequenceNumber, onNavigate, sel
           onNavigate(comment.id);
         }
       }}
-      title="Jump to this comment on the page"
-      className={`bl-comment-row border-black/8 flex cursor-pointer flex-col gap-2 rounded-lg border bg-white p-3 text-left dark:border-white/10 dark:bg-white/5 ${selected ? "is-selected" : ""}`}
+      title={
+        orphaned
+          ? "This comment's position on the page could not be confirmed after a page change"
+          : "Jump to this comment on the page"
+      }
+      className={`bl-comment-row ${selected ? "is-selected" : ""} ${orphaned ? "bl-comment-orphaned" : ""}`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span
-            className={`flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold text-white ${meta.dot}`}
-            title={meta.label}
-          >
-            {sequenceNumber}
-          </span>
-          <Avatar name={comment.author_name} size={26} />
-          <div>
-            <span className="text-sm font-semibold">{comment.author_name}</span>{" "}
-            <span className="text-text-muted text-xs">{timeAgo(comment.created_at)}</span>
-          </div>
+      <div className="bl-comment-head">
+        <span className="bl-comment-badge" title={meta.label}>
+          {sequenceNumber}
+        </span>
+        <Avatar name={comment.author_name} size={24} />
+        <div className="bl-comment-person">
+          <span className="bl-comment-who">{comment.author_name}</span>
+          <span className="bl-comment-when">{timeAgo(comment.created_at)}</span>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <span className="text-text-muted" title="Desktop capture">
-            <MonitorIcon width={14} height={14} />
-          </span>
+        <div className="bl-comment-actions">
+          {deviceType && (
+            <span style={{ color: "var(--ink-4)" }} title={`Captured on ${deviceType}`}>
+              <MonitorIcon width={13} height={13} />
+            </span>
+          )}
           <button
+            type="button"
             onClick={(event) => {
               event.stopPropagation();
               resolveMutation.mutate();
             }}
             disabled={resolveMutation.isPending}
             aria-pressed={comment.status === "resolved"}
-            aria-label={comment.status === "resolved" ? "Mark as unresolved" : "Mark as resolved"}
-            title={comment.status === "resolved" ? "Resolved" : "Mark as resolved"}
-            className={`flex h-6 w-6 items-center justify-center rounded-full border ${
-              comment.status === "resolved"
-                ? "border-status-resolved bg-status-resolved text-white"
-                : "border-black/15 text-text-muted dark:border-white/15"
-            }`}
+            aria-label={comment.status === "resolved" ? "Reopen this comment" : "Mark as resolved"}
+            title={comment.status === "resolved" ? "Resolved — click to reopen" : "Mark as resolved"}
+            className={`bl-comment-resolve ${comment.status === "resolved" ? "is-resolved" : ""}`}
           >
             <svg viewBox="0 0 16 16" width="10" height="10" fill="none" aria-hidden="true">
               <path
@@ -111,45 +145,49 @@ export function CommentRow({ comment, projectId, sequenceNumber, onNavigate, sel
               />
             </svg>
           </button>
-          <div className="relative" ref={menuRef} onClick={(event) => event.stopPropagation()}>
+          <div className="bl-comment-popover-anchor" ref={menuRef} onClick={(event) => event.stopPropagation()}>
             <button
+              type="button"
               onClick={() => setShowMenu((prev) => !prev)}
               aria-label="Comment options"
               aria-haspopup="true"
-              className="text-text-muted flex h-6 w-6 items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10"
+              aria-expanded={showMenu}
+              className="bl-icon"
+              style={{ width: 24, height: 24, fontSize: 14 }}
             >
-              <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="currentColor" aria-hidden="true">
                 <circle cx="3" cy="8" r="1.3" />
                 <circle cx="8" cy="8" r="1.3" />
                 <circle cx="13" cy="8" r="1.3" />
               </svg>
             </button>
             {showMenu && (
-              <div className="bg-bg-surface absolute top-7 right-0 z-10 w-44 rounded-md border border-black/10 py-1 shadow-lg dark:border-white/10 dark:bg-[#14141A]">
-                <div className="text-text-muted px-3 pt-1 pb-0.5 text-[10px] font-semibold tracking-wide uppercase">
-                  Move to
-                </div>
+              <div className="bl-comment-popover bl-comment-menu" role="menu">
+                <div className="bl-review-popover-label">Move to</div>
                 {STATUS_ORDER.map((status) => (
                   <button
                     key={status}
+                    type="button"
                     onClick={() => {
                       setShowMenu(false);
                       setStatusMutation.mutate(status);
                     }}
                     disabled={status === comment.status}
-                    className="hover:bg-bg-canvas flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm disabled:opacity-40"
+                    className="bl-review-menu-row"
                   >
-                    <span className={`h-2 w-2 rounded-full ${STATUS_META[status].dot}`} />
+                    <span className="bl-status-dot" style={{ background: STATUS_META[status].color }} />
                     {STATUS_META[status].label}
                   </button>
                 ))}
-                <div className="my-1 border-t border-black/10 dark:border-white/10" />
+                <div style={{ borderTop: "1px solid var(--line-soft)", margin: "4px 0" }} />
                 <button
+                  type="button"
                   onClick={() => {
                     setShowMenu(false);
                     deleteThreadMutation.mutate();
                   }}
-                  className="text-recovery-orphaned hover:bg-bg-canvas block w-full px-3 py-1.5 text-left text-sm"
+                  className="bl-review-menu-row"
+                  style={{ color: "#A8401F" }}
                 >
                   Delete thread
                 </button>
@@ -158,9 +196,24 @@ export function CommentRow({ comment, projectId, sequenceNumber, onNavigate, sel
           </div>
         </div>
       </div>
-      <p className="text-sm">{comment.body}</p>
+
+      <p className="bl-comment-body">{renderWithMentions(comment.body)}</p>
+
+      {comment.screenshot_url ? (
+        <a
+          href={comment.screenshot_url}
+          target="_blank"
+          rel="noreferrer"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <img src={comment.screenshot_url} alt="Captured review context" className="bl-comment-shot" />
+        </a>
+      ) : comment.capture_status === "failed" ? (
+        <span className="bl-comment-shot-failed">Screenshot capture failed</span>
+      ) : null}
+
       {comment.attachments.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="bl-chip-row">
           {comment.attachments.map((attachment) => (
             <a
               key={attachment.url}
@@ -168,23 +221,65 @@ export function CommentRow({ comment, projectId, sequenceNumber, onNavigate, sel
               target="_blank"
               rel="noreferrer"
               onClick={(event) => event.stopPropagation()}
-              className="bg-bg-canvas flex max-w-[160px] items-center gap-1.5 rounded-md border border-black/10 px-2 py-1 text-xs dark:border-white/10"
+              className="bl-chip"
               title={attachment.filename}
             >
-              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" aria-hidden="true" className="text-text-muted shrink-0">
-                <path
-                  d="M11.5 5.5 6.8 10.2a2 2 0 1 1-2.8-2.8l5-5a3 3 0 1 1 4.2 4.2l-5.2 5.2a1 1 0 1 1-1.4-1.4L11 5.9"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span className="truncate">{attachment.filename}</span>
+              {attachment.filename}
             </a>
           ))}
         </div>
       )}
+
+      <div className="bl-comment-foot">
+        <span className="bl-status-pill">
+          <span className="bl-status-dot" style={{ background: meta.color }} />
+          {meta.label}
+        </span>
+        {priority && (
+          <span className="bl-status-pill" title="Priority">
+            <span className="bl-status-dot" style={{ background: priority.color }} />
+            {priority.label}
+          </span>
+        )}
+        {due && (
+          <span className={`bl-due-chip ${due.tone === "late" ? "is-late" : due.tone === "soon" ? "is-soon" : ""}`}>
+            {due.text}
+          </span>
+        )}
+        <LayerBadge layer={comment.layer} />
+        {orphaned && <RecoveryBadge status={comment.recovery_status} />}
+        {comment.tags?.map((tag) => (
+          <span key={tag} className="bl-chip">
+            {tag}
+          </span>
+        ))}
+        {assigneeIds.length > 0 && (
+          <span
+            className="flex items-center"
+            title={`Assigned to ${assigneeIds.map((id) => memberName(members, id)).join(", ")}`}
+          >
+            {assigneeIds.slice(0, 3).map((id, index) => (
+              <span key={id} style={{ marginLeft: index === 0 ? 0 : -6, display: "flex" }}>
+                <Avatar name={memberName(members, id)} size={20} />
+              </span>
+            ))}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenThread(comment.id);
+          }}
+          className="bl-comment-reply-count"
+          title="Open this thread"
+        >
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M21 11.5a8.4 8.4 0 01-9 8.4L3 21l1.1-8.9A8.4 8.4 0 1121 11.5z" />
+          </svg>
+          {replyCount > 0 ? replyCount : "Reply"}
+        </button>
+      </div>
     </div>
   );
 }

@@ -41,96 +41,114 @@ export function DetailsTab({
 }: DetailsTabProps) {
   const [showCollaborators, setShowCollaborators] = useState(false);
 
-  const { data: members } = useQuery({
+  const membersQuery = useQuery({
     queryKey: qk.members(workspaceId),
     queryFn: () => workspacesApi.listMembers(workspaceId),
   });
-  const { data: comments } = useQuery({
+  const commentsQuery = useQuery({
     queryKey: qk.projectComments(project.id),
     queryFn: () => boardApi.listProjectComments(project.id),
   });
-  const { data: pages } = useQuery({
+  const pagesQuery = useQuery({
     queryKey: qk.projectPages(project.id),
     queryFn: () => pagesApi.listProjectPages(project.id),
   });
 
-  const creator = (members ?? []).find((member) => member.user_id === project.created_by);
-  const totalComments = comments?.length ?? 0;
-  const resolvedComments = (comments ?? []).filter((c) => c.status === "resolved").length;
+  const members = membersQuery.data ?? [];
+  const creator = members.find((member) => member.user_id === project.created_by);
+  const statsLoading = commentsQuery.isLoading || pagesQuery.isLoading;
+  const statsError = commentsQuery.isError || pagesQuery.isError;
+  const totalComments = commentsQuery.data?.length ?? 0;
+  const resolvedComments = (commentsQuery.data ?? []).filter((c) => c.status === "resolved").length;
 
   return (
     <div className="flex flex-col gap-6 p-4">
       <div>
-        <h3 className="mb-2 text-sm font-semibold">Page Overview</h3>
-        <div className="border-black/8 flex flex-col gap-4 rounded-lg border bg-white p-4 dark:border-white/10 dark:bg-white/5">
+        <h3 className="mb-2 text-sm font-semibold">Page overview</h3>
+        <div className="bl-link-settings-panel">
           {creator && (
-            <div className="flex items-center gap-3 border-b border-black/10 pb-3 dark:border-white/10">
-              <Avatar name={creator.name} avatarUrl={creator.avatar_url} size={32} />
-              <div>
-                <p className="text-sm font-semibold">{creator.name}</p>
-                <p className="text-accent-primary text-xs">
-                  Added on {formatAddedOn(project.created_at)}
-                </p>
-              </div>
-            </div>
+            <header>
+              <Avatar name={creator.name} avatarUrl={creator.avatar_url} size={24} />
+              <strong>{creator.name}</strong>
+              <span style={{ marginLeft: "auto", color: "var(--ink-4)", font: "9px var(--mono)" }}>
+                Added {formatAddedOn(project.created_at)}
+              </span>
+            </header>
           )}
-          <dl className="flex flex-col gap-2 text-sm">
-            <div className="flex items-center justify-between">
-              <dt>Total Comments</dt>
-              <dd className="text-accent-primary font-semibold">{totalComments}</dd>
+          {statsError ? (
+            <div className="bl-inline-error" role="alert" style={{ marginTop: 10 }}>
+              <span>Some project stats could not load.</span>
+              <button type="button" onClick={() => { commentsQuery.refetch(); pagesQuery.refetch(); }}>
+                Try again
+              </button>
             </div>
-            <div className="flex items-center justify-between">
-              <dt>Resolved Comments</dt>
-              <dd className="text-accent-primary font-semibold">{resolvedComments}</dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt>Versions</dt>
-              <dd className="text-accent-primary font-semibold">{pages?.length ?? 0}</dd>
-            </div>
-            <div className="flex items-center justify-between border-t border-black/10 pt-2 dark:border-white/10">
-              <dt>URL</dt>
-              <dd>
-                <a
-                  href={project.target_origin}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Open project URL"
-                  className="text-accent-primary"
-                >
-                  ↗
-                </a>
-              </dd>
-            </div>
-          </dl>
+          ) : (
+            <dl>
+              <div>
+                <dt>Total comments</dt>
+                <dd>{statsLoading ? "…" : totalComments}</dd>
+              </div>
+              <div>
+                <dt>Resolved</dt>
+                <dd>{statsLoading ? "…" : resolvedComments}</dd>
+              </div>
+              <div>
+                <dt>Versions</dt>
+                <dd>{statsLoading ? "…" : (pagesQuery.data?.length ?? 0)}</dd>
+              </div>
+              <div>
+                <dt>URL</dt>
+                <dd>
+                  <a href={project.target_origin} target="_blank" rel="noreferrer" className="bl-text-link">
+                    Open ↗
+                  </a>
+                </dd>
+              </div>
+            </dl>
+          )}
         </div>
       </div>
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Collaborators ({members?.length ?? 0})</h3>
+          <h3 className="text-sm font-semibold">Collaborators ({members.length})</h3>
         </div>
         <button
+          type="button"
           onClick={() => setShowCollaborators(true)}
-          className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-black/10 py-2.5 text-sm font-medium dark:border-white/10"
+          className="bl-quiet"
+          style={{ width: "100%", marginBottom: 8 }}
         >
-          + Add New
+          + Add new
         </button>
-        <div className="flex flex-col gap-2">
-          {(members ?? []).map((member) => (
-            <div
-              key={member.id}
-              className="border-black/8 flex items-center gap-3 rounded-lg border bg-white p-3 dark:border-white/10 dark:bg-white/5"
-            >
-              <Avatar name={member.name} avatarUrl={member.avatar_url} size={32} />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{member.name}</p>
-                <span className="text-text-muted inline-block rounded-md border border-black/10 px-2 py-0.5 text-xs dark:border-white/10">
-                  {ROLE_LABELS[member.role] ?? member.role}
+        {membersQuery.isLoading ? (
+          <div className="bl-member-skeleton" role="status" aria-label="Loading collaborators">
+            <i />
+            <i />
+          </div>
+        ) : membersQuery.isError ? (
+          <div className="bl-inline-error" role="alert">
+            <span>Collaborators could not load.</span>
+            <button type="button" onClick={() => membersQuery.refetch()}>
+              Try again
+            </button>
+          </div>
+        ) : members.length === 0 ? (
+          <p className="bl-inline-note">No collaborators yet.</p>
+        ) : (
+          <div className="bl-share-people">
+            {members.map((member) => (
+              <div key={member.id} className="bl-share-person">
+                <Avatar name={member.name} avatarUrl={member.avatar_url} size={32} />
+                <span>
+                  <strong>{member.name}</strong>
+                  <small>{member.email}</small>
                 </span>
+                <em>{ROLE_LABELS[member.role] ?? member.role}</em>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {showCollaborators && (

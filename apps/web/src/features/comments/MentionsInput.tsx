@@ -118,17 +118,14 @@ export function MentionsInput({ onMentionedIdsChange, ...props }: MentionsInputP
       />
       
       {mentionState && filteredMembers.length > 0 && (
-        <div 
-          className="absolute z-50 bg-bg-surface border border-black/10 dark:border-white/10 rounded-md shadow-lg py-1 max-h-48 overflow-y-auto"
+        <div
+          className="bl-comment-popover"
+          role="listbox"
+          aria-label="Mention a member"
           style={{ top: "100%", left: 0, minWidth: "200px" }}
         >
-          {filteredMembers.map(m => (
-            <button
-              key={m.id}
-              className="w-full text-left px-3 py-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-              onClick={() => insertMention(m)}
-              type="button"
-            >
+          {filteredMembers.map((m) => (
+            <button key={m.id} role="option" className="bl-review-menu-row" onClick={() => insertMention(m)} type="button">
               {m.name || m.email}
             </button>
           ))}

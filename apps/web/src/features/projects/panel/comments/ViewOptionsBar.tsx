@@ -22,12 +22,11 @@ export function ViewOptionsBar({
   setGroupBy,
 }: ViewOptionsBarProps) {
   return (
-    <>
-      <div className="flex flex-col gap-2 border-b border-black/10 pb-3 dark:border-white/10">
+    <div className="flex flex-col gap-3 border-b pb-3" style={{ borderColor: "var(--line-soft)" }}>
+      <div className="flex flex-col gap-2">
         <label
-          className={`flex items-center gap-2 text-xs ${
-            currentPageId ? "text-text-primary" : "text-text-muted"
-          }`}
+          className="bl-check"
+          style={!currentPageId ? { color: "var(--ink-4)" } : undefined}
           title={currentPageId ? undefined : "Load a page in the canvas first"}
         >
           <input
@@ -38,7 +37,7 @@ export function ViewOptionsBar({
           />
           Show comments on current page only
         </label>
-        <label className="flex items-center gap-2 text-xs text-text-primary">
+        <label className="bl-check">
           <input
             type="checkbox"
             checked={hideResolved}
@@ -48,30 +47,30 @@ export function ViewOptionsBar({
         </label>
       </div>
 
-      <div className="flex items-center gap-4 border-b border-black/10 pb-3 dark:border-white/10">
+      <div className="flex items-center gap-4">
         <label className="flex items-center gap-2 text-xs">
-          Display:
+          Display
           <select
             value={displayMode}
             onChange={(e) => setDisplayMode(e.target.value as "comfortable" | "compact")}
-            className="rounded border border-black/10 px-2 py-1 dark:border-white/10 dark:bg-transparent"
+            className="bl-select"
           >
             <option value="comfortable">Comfortable</option>
             <option value="compact">Compact</option>
           </select>
         </label>
         <label className="flex items-center gap-2 text-xs">
-          Group by:
+          Group by
           <select
             value={groupBy}
             onChange={(e) => setGroupBy(e.target.value as "none" | "page")}
-            className="rounded border border-black/10 px-2 py-1 dark:border-white/10 dark:bg-transparent"
+            className="bl-select"
           >
             <option value="none">None</option>
             <option value="page">Page</option>
           </select>
         </label>
       </div>
-    </>
+    </div>
   );
 }

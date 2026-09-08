@@ -18,10 +18,26 @@ export function AiTab() {
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
-      <span className="from-accent-primary flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br to-fuchsia-400 text-white">
+      <span
+        style={{
+          display: "flex",
+          width: 56,
+          height: 56,
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 3,
+          background: "var(--ink)",
+          color: "var(--mint)",
+        }}
+      >
         <SparkleIcon width={26} height={26} stroke="none" fill="currentColor" />
       </span>
-      <h3 className="text-lg font-semibold">Welcome to BugHunt AI</h3>
+      <div>
+        <h3 className="text-lg font-semibold">Welcome to BugHunt AI</h3>
+        <span className="bl-scope-badge" style={{ marginTop: 6, display: "inline-flex" }}>
+          Pro feature
+        </span>
+      </div>
       <ul className="flex flex-col gap-3 self-stretch text-left">
         {CHECKS.map((check) => (
           <li key={check} className="flex items-start gap-2.5 text-sm">
@@ -30,7 +46,8 @@ export function AiTab() {
               width="18"
               height="18"
               fill="none"
-              className="text-status-resolved mt-0.5 shrink-0"
+              className="mt-0.5 shrink-0"
+              style={{ color: "var(--mint-deep)" }}
               aria-hidden="true"
             >
               <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" />
@@ -46,11 +63,8 @@ export function AiTab() {
           </li>
         ))}
       </ul>
-      <button
-        onClick={() => setShowPaywall(true)}
-        className="from-accent-primary w-full rounded-lg bg-gradient-to-r to-fuchsia-500 py-2.5 text-sm font-semibold text-white"
-      >
-        Analyse Page
+      <button type="button" onClick={() => setShowPaywall(true)} className="bl-button mint" style={{ width: "100%" }}>
+        Analyse page
       </button>
 
       {showPaywall && (

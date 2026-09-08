@@ -14,6 +14,7 @@ The user's request authorizes planning and implementation across frontend, backe
 6. [Delivery and verification ledger](06-delivery.md)
 7. [HTML parity, UI/UX, accessibility, resilience, and localization audit](07-html-parity-audit.md)
 8. [Source inventory](../reference/html-inventory.md) and [original HTML](../reference/backline-final-draft.html)
+9. [Reusable post-login UI migration prompts](10-ui-migration-chat-prompts.md)
 
 The existing [engineering specification](../spec/00-README.md) remains the architecture baseline. [TDR-0012](../tdr/0012-final-draft-product-evolution.md) records this dated product amendment. Do not interpret a planned capability as implemented; use the delivery ledger and executable checks as evidence.
 

@@ -13,7 +13,7 @@ export function McpTab() {
   const { toast } = useToast();
   return (
     <div className="flex flex-col gap-5 p-4">
-      <p className="text-text-muted text-sm">
+      <p style={{ color: "var(--ink-3)", fontSize: 13 }}>
         Let your AI agent read comments, push fixes, and close threads - without switching
         tabs.
       </p>
@@ -22,22 +22,17 @@ export function McpTab() {
         <h3 className="mb-2 text-sm font-semibold">Connect</h3>
         <div className="flex flex-col gap-2">
           {CONNECTORS.map((connector) => (
-            <div
-              key={connector.name}
-              className="border-black/8 flex items-center justify-between rounded-lg border bg-white p-3 dark:border-white/10 dark:bg-white/5"
-            >
-              <div className="flex items-center gap-2.5">
-                <span
-                  className="flex h-7 w-7 items-center justify-center rounded-md text-xs font-semibold text-white"
-                  style={{ backgroundColor: connector.color }}
-                >
+            <div key={connector.name} className="bl-connector-row">
+              <span className="bl-connector-name">
+                <span className="bl-connector-id" style={{ background: connector.color }}>
                   {connector.name[0]}
                 </span>
-                <span className="text-sm font-medium">{connector.name}</span>
-              </div>
+                {connector.name}
+              </span>
               <button
+                type="button"
                 onClick={() => toast(`Connecting ${connector.name} is coming soon.`, "warning")}
-                className="rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
+                className="bl-quiet"
               >
                 Connect
               </button>
@@ -45,16 +40,20 @@ export function McpTab() {
           ))}
         </div>
         <button
+          type="button"
           onClick={() => toast("Adding other MCP clients is coming soon.", "warning")}
-          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-black/10 py-2.5 text-sm font-medium dark:border-white/10"
+          className="bl-quiet"
+          style={{ marginTop: 8, width: "100%" }}
         >
           + Add other MCP
         </button>
       </div>
 
-      <div className="border-t border-black/10 pt-4 dark:border-white/10">
-        <h3 className="text-sm font-semibold">Personal Access Token</h3>
-        <p className="text-text-muted mt-1 text-xs">Coming soon.</p>
+      <div style={{ borderTop: "1px solid var(--line-soft)", paddingTop: 14 }}>
+        <h3 className="text-sm font-semibold">Personal access token</h3>
+        <p className="bl-inline-note" style={{ marginTop: 6 }}>
+          Coming soon.
+        </p>
       </div>
     </div>
   );

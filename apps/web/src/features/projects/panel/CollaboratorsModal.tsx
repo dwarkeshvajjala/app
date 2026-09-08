@@ -1,8 +1,9 @@
-import { Avatar, Button } from "@backline/ui";
+import { Avatar } from "@backline/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
+import { Dialog } from "../../../components/Dialog";
 import { GearIcon } from "../../../components/icons";
 import { qk } from "../../../lib/query-keys";
 import { useAuth } from "../../auth/AuthContext";
@@ -35,7 +36,9 @@ interface CollaboratorsModalProps {
 // grants full workspace membership, not a scoped viewer role), so those are mapped to
 // what's actually real here instead of faked: the invite role dropdown offers this
 // app's real Member/Admin workspace roles, and the settings gear links to the full
-// Share Links page (passcode/expiry/mode) rather than a fake checklist.
+// Share Links page (passcode/expiry/mode) rather than a fake checklist. Shares its
+// vocabulary with ShareProjectModal.tsx, which covers the same two capabilities in a
+// slightly wider "project sharing" context.
 export function CollaboratorsModal({
   project,
   workspaceId,
@@ -48,18 +51,8 @@ export function CollaboratorsModal({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"member" | "admin">("member");
   const [copied, setCopied] = useState(false);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    closeButtonRef.current?.focus();
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
-  const { data: members } = useQuery({
+  const membersQuery = useQuery({
     queryKey: qk.members(workspaceId),
     queryFn: () => workspacesApi.listMembers(workspaceId),
   });
@@ -88,11 +81,8 @@ export function CollaboratorsModal({
   });
 
   function toggleGeneralAccess() {
-    if (activeLink) {
-      revokeLinkMutation.mutate(activeLink.id);
-    } else {
-      createLinkMutation.mutate();
-    }
+    if (activeLink) revokeLinkMutation.mutate(activeLink.id);
+    else createLinkMutation.mutate();
   }
 
   async function copyLink() {
@@ -109,126 +99,154 @@ export function CollaboratorsModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Share ${project.name}`}
-        onClick={(event) => event.stopPropagation()}
-        className="bg-bg-surface flex w-full max-w-lg flex-col gap-5 rounded-xl p-6 dark:bg-[#14141A]"
-      >
-        <div className="flex items-start justify-between gap-2">
-          <h2 className="text-lg font-semibold">Share &quot;{project.name}&quot;</h2>
-          <button
-            ref={closeButtonRef}
-            onClick={onClose}
-            aria-label="Close"
-            className="text-text-muted text-xl leading-none"
-          >
-            ×
-          </button>
-        </div>
-
-        <form onSubmit={handleInvite} className="flex items-center gap-2">
-          <input
-            type="email"
-            required
-            placeholder={`someone@${workspaceName.toLowerCase().replace(/\s+/g, "")}.com`}
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className="flex-1 rounded-md border border-black/10 px-3 py-2.5 text-sm dark:border-white/10 dark:bg-transparent"
-          />
-          <select
-            value={role}
-            onChange={(event) => setRole(event.target.value as "member" | "admin")}
-            aria-label="Role"
-            className="rounded-md border border-black/10 px-2 py-2.5 text-sm dark:border-white/10 dark:bg-transparent"
-          >
-            <option value="member">Member</option>
-            <option value="admin">Admin</option>
-          </select>
-          <Button type="submit" disabled={inviteMutation.isPending}>
-            Invite
-          </Button>
-        </form>
-        {inviteMutation.isError && (
-          <p className="text-recovery-orphaned -mt-3 text-xs">Could not send that invite.</p>
-        )}
-
-        <div className="flex flex-col gap-3">
-          {(members ?? []).map((member) => (
-            <div key={member.id} className="flex items-center gap-3">
-              <Avatar name={member.name} avatarUrl={member.avatar_url} size={36} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="truncate text-sm font-semibold">{member.name}</p>
-                  {member.user_id === user?.id && (
-                    <span className="bg-accent-primary/10 text-accent-primary rounded-full px-2 py-0.5 text-xs font-medium">
-                      You
-                    </span>
-                  )}
-                  <span className="text-text-muted rounded-md border border-black/10 px-2 py-0.5 text-xs dark:border-white/10">
-                    {ROLE_LABELS[member.role] ?? member.role}
-                  </span>
-                </div>
-                <p className="text-accent-primary truncate text-xs">{member.email}</p>
-              </div>
+    <Dialog title={`Share "${project.name}"`} onClose={onClose}>
+      <div className="bl-share-body">
+        <section className="bl-share-section">
+          <div className="bl-section-heading">
+            <div>
+              <h3>Invite a collaborator</h3>
+              <p>Workspace access · every project</p>
             </div>
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-2 border-t border-black/10 pt-4 dark:border-white/10">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold">General access</span>
-            <button
-              role="switch"
-              aria-checked={!!activeLink}
-              aria-label="Anyone with the link can access this project"
-              onClick={toggleGeneralAccess}
-              disabled={createLinkMutation.isPending || revokeLinkMutation.isPending}
-              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                activeLink ? "bg-accent-primary" : "bg-black/15 dark:bg-white/15"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                  activeLink ? "translate-x-[22px]" : "translate-x-0.5"
-                }`}
-              />
-            </button>
+            <span className="bl-scope-badge">Workspace</span>
           </div>
-          <p className="text-accent-primary text-xs">
-            {activeLink
-              ? "Anyone with the link can access this project."
-              : "No one can access this project via link right now."}
-          </p>
-          {activeLink && (
-            <div className="flex items-center gap-2">
-              <input
-                readOnly
-                value={reviewUrl(activeLink.token)}
-                aria-label="Client review link"
-                onFocus={(event) => event.target.select()}
-                className="text-text-muted flex-1 truncate rounded-md border border-black/10 px-3 py-2 text-xs dark:border-white/10"
-              />
-              <Button variant="secondary" onClick={copyLink}>
-                {copied ? "Copied!" : "Copy Link"}
-              </Button>
-              <Link
-                to={`/w/${workspaceSlug}/p/${project.id}/share-links`}
-                aria-label="Manage share link settings (passcode, expiry, mode)"
-                onClick={onClose}
-                className="text-text-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-black/10 dark:border-white/10"
-              >
-                <GearIcon />
-              </Link>
+          <form className="bl-invite-row" onSubmit={handleInvite}>
+            <input
+              className="bl-input"
+              type="email"
+              required
+              placeholder={`someone@${workspaceName.toLowerCase().replace(/\s+/g, "")}.com`}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              aria-label="Collaborator email"
+            />
+            <select
+              className="bl-input"
+              value={role}
+              onChange={(event) => setRole(event.target.value as "member" | "admin")}
+              aria-label="Role"
+            >
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button className="bl-button" disabled={inviteMutation.isPending || !email.trim()}>
+              {inviteMutation.isPending ? "Sending…" : "Invite"}
+            </button>
+          </form>
+          {inviteMutation.isError && <p className="bl-error">Could not send that invite.</p>}
+
+          {membersQuery.isLoading ? (
+            <div className="bl-member-skeleton" role="status" aria-label="Loading collaborators">
+              <i />
+              <i />
+            </div>
+          ) : membersQuery.isError ? (
+            <div className="bl-inline-error" role="alert">
+              <span>Collaborators could not load.</span>
+              <button type="button" onClick={() => membersQuery.refetch()}>
+                Try again
+              </button>
+            </div>
+          ) : (
+            <div className="bl-share-people">
+              {membersQuery.data?.map((member) => (
+                <div key={member.id} className="bl-share-person">
+                  <Avatar name={member.name} avatarUrl={member.avatar_url} size={32} />
+                  <span>
+                    <strong>
+                      {member.name}
+                      {member.user_id === user?.id ? " (You)" : ""}
+                    </strong>
+                    <small>{member.email}</small>
+                  </span>
+                  <em>{ROLE_LABELS[member.role] ?? member.role}</em>
+                </div>
+              ))}
             </div>
           )}
-        </div>
+        </section>
+
+        <section className="bl-share-section bl-share-link-section">
+          <div className="bl-section-heading">
+            <div>
+              <h3>Anyone with the link</h3>
+              <p>Project-scoped guest access</p>
+            </div>
+            <span className={`bl-access-state${activeLink ? " is-on" : ""}`}>
+              <i />
+              {activeLink ? "On" : "Off"}
+            </span>
+          </div>
+          <p>Reviewers can open this project and leave comments without creating an account.</p>
+
+          {shareLinksQuery.isLoading ? (
+            <div className="bl-link-skeleton" role="status">
+              Loading review link…
+            </div>
+          ) : shareLinksQuery.isError ? (
+            <div className="bl-inline-error" role="alert">
+              <span>Review link could not load.</span>
+              <button type="button" onClick={() => shareLinksQuery.refetch()}>
+                Try again
+              </button>
+            </div>
+          ) : (
+            <>
+              <label className="bl-setting-row compact" style={{ marginTop: 4 }}>
+                <span className="bl-setting-copy">
+                  <strong>Anyone with the link</strong>
+                  <span>{activeLink ? "On — reviewers can open and comment." : "Off — link access is disabled."}</span>
+                </span>
+                <input
+                  type="checkbox"
+                  className="bl-switch-input"
+                  checked={!!activeLink}
+                  disabled={createLinkMutation.isPending || revokeLinkMutation.isPending}
+                  onChange={toggleGeneralAccess}
+                  aria-label="Anyone with the link can access this project"
+                />
+                <span className="bl-switch" aria-hidden="true">
+                  <i />
+                </span>
+              </label>
+              {activeLink && (
+                <div className="bl-link-row" style={{ marginTop: 10 }}>
+                  <input
+                    readOnly
+                    value={reviewUrl(activeLink.token)}
+                    aria-label="Client review link"
+                    onFocus={(event) => event.target.select()}
+                    className="bl-input bl-mono"
+                  />
+                  <button type="button" className="bl-quiet" onClick={copyLink}>
+                    {copied ? "Copied" : "Copy link"}
+                  </button>
+                  <Link
+                    to={`/w/${workspaceSlug}/p/${project.id}/share-links`}
+                    aria-label="Manage share link settings (passcode, expiry, mode)"
+                    onClick={onClose}
+                    className="bl-icon-button"
+                  >
+                    <GearIcon />
+                  </Link>
+                </div>
+              )}
+              <p className="bl-guest-hint">
+                {activeLink
+                  ? "Each project gets its own link. Passcode, expiry and domain restrictions live on the full share-links manager."
+                  : "No one can open this project via link right now."}
+              </p>
+            </>
+          )}
+        </section>
       </div>
-    </div>
+      <footer className="bl-dialog-actions bl-dialog-actions-bordered">
+        <Link className="bl-text-link" to={`/w/${workspaceSlug}/p/${project.id}/share-links`} onClick={onClose}>
+          Manage all share links
+        </Link>
+        <button type="button" className="bl-quiet" onClick={onClose}>
+          Done
+        </button>
+      </footer>
+    </Dialog>
   );
 }

@@ -4,31 +4,55 @@ import type { RefObject } from "react";
 
 import * as boardApi from "../../board/api";
 import type { CommentOut, CommentStatus } from "../../board/api";
+import { CommentThreadPanel } from "../../board/CommentThreadPanel";
 import { API_BASE_URL } from "../../../lib/api-client";
 import { qk } from "../../../lib/query-keys";
+import * as pagesApi from "../../pages/api";
+import * as workspacesApi from "../../workspaces/api";
 import { CommentsList } from "./comments/CommentsList";
 import { FilterSortBar } from "./comments/FilterSortBar";
 import { StatusChips } from "./comments/StatusChips";
+import { commentBrowser, commentDeviceType } from "./comments/types";
 import type { LayerFilter, SortOrder } from "./comments/types";
 import { ViewOptionsBar } from "./comments/ViewOptionsBar";
 
 interface CommentsTabProps {
   projectId: string;
+  workspaceId: string;
   canvasRef: RefObject<HTMLIFrameElement | null>;
   currentPageId: string | null;
   selectedCommentId?: string | null;
   onSelectComment?: (commentId: string) => void;
 }
 
-export function CommentsTab({ projectId, canvasRef, currentPageId, selectedCommentId, onSelectComment }: CommentsTabProps) {
-  const { data: comments, isLoading } = useQuery({
+export function CommentsTab({
+  projectId,
+  workspaceId,
+  canvasRef,
+  currentPageId,
+  selectedCommentId,
+  onSelectComment,
+}: CommentsTabProps) {
+  const commentsQuery = useQuery({
     queryKey: qk.projectComments(projectId),
     queryFn: () => boardApi.listProjectComments(projectId),
+  });
+  const comments = commentsQuery.data;
+
+  const { data: members = [] } = useQuery({
+    queryKey: qk.members(workspaceId),
+    queryFn: () => workspacesApi.listMembers(workspaceId),
+    enabled: !!workspaceId,
+  });
+
+  const { data: pages = [] } = useQuery({
+    queryKey: qk.projectPages(projectId),
+    queryFn: () => pagesApi.listProjectPages(projectId),
   });
 
   // null = show every status (the initial state) - clicking a chip isolates the list
   // down to just that one status, clicking it again (or "Select all") goes back to
-  // showing everything. Not a multi-select toggle: with 4 statuses, "tap one to see just
+  // showing everything. Not a multi-select toggle: with 6 statuses, "tap one to see just
   // that bucket" is the more useful click for triaging than gradually excluding buckets.
   const [activeStatus, setActiveStatus] = useState<CommentStatus | null>(null);
   const [hideResolved, setHideResolved] = useState(false);
@@ -41,8 +65,34 @@ export function CommentsTab({ projectId, canvasRef, currentPageId, selectedComme
   const [activeAssignees, setActiveAssignees] = useState<string[]>([]);
   const [displayMode, setDisplayMode] = useState<"comfortable" | "compact">("comfortable");
   const [groupBy, setGroupBy] = useState<"none" | "page">("none");
+  const [openThreadId, setOpenThreadId] = useState<string | null>(null);
 
   const allThreads = (comments ?? []).filter((c) => !c.parent_id);
+
+  // Replies (parent_id set) share the same flat list as top-level comments - grouped
+  // here for the reply-count badge and the thread view, the same way BoardPage's own
+  // repliesByParent works for the ticket board's copy of this same data.
+  const repliesByParent = useMemo(() => {
+    const map = new Map<string, CommentOut[]>();
+    for (const comment of comments ?? []) {
+      if (!comment.parent_id) continue;
+      const list = map.get(comment.parent_id) ?? [];
+      list.push(comment);
+      map.set(comment.parent_id, list);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.created_at.localeCompare(b.created_at));
+    }
+    return map;
+  }, [comments]);
+
+  const replyCountByCommentId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const [parentId, replies] of repliesByParent) map.set(parentId, replies.length);
+    return map;
+  }, [repliesByParent]);
+
+  const openThreadComment = (comments ?? []).find((c) => c.id === openThreadId) ?? null;
 
   // Numeric badge order is stable across every filter/sort choice - it always reflects
   // creation order across the whole project, not the currently-visible subset - so a
@@ -74,10 +124,10 @@ export function CommentsTab({ projectId, canvasRef, currentPageId, selectedComme
     if (activeStatus && c.status !== activeStatus) return false;
     if (layerFilter !== "all" && c.layer !== layerFilter) return false;
     if (currentPageOnly && c.page_id !== currentPageId) return false;
-    if (activeTags.length > 0 && !activeTags.some(t => c.tags?.includes(t as NonNullable<CommentOut["tags"]>[number]))) return false;
-    if (activeDeviceTypes.length > 0 && !activeDeviceTypes.includes(c.context?.device_type as string)) return false;
-    if (activeBrowsers.length > 0 && !activeBrowsers.includes(c.context?.browser as string)) return false;
-    if (activeAssignees.length > 0 && !activeAssignees.some(a => c.assignee_id === a || c.assignee_ids?.includes(a))) return false;
+    if (activeTags.length > 0 && !activeTags.some((t) => c.tags?.includes(t as NonNullable<CommentOut["tags"]>[number]))) return false;
+    if (activeDeviceTypes.length > 0 && !activeDeviceTypes.includes(commentDeviceType(c) ?? "")) return false;
+    if (activeBrowsers.length > 0 && !activeBrowsers.includes(commentBrowser(c) ?? "")) return false;
+    if (activeAssignees.length > 0 && !activeAssignees.some((a) => c.assignee_id === a || c.assignee_ids?.includes(a))) return false;
     return true;
   });
 
@@ -123,6 +173,7 @@ export function CommentsTab({ projectId, canvasRef, currentPageId, selectedComme
 
       <FilterSortBar
         allThreads={allThreads}
+        members={members}
         sortOrder={sortOrder}
         setSortOrder={setSortOrder}
         layerFilter={layerFilter}
@@ -150,17 +201,32 @@ export function CommentsTab({ projectId, canvasRef, currentPageId, selectedComme
       />
 
       <CommentsList
-        isLoading={isLoading}
+        isLoading={commentsQuery.isLoading}
+        isError={commentsQuery.isError}
+        onRetry={() => commentsQuery.refetch()}
         allThreads={allThreads}
         filteredThreads={filteredThreads}
         sortedThreads={sortedThreads}
         displayMode={displayMode}
         groupBy={groupBy}
         projectId={projectId}
+        pages={pages}
+        members={members}
         sequenceByCommentId={sequenceByCommentId}
+        replyCountByCommentId={replyCountByCommentId}
         onNavigate={navigateToComment}
+        onOpenThread={setOpenThreadId}
         selectedCommentId={selectedCommentId}
       />
+
+      {openThreadComment && (
+        <CommentThreadPanel
+          comment={openThreadComment}
+          replies={repliesByParent.get(openThreadComment.id) ?? []}
+          projectId={projectId}
+          onClose={() => setOpenThreadId(null)}
+        />
+      )}
     </div>
   );
 }

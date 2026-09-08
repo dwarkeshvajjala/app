@@ -97,6 +97,7 @@ export function ProjectSidePanel({
             {activeTab === "comments" && (
               <CommentsTab
                 projectId={project.id}
+                workspaceId={workspaceId}
                 canvasRef={canvasRef}
                 currentPageId={currentPageId}
                 selectedCommentId={selectedCommentId}

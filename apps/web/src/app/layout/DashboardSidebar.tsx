@@ -8,20 +8,22 @@ import type { WorkspaceOut } from "../../features/workspaces/api";
 import { WorkspaceSwitcherPopover } from "../../features/workspaces/WorkspaceSwitcherPopover";
 import { qk } from "../../lib/query-keys";
 import { STATUS_COLORS, STATUS_LABELS, WORKFLOW_STATUSES } from "../../lib/workflow";
-import { ActivityClockIcon, AssignedToMeIcon, ChevronDownIcon, ClientsIcon, ProjectsIcon, TicketsIcon } from "./sidebar-icons";
+import { ActivityClockIcon, AssignedToMeIcon, ChevronDownIcon, ClientsIcon, CloseIcon, ProjectsIcon, TicketsIcon } from "./sidebar-icons";
+import { BrandMark } from "../../components/BrandMark";
 
 // Account/sign-out no longer lives here: it's the AccountButton in the topbar
 // (WorkspaceLayout) now, top-right next to search/notifications instead of a text
 // button at the bottom of this nav.
-export function DashboardSidebar({ workspace }: { workspace: WorkspaceOut }) {
+export function DashboardSidebar({ workspace, mobileOpen = false, onClose, onNavigate }: { workspace: WorkspaceOut; mobileOpen?: boolean; onClose?: () => void; onNavigate?: () => void }) {
   const base = `/w/${workspace.slug}`;
   const location = useLocation();
   const { t } = useTranslation();
   const { data } = useQuery({ queryKey: qk.dashboard(workspace.id), queryFn: () => getDashboard(workspace.id) });
+  const query = new URLSearchParams(location.search);
   const links = [
-    { to: base, label: t('sidebar.projects' as TranslationKeys), icon: ProjectsIcon, count: data?.projects },
-    { to: `${base}/tickets?view=mine`, label: "Assigned to me", icon: AssignedToMeIcon, count: data?.assigned_to_me },
-    { to: `${base}/tickets`, label: t('sidebar.tickets' as TranslationKeys), icon: TicketsIcon, count: data?.tickets },
+    { to: base, label: t('sidebar.projects' as TranslationKeys), icon: ProjectsIcon, count: data?.projects, active: location.pathname === base && query.get("archived") !== "true" },
+    { to: `${base}/tickets?view=mine`, label: "Assigned to me", icon: AssignedToMeIcon, count: data?.assigned_to_me, active: location.pathname === `${base}/tickets` && query.get("view") === "mine" },
+    { to: `${base}/tickets`, label: t('sidebar.tickets' as TranslationKeys), icon: TicketsIcon, count: data?.tickets, active: location.pathname === `${base}/tickets` && query.get("view") !== "mine" && !query.get("status") },
     { to: `${base}/activity`, label: t('sidebar.activity' as TranslationKeys), icon: ActivityClockIcon },
     { to: `${base}/clients`, label: t('sidebar.clients' as TranslationKeys), icon: ClientsIcon },
   ];
@@ -29,7 +31,11 @@ export function DashboardSidebar({ workspace }: { workspace: WorkspaceOut }) {
 
   const [showWsPop, setShowWsPop] = useState(false);
 
-  return <aside className="bl-rail">
+  return <aside id="workspace-navigation" className={`bl-rail${mobileOpen ? " is-open" : ""}`} aria-label="Workspace sidebar">
+    <header className="bl-rail-brand">
+      <BrandMark />
+      <button type="button" className="bl-rail-close" aria-label="Close navigation" onClick={onClose}><CloseIcon /></button>
+    </header>
     {/* Workspace switcher trigger */}
     <div style={{ position: "relative" }}>
       <button
@@ -53,16 +59,16 @@ export function DashboardSidebar({ workspace }: { workspace: WorkspaceOut }) {
     </div>
 
     <nav aria-label="Workspace navigation" className="bl-nav">
-      {links.map((item) => <NavLink key={item.label} className={active(item.to) ? "is-on" : ""} to={item.to}><item.icon className="bl-nav-icon" /><span>{item.label}</span>{item.count !== undefined && <b className="bl-count">{item.count}</b>}</NavLink>)}
+      {links.map((item) => <NavLink key={item.label} onClick={onNavigate} className={(item.active ?? active(item.to)) ? "is-on" : ""} to={item.to}><item.icon className="bl-nav-icon" /><span>{item.label}</span>{item.count !== undefined && <b className="bl-count">{item.count}</b>}</NavLink>)}
       <p className="bl-eyebrow">Comments by status</p>
-      {WORKFLOW_STATUSES.filter((s) => s !== "wont_fix").map((s) => <NavLink key={s} className={active(`${base}/tickets?status=${s}`) ? "is-on" : ""} to={`${base}/tickets?status=${s}`}><i className="bl-dot" style={{ background: STATUS_COLORS[s] }} /><span>{STATUS_LABELS[s]}</span><b className="bl-count">{data?.statuses[s] ?? 0}</b></NavLink>)}
+      {WORKFLOW_STATUSES.filter((s) => s !== "wont_fix").map((s) => <NavLink key={s} onClick={onNavigate} className={location.pathname === `${base}/tickets` && query.get("status") === s ? "is-on" : ""} to={`${base}/tickets?status=${s}`}><i className="bl-dot" style={{ background: STATUS_COLORS[s] }} /><span>{STATUS_LABELS[s]}</span><b className="bl-count">{data?.statuses[s] ?? 0}</b></NavLink>)}
       <p className="bl-eyebrow">Projects</p>
-      <NavLink to={`${base}?archived=true`} className={active(`${base}?archived=true`) ? "is-on" : ""}><i className="bl-dot" /><span>Archived</span><b className="bl-count">{data?.archived_projects ?? 0}</b></NavLink>
+      <NavLink onClick={onNavigate} to={`${base}?archived=true`} className={location.pathname === base && query.get("archived") === "true" ? "is-on" : ""}><i className="bl-dot" /><span>Archived</span><b className="bl-count">{data?.archived_projects ?? 0}</b></NavLink>
       <p className="bl-eyebrow">Workspace</p>
-      {[['members', 'Members'], ['integrations', 'Integrations'], ['settings', 'Settings']].map(([path, label]) => <NavLink key={path} to={`${base}/${path}`} className={({ isActive }) => isActive ? "is-on" : ""}>{label}</NavLink>)}
+      {[['members', 'Members'], ['integrations', 'Integrations'], ['settings', 'Settings']].map(([path, label]) => <NavLink key={path} onClick={onNavigate} to={`${base}/${path}`} className={({ isActive }) => isActive ? "is-on" : ""}>{label}</NavLink>)}
     </nav>
     <footer className="bl-rail-footer">
-      <div className="bl-plan"><strong className="capitalize">{workspace.plan} plan</strong><span className="bl-mono">{data?.projects ?? "—"} active projects</span><p>One place for your team's client reviews.</p><NavLink className="bl-button mint" to={`${base}/billing`}>Compare plans</NavLink></div>
+      <div className="bl-plan"><strong className="capitalize">{workspace.plan} plan</strong><span className="bl-mono">{data?.projects ?? "—"} active projects</span><p>One place for your team's client reviews.</p><NavLink onClick={onNavigate} className="bl-button mint" to={`${base}/billing`}>Compare plans</NavLink></div>
     </footer>
   </aside>;
 }

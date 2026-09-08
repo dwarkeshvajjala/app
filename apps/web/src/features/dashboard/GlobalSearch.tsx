@@ -6,6 +6,7 @@ import { qk } from "../../lib/query-keys";
 import { searchWorkspace } from "./api";
 import type { SearchResults } from "./api";
 import { useOnClickOutside } from "../../lib/use-click-outside";
+import { SearchIcon } from "../../components/icons";
 
 type SearchItem = SearchResults["items"][number];
 
@@ -32,6 +33,7 @@ export function GlobalSearch({ workspaceId, workspaceSlug }: { workspaceId: stri
   const input = useRef<HTMLInputElement>(null);
   const popover = useRef<HTMLElement>(null);
   const navigate = useNavigate();
+  const shortcut = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘K" : "Ctrl K";
 
   // FE-05/BE-05: fetch on pause, not per keystroke - the input itself stays
   // immediate (uncontrolled lag would feel broken), only the network request lags.
@@ -108,7 +110,7 @@ export function GlobalSearch({ workspaceId, workspaceSlug }: { workspaceId: stri
   return (
     <div className="bl-global-search" ref={containerRef}>
       <label className="bl-search">
-        <span aria-hidden="true">⌕</span>
+        <span className="bl-search-icon" aria-hidden="true"><SearchIcon /></span>
         <input
           ref={input}
           aria-label="Search this workspace"
@@ -122,7 +124,7 @@ export function GlobalSearch({ workspaceId, workspaceSlug }: { workspaceId: stri
           aria-expanded={!!activeQuery}
           aria-autocomplete="list"
         />
-        <kbd>⌘K</kbd>
+        <kbd>{shortcut}</kbd>
       </label>
       {activeQuery && (
         <section

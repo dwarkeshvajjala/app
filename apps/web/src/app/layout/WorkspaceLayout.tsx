@@ -1,7 +1,7 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Avatar } from "@backline/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useWSEvent } from "../WSProvider";
 
 import { qk } from "../../lib/query-keys";
@@ -13,6 +13,10 @@ import { useAuth } from "../../features/auth/AuthContext";
 import { GlobalSearch } from "../../features/dashboard/GlobalSearch";
 import { NotificationBell } from "../../features/notifications/NotificationBell";
 import { useConnectionStore } from "../../stores/connectionStore";
+import { BrandMark } from "../../components/BrandMark";
+import { PlusIcon } from "../../components/icons";
+import { CloseIcon, MenuIcon } from "./sidebar-icons";
+import { ProjectForm } from "../../features/projects/ProjectForm";
 
 // Account entry point - top-right of the persistent topbar, next to search and
 // notifications, rather than a text button buried at the bottom of the sidebar
@@ -36,7 +40,10 @@ function AccountButton() {
 // much lighter header instead (see ProjectLayout.tsx's docblock for why).
 export function WorkspaceLayout() {
   const result = useWorkspaceContext();
+  const location = useLocation();
   const cache = useQueryClient();
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
+  const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const workspaceId = "workspace" in result ? result.workspace.id : undefined;
   const refresh = useCallback(() => {
     if (workspaceId) void cache.invalidateQueries({ queryKey: qk.workspace(workspaceId) });
@@ -46,6 +53,24 @@ export function WorkspaceLayout() {
   useWSEvent("comment.deleted", refresh);
 
   const connStatus = useConnectionStore((s) => s.status);
+
+  useEffect(() => {
+    setMobileNavigationOpen(false);
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!mobileNavigationOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileNavigationOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [mobileNavigationOpen]);
 
   if (result.status === "loading") {
     return <LoadingScreen />;
@@ -64,9 +89,43 @@ export function WorkspaceLayout() {
 
   return (
     <div className="bl-app">
-      <DashboardSidebar workspace={workspace} />
+      <a className="bl-skip-link" href="#workspace-content">Skip to content</a>
+      <DashboardSidebar
+        workspace={workspace}
+        mobileOpen={mobileNavigationOpen}
+        onClose={() => setMobileNavigationOpen(false)}
+        onNavigate={() => setMobileNavigationOpen(false)}
+      />
+      {mobileNavigationOpen && (
+        <button
+          type="button"
+          className="bl-nav-scrim"
+          aria-label="Close workspace navigation"
+          onClick={() => setMobileNavigationOpen(false)}
+        />
+      )}
       <div className="bl-main">
-        <header className="bl-topbar"><GlobalSearch workspaceId={workspace.id} workspaceSlug={workspace.slug} /><NotificationBell /><AccountButton /></header>
+        <header className="bl-topbar">
+          <button
+            type="button"
+            className="bl-mobile-menu-button"
+            aria-label="Open workspace navigation"
+            aria-controls="workspace-navigation"
+            aria-expanded={mobileNavigationOpen}
+            onClick={() => setMobileNavigationOpen(true)}
+          >
+            {mobileNavigationOpen ? <CloseIcon /> : <MenuIcon />}
+          </button>
+          <span className="bl-mobile-brand"><BrandMark compact /></span>
+          <GlobalSearch workspaceId={workspace.id} workspaceSlug={workspace.slug} />
+          <div className="bl-topbar-actions">
+            <button type="button" className="bl-button bl-topbar-create" onClick={() => setCreateProjectOpen(true)}>
+              <PlusIcon /> <span>New project</span>
+            </button>
+            <NotificationBell />
+            <AccountButton />
+          </div>
+        </header>
         {connStatus !== "connected" && (
           <div
             className={`bl-conn-banner ${connStatus === "reconnecting" ? "reconnecting" : "offline"}`}
@@ -78,8 +137,11 @@ export function WorkspaceLayout() {
               : "You are offline. Changes may not be saved."}
           </div>
         )}
-        <Outlet context={{ workspace }} />
+        <div id="workspace-content" className="bl-route-content" tabIndex={-1}>
+          <Outlet context={{ workspace }} />
+        </div>
       </div>
+      {createProjectOpen && <ProjectForm workspace={workspace} onClose={() => setCreateProjectOpen(false)} />}
     </div>
   );
 }

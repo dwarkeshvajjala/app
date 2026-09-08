@@ -1,5 +1,48 @@
 # Delivery and verification ledger
 
+## 2026-09-08: Post-login UI migration — project side panel and comments slice
+
+- Migrated `ProjectSidePanel` and its Comments/Details/Integrations/MCP/AI tabs off
+  the pre-migration Tailwind theme onto the Final Draft `bl-` brand, reusing the
+  vocabulary already shipped for `ShareProjectModal`, `TicketDetail`, and the review
+  workspace toolbar rather than inventing a new one. TDR-0019 records the specific
+  reuse, scope and behavior decisions.
+- Rebuilt the `CommentsTab` tree (`StatusChips`, `FilterSortBar`, `ViewOptionsBar`,
+  `CommentsList`, `CommentRow`, `comments/types.ts`): status label/color now come from
+  `@backline/ui`'s shared workflow module instead of a second, drifting copy; added
+  the previously-missing device-type and assignee filter sections; comment cards now
+  show priority, due date (with overdue/due-today/due-tomorrow language), tags,
+  assignee avatars, `@mention` highlighting, screenshot previews (and a capture-failed
+  note), attachment chips, a layer badge (client-visible/team-only) on every row, and
+  an anchor-recovery badge for orphaned/low-confidence comments. Loading uses real
+  skeletons, and a dedicated error state with retry now exists (previously absent).
+  Grouping by page resolves real page titles/URLs instead of a raw page id.
+- Wired `CommentThreadPanel` into the Comments tab as an "open thread" action on every
+  row (distinct from the row's existing click-to-navigate-to-pin behavior, which is
+  preserved), and rebuilt it on the shared `Dialog` component with status, priority,
+  tags, assignees, due date, and waiting-on/waiting-on-client editing - the same
+  fields and components (`DatePicker`, `PeoplePicker`) `TicketDetail.tsx` already uses
+  for the same underlying comment record. `BoardPage.tsx`'s existing usage is
+  unchanged. Fixed a pre-existing bug where assignee/waiting-on ids were compared
+  against the wrong member field (workspace membership id instead of user id),
+  meaning a saved assignee could never show as selected again.
+- Restyled `DetailsTab`, `IntegrationsTab`, `McpTab`, `AiTab`, `CollaboratorsModal`,
+  `ProFeatureModal`, and `UpgradeToProModal` onto the same brand; `CollaboratorsModal`/
+  `ProFeatureModal`/`UpgradeToProModal` now use the shared `Dialog` component (native
+  modal semantics, focus containment/return, Escape) instead of hand-rolled overlay
+  divs. MCP connectors, workspace-integration quick toggles, and BugHunt AI remain
+  visibly static/gated - no fake connection, AI, or billing success was added.
+- Existing React Query keys/invalidation, comment/reply/attachment API calls,
+  workspace/member/share-link data, authorization boundaries, and the widget's
+  `postMessage` pin-navigation contract were preserved. No backend, database,
+  generated API declaration, or widget file was changed.
+- Not run at the user's request: lint, typecheck, build, automated tests, local
+  preview, browser interaction QA, keyboard journey QA, and responsive/mobile-sheet
+  screenshot comparison. The final diff was inspected for scope; release verification
+  is still required. One known pre-existing accessibility nesting concern was not
+  changed in this pass: `CommentRow`'s clickable row (`role="button"`) still contains
+  further interactive buttons (resolve/menu/reply), inherited from before this slice.
+
 ## 2026-09-08: Post-login UI migration — project review workspace slice
 
 - Migrated `ProjectLayout` and the website `ProjectOverviewPage` to the Final Draft's

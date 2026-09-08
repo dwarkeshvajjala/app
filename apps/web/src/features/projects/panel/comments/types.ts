@@ -1,41 +1,70 @@
-import type { CommentStatus } from "../../../board/api";
+import type { CommentOut, CommentStatus } from "../../../board/api";
+import { STATUS_COLORS, STATUS_LABELS, TAGS, WORKFLOW_STATUSES } from "../../../../lib/workflow";
 
 export type LayerFilter = "all" | "client" | "team";
 export type SortOrder = "newest" | "oldest";
+export type CommentPriority = NonNullable<CommentOut["priority"]>;
 
-export const STATUS_ORDER: CommentStatus[] = ["todo", "in_progress", "in_review", "blocked", "resolved", "wont_fix"];
+// Single source of truth is @backline/ui's workflow module (FE-05) - re-exported
+// under the names this feature's components already import, so status label/color
+// no longer drifts from the shared board/tickets/widget copy.
+export const STATUS_ORDER: CommentStatus[] = WORKFLOW_STATUSES;
 
-export const STATUS_META: Record<
-  CommentStatus,
-  { label: string; dot: string; fill: string; border: string }
-> = {
-  in_review: { label: "In review", dot: "bg-status-in-review", fill: "bg-status-in-review/10 text-status-in-review", border: "border-status-in-review/40" },
-  blocked: { label: "Blocked", dot: "bg-status-blocked", fill: "bg-status-blocked/10 text-status-blocked", border: "border-status-blocked/40" },
-  todo: {
-    // FE-05: matches @backline/ui's STATUS_LABELS (packages/ui/src/workflow.ts) -
-    // this was "Active" here, "To do" in Badge.tsx/BoardPage/widget, 3 different
-    // words for the same status.
-    label: "Not started",
-    dot: "bg-status-todo",
-    fill: "bg-status-todo/10 text-slate-600 dark:text-slate-300",
-    border: "border-status-todo/40",
+export interface StatusMeta {
+  label: string;
+  color: string;
+}
+
+export const STATUS_META: Record<CommentStatus, StatusMeta> = WORKFLOW_STATUSES.reduce(
+  (meta, status) => {
+    meta[status] = { label: STATUS_LABELS[status], color: STATUS_COLORS[status] };
+    return meta;
   },
-  in_progress: {
-    label: "In progress",
-    dot: "bg-status-in-progress",
-    fill: "bg-status-in-progress/10 text-amber-700 dark:text-amber-300",
-    border: "border-status-in-progress/40",
-  },
-  resolved: {
-    label: "Resolved",
-    dot: "bg-status-resolved",
-    fill: "bg-status-resolved/10 text-emerald-700 dark:text-emerald-300",
-    border: "border-status-resolved/40",
-  },
-  wont_fix: {
-    label: "Won't fix",
-    dot: "bg-status-wont-fix",
-    fill: "bg-status-wont-fix/10 text-slate-600 dark:text-slate-300",
-    border: "border-status-wont-fix/40",
-  },
+  {} as Record<CommentStatus, StatusMeta>,
+);
+
+export const COMMENT_TAGS = TAGS;
+
+export const PRIORITY_ORDER: CommentPriority[] = ["high", "medium", "low"];
+
+export const PRIORITY_META: Record<CommentPriority, StatusMeta> = {
+  high: { label: "High", color: "#C2542E" },
+  medium: { label: "Medium", color: "#E8B833" },
+  low: { label: "Low", color: "#9A9D99" },
+};
+
+export interface DueMeta {
+  text: string;
+  tone: "" | "late" | "soon" | "ok";
+}
+
+// Mirrors the reference's dueLabel(): overdue/today/tomorrow read as plain language,
+// everything else as a short date; a closed comment's date reads as "Done" rather
+// than a stale countdown.
+export function dueMeta(dueAt: string | null | undefined, closed: boolean): DueMeta | null {
+  if (!dueAt) return null;
+  if (closed) return { text: "Done", tone: "ok" };
+  const due = new Date(dueAt);
+  const now = new Date();
+  const startOfDue = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffDays = Math.round((startOfDue.getTime() - startOfToday.getTime()) / 86_400_000);
+  if (diffDays < 0) return { text: `${Math.abs(diffDays)}d overdue`, tone: "late" };
+  if (diffDays === 0) return { text: "Due today", tone: "soon" };
+  if (diffDays === 1) return { text: "Due tomorrow", tone: "soon" };
+  return { text: `Due ${due.toLocaleDateString(undefined, { day: "numeric", month: "short" })}`, tone: "" };
+}
+
+export function commentDeviceType(comment: CommentOut): string | undefined {
+  return (comment.context as { device_type?: string }).device_type;
+}
+
+export function commentBrowser(comment: CommentOut): string | undefined {
+  return (comment.context as { browser?: string }).browser;
+}
+
+export const DEVICE_TYPE_LABELS: Record<string, string> = {
+  desktop: "Desktop",
+  tablet: "Tablet",
+  mobile: "Mobile",
 };

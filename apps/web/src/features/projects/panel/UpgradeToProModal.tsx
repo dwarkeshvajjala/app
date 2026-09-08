@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { Dialog } from "../../../components/Dialog";
 import { useToast } from "../../../components/Toast";
 
 const FEATURES = [
@@ -27,104 +28,79 @@ export function UpgradeToProModal({ onClose }: { onClose: () => void }) {
   const totalAmount = billing === "monthly" ? monthlyTotal : discountedAnnualTotal;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Upgrade to Pro"
-        onClick={(event) => event.stopPropagation()}
-        className="bg-bg-surface flex w-full max-w-md flex-col gap-5 rounded-xl p-6 dark:bg-[#14141A]"
-      >
-        <div className="flex items-start justify-between gap-2">
-          <h2 className="text-lg font-semibold">Upgrade to Pro</h2>
-          <button onClick={onClose} aria-label="Close" className="text-text-muted text-xl leading-none">
-            ×
-          </button>
-        </div>
-
-        <div className="bg-bg-canvas flex rounded-lg p-1 text-sm font-medium">
-          <button
-            onClick={() => setBilling("monthly")}
-            aria-pressed={billing === "monthly"}
-            className={`flex-1 rounded-md py-2 ${
-              billing === "monthly" ? "bg-bg-surface shadow dark:bg-[#14141A]" : "text-text-muted"
-            }`}
-          >
+    <Dialog title="Upgrade to Pro" onClose={onClose}>
+      <div className="bl-form">
+        <div className="bl-segment" style={{ width: "100%" }}>
+          <button type="button" onClick={() => setBilling("monthly")} aria-pressed={billing === "monthly"} style={{ flex: 1 }}>
             Monthly
           </button>
-          <button
-            onClick={() => setBilling("annually")}
-            aria-pressed={billing === "annually"}
-            className={`flex-1 rounded-md py-2 ${
-              billing === "annually" ? "bg-bg-surface shadow dark:bg-[#14141A]" : "text-text-muted"
-            }`}
-          >
-            Annually <span className="text-accent-primary">Save {ANNUAL_DISCOUNT * 100}%</span>
+          <button type="button" onClick={() => setBilling("annually")} aria-pressed={billing === "annually"} style={{ flex: 1 }}>
+            Annually
+            <span style={{ marginLeft: 5, color: "var(--mint-deep)" }}>Save {ANNUAL_DISCOUNT * 100}%</span>
           </button>
         </div>
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-text-muted text-xs font-medium">Cost</p>
-            <p className="text-2xl font-bold">
-              ${MONTHLY_PRICE_PER_SEAT} <span className="text-text-muted text-sm font-normal">/month/user</span>
+            <p className="bl-mono" style={{ color: "var(--ink-4)" }}>
+              Cost
+            </p>
+            <p style={{ fontSize: 22, fontWeight: 700 }}>
+              ${MONTHLY_PRICE_PER_SEAT} <span style={{ fontSize: 13, fontWeight: 400, color: "var(--ink-4)" }}>/month/user</span>
             </p>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <span className="text-text-muted text-xs font-medium">Seats</span>
-            <select
-              value={seats}
-              onChange={(event) => setSeats(Number(event.target.value))}
-              aria-label="Number of seats"
-              className="rounded-md border border-black/10 px-2 py-1.5 text-sm dark:border-white/10 dark:bg-transparent"
-            >
+          <label style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+            <span className="bl-mono" style={{ color: "var(--ink-4)" }}>
+              Seats
+            </span>
+            <select value={seats} onChange={(event) => setSeats(Number(event.target.value))} aria-label="Number of seats" className="bl-input">
               {[1, 2, 3, 4, 5].map((n) => (
                 <option key={n} value={n}>
                   {n} user{n > 1 ? "s" : ""}
                 </option>
               ))}
             </select>
-          </div>
+          </label>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-black/10 pt-4 dark:border-white/10">
+        <div style={{ borderTop: "1px solid var(--line-soft)", paddingTop: 14 }}>
           <p className="text-sm font-semibold">What you get</p>
-          <ul className="flex flex-col gap-1.5">
+          <ul className="flex flex-col gap-1.5" style={{ marginTop: 8 }}>
             {FEATURES.map((feature) => (
               <li key={feature} className="flex items-start gap-2 text-sm">
-                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-current" />
+                <span className="bl-status-dot" style={{ marginTop: 6, background: "var(--ink-4)" }} />
                 {feature}
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="flex items-center justify-between border-t border-black/10 pt-4 dark:border-white/10">
+        <div className="flex items-center justify-between" style={{ borderTop: "1px solid var(--line-soft)", paddingTop: 14 }}>
           <div>
-            <p className="text-text-muted text-xs font-medium">Total Amount</p>
-            <p className="text-lg font-bold">
+            <p className="bl-mono" style={{ color: "var(--ink-4)" }}>
+              Total amount
+            </p>
+            <p style={{ fontSize: 15, fontWeight: 700 }}>
               ${totalAmount.toFixed(2)}{" "}
               {billing === "annually" && (
-                <span className="text-text-muted text-sm font-normal line-through">
+                <span style={{ fontSize: 12, fontWeight: 400, color: "var(--ink-4)", textDecoration: "line-through" }}>
                   ${fullAnnualTotal.toFixed(2)}
                 </span>
               )}{" "}
-              <span className="text-text-muted text-sm font-normal">
+              <span style={{ fontSize: 12, fontWeight: 400, color: "var(--ink-4)" }}>
                 (Billed {billing === "annually" ? "annually" : "monthly"})
               </span>
             </p>
           </div>
           <button
+            type="button"
             onClick={() => toast("Billing isn't wired up yet - coming soon.", "warning")}
-            className="from-accent-primary rounded-lg bg-gradient-to-r to-fuchsia-500 px-5 py-2.5 text-sm font-semibold whitespace-nowrap text-white"
+            className="bl-button mint"
           >
-            Upgrade Now
+            Upgrade now
           </button>
         </div>
       </div>
-    </div>
+    </Dialog>
   );
 }
