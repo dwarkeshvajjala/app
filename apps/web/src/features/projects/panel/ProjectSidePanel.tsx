@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { RefObject } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import type { ProjectOut } from "../api";
 import { AiTab } from "./AiTab";
@@ -56,7 +57,15 @@ export function ProjectSidePanel({
   selectedCommentId,
   onSelectComment,
 }: ProjectSidePanelProps) {
-  const [activeTab, setActiveTab] = useState<TabId | null>(null);
+  // A shared `?thread=<id>` link (Comments tab's own URL-owned state, see
+  // useCommentFilters.ts) must reopen this drawer on a fresh load - otherwise the id
+  // survives in the URL but CommentsTab never mounts to read it, and the deep link
+  // silently does nothing. Only checked once, at mount: after that, opening/closing
+  // the drawer is the user's own choice and shouldn't be fought on every re-render.
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<TabId | null>(() =>
+    searchParams.get("thread") ? "comments" : null,
+  );
 
   function toggleTab(id: TabId) {
     setActiveTab((current) => (current === id ? null : id));

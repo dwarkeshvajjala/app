@@ -76,3 +76,21 @@ workspace ticket board, and the widget's own copy without all three being update
 together (the widget keeps its own hand-copied constants by design; see
 `packages/ui/src/workflow.ts`'s own comment). No backend, database, generated API
 declaration, or widget file was changed.
+
+## Amendment (audit batch 07, 2026-09-09): decision 5 superseded
+
+Decision 5 ("Comments-tab filters stay local component state, not URL parameters") is
+**superseded**. The M-15 audit (ledger IDs FD-AUD-027..031, UX-AUD-047..055) explicitly
+requires filters and the open-thread id to be URL-owned so a thread deep link and a
+hard refresh both reproduce the same view - the same FE-03 rationale `BoardPage.tsx`
+already followed for its own `?comment=`/filter params (see that file's own comment at
+the top of its `useSearchParams` block). `useCommentFilters.ts` now stores all of
+`status`/`hideResolved`/`layer`/`sort`/`currentPageOnly`/`tags`/`deviceTypes`/
+`browsers`/`assignees`/`display`/`groupBy`/`thread` in `ProjectOverviewPage`'s existing
+search params (same pattern as its `page`/`mode`/`zoom`/`viewport` params - no key
+collisions). `ProjectSidePanel`'s own open/closed drawer state is lazily initialized
+from `?thread=` on mount so a deep link actually opens the Comments tab, not just
+restores its filters once manually reopened.
+
+The rest of TDR-0019 (decisions 1-4) is unaffected and still describes the current
+implementation.

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { RefObject } from "react";
 
 import * as boardApi from "../../board/api";
@@ -13,8 +13,8 @@ import { CommentsList } from "./comments/CommentsList";
 import { FilterSortBar } from "./comments/FilterSortBar";
 import { StatusChips } from "./comments/StatusChips";
 import { commentBrowser, commentDeviceType } from "./comments/types";
-import type { LayerFilter, SortOrder } from "./comments/types";
 import { ViewOptionsBar } from "./comments/ViewOptionsBar";
+import { useCommentFilters } from "./comments/useCommentFilters";
 
 interface CommentsTabProps {
   projectId: string;
@@ -50,22 +50,32 @@ export function CommentsTab({
     queryFn: () => pagesApi.listProjectPages(projectId),
   });
 
-  // null = show every status (the initial state) - clicking a chip isolates the list
-  // down to just that one status, clicking it again (or "Select all") goes back to
-  // showing everything. Not a multi-select toggle: with 6 statuses, "tap one to see just
-  // that bucket" is the more useful click for triaging than gradually excluding buckets.
-  const [activeStatus, setActiveStatus] = useState<CommentStatus | null>(null);
-  const [hideResolved, setHideResolved] = useState(false);
-  const [layerFilter, setLayerFilter] = useState<LayerFilter>("all");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
-  const [currentPageOnly, setCurrentPageOnly] = useState(false);
-  const [activeTags, setActiveTags] = useState<string[]>([]);
-  const [activeDeviceTypes, setActiveDeviceTypes] = useState<string[]>([]);
-  const [activeBrowsers, setActiveBrowsers] = useState<string[]>([]);
-  const [activeAssignees, setActiveAssignees] = useState<string[]>([]);
-  const [displayMode, setDisplayMode] = useState<"comfortable" | "compact">("comfortable");
-  const [groupBy, setGroupBy] = useState<"none" | "page">("none");
-  const [openThreadId, setOpenThreadId] = useState<string | null>(null);
+  const {
+    activeStatus,
+    setActiveStatus,
+    hideResolved,
+    setHideResolved,
+    layerFilter,
+    setLayerFilter,
+    sortOrder,
+    setSortOrder,
+    currentPageOnly,
+    setCurrentPageOnly,
+    activeTags,
+    setActiveTags,
+    activeDeviceTypes,
+    setActiveDeviceTypes,
+    activeBrowsers,
+    setActiveBrowsers,
+    activeAssignees,
+    setActiveAssignees,
+    displayMode,
+    setDisplayMode,
+    groupBy,
+    setGroupBy,
+    openThreadId,
+    setOpenThreadId,
+  } = useCommentFilters();
 
   const allThreads = (comments ?? []).filter((c) => !c.parent_id);
 

@@ -26,6 +26,15 @@ backend, a genuinely separate feature with no existing scaffolding (no composer
 mention-autocomplete UI, no mention-extraction logic anywhere) - deferred, not
 half-built.
 
+> **Superseded (audit batch 03, then batch 07):** the deferral above no longer applies.
+> `MentionsInput.tsx` (composer parser/autocomplete) and `create_reply()` (backend -
+> dedupes via `dict.fromkeys`, validates each id against workspace membership before
+> calling `notification_service.notify_comment_mention`, `backend/app/modules/
+> comments/service.py`) shipped a third trigger type, "mentioned in a reply," per
+> `audit-batch-03-report.md`. Flagged stale (not yet amended) in
+> `audit-batch-00-report.md` and `09-m00-baseline-report.md` per audit rule M-21; this
+> note closes that gap.
+
 ## Decision: `notification.new` has no per-recipient WS channel
 
 `12-API-WebSocket.md` §12.6 only defines two channel shapes: `workspace:{id}:all`

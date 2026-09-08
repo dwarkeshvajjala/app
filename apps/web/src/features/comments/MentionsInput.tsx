@@ -18,7 +18,12 @@ interface MentionsInputProps extends React.TextareaHTMLAttributes<HTMLTextAreaEl
 export function MentionsInput({ onMentionedIdsChange, ...props }: MentionsInputProps) {
   const { workspaceSlug } = useParams();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const mentionedIdsRef = useRef<Set<string>>(new Set());
+  // Maps a mentioned member's id to the exact "@Name " text insertMention() wrote into
+  // the draft - ids never appear in the draft's own text, so this is what lets a later
+  // edit that deletes the mention (backspace, retyping, cutting a line) be detected and
+  // pruned. Without this, deleting "@Bob" from the visible text would still silently
+  // notify Bob on submit, since nothing else ever removes an id once added.
+  const mentionedTextRef = useRef<Map<string, string>>(new Map());
 
   const [mentionState, setMentionState] = useState<{ active: boolean; query: string; startIndex: number; top: number; left: number } | null>(null);
 
@@ -54,9 +59,23 @@ export function MentionsInput({ onMentionedIdsChange, ...props }: MentionsInputP
     }
   }
 
+  // Drops any tracked mention whose inserted text is no longer present in the draft,
+  // so removing "@Bob " from the message also removes Bob from what gets submitted.
+  function pruneRemovedMentions(value: string) {
+    let changed = false;
+    for (const [memberId, text] of mentionedTextRef.current) {
+      if (!value.includes(text)) {
+        mentionedTextRef.current.delete(memberId);
+        changed = true;
+      }
+    }
+    if (changed) onMentionedIdsChange?.(Array.from(mentionedTextRef.current.keys()));
+  }
+
   function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     props.onChange(e);
-    
+    pruneRemovedMentions(e.target.value);
+
     const value = e.target.value;
     const cursor = e.target.selectionStart;
     
@@ -91,8 +110,8 @@ export function MentionsInput({ onMentionedIdsChange, ...props }: MentionsInputP
     } as React.ChangeEvent<HTMLTextAreaElement>;
 
     props.onChange(syntheticEvent);
-    mentionedIdsRef.current.add(member.user_id);
-    onMentionedIdsChange?.(Array.from(mentionedIdsRef.current));
+    mentionedTextRef.current.set(member.user_id, mentionText);
+    onMentionedIdsChange?.(Array.from(mentionedTextRef.current.keys()));
     setMentionState(null);
     
     // Focus back on textarea and set cursor
