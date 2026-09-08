@@ -51,16 +51,52 @@ export function AssetReview({
   const [zoomScale, setZoomScale] = useState(1);
   const [rotation, setRotation] = useState(0);
 
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+      if (e.key === '=' || e.key === '+') { setZoomScale(s => Math.min(4, s + 0.25)); }
+      else if (e.key === '-') { setZoomScale(s => Math.max(0.25, s - 0.25)); }
+      else if (e.key === '[') { setRotation(r => (r - 90) % 360); }
+      else if (e.key === ']') { setRotation(r => (r + 90) % 360); }
+      else if (e.key === 'ArrowRight' && asset && page < asset.page_count) { setPage(p => p + 1); setDraft(null); setSelected(''); }
+      else if (e.key === 'ArrowLeft' && asset && page > 1) { setPage(p => p - 1); setDraft(null); setSelected(''); }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [asset, page]);
   // Drag state for moving/resizing existing comments
   const [draggingComment, setDraggingComment] = useState<{ id: string, type: 'move' | 'resize', startRegion: api.Region, startPoint: { x: number, y: number } } | null>(null);
   const [tempRegion, setTempRegion] = useState<{ id: string, region: api.Region } | null>(null);
 
-  function point(e: React.PointerEvent<HTMLElement>) { const rect = e.currentTarget.getBoundingClientRect(); return { x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)), y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height)) }; }
+  function getPoint(clientX: number, clientY: number, container: HTMLElement) {
+    const rect = container.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = clientX - cx;
+    const dy = clientY - cy;
+    
+    // Rotate back by -rotation
+    const rad = -rotation * Math.PI / 180;
+    const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
+    const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
+    
+    // Un-scale and shift origin to top-left of the un-transformed element
+    const w = container.offsetWidth;
+    const h = container.offsetHeight;
+    
+    const x = (rx / zoomScale + w / 2) / w;
+    const y = (ry / zoomScale + h / 2) / h;
+    
+    return { 
+      x: Math.max(0, Math.min(1, x)), 
+      y: Math.max(0, Math.min(1, y)) 
+    };
+  }
   
   function handleContainerDown(e: React.PointerEvent<HTMLDivElement>) { 
     if (!commentMode || !asset || (e.target as HTMLElement).closest('button')) return; 
     e.preventDefault(); 
-    start.current = point(e); 
+    start.current = getPoint(e.clientX, e.clientY, e.currentTarget); 
     e.currentTarget.setPointerCapture(e.pointerId); 
     setDraft({ ...start.current, width: 0, height: 0, page_number: page }); 
     setSelected(""); 
@@ -68,7 +104,7 @@ export function AssetReview({
   
   function handleContainerMove(e: React.PointerEvent<HTMLDivElement>) { 
     if (draggingComment) {
-      const p = point(e);
+      const p = getPoint(e.clientX, e.clientY, e.currentTarget);
       const { startRegion, startPoint, type } = draggingComment;
       const dx = p.x - startPoint.x;
       const dy = p.y - startPoint.y;
@@ -86,7 +122,7 @@ export function AssetReview({
     }
 
     if (!start.current) return; 
-    const p = point(e), s = start.current; 
+    const p = getPoint(e.clientX, e.clientY, e.currentTarget), s = start.current; 
     setDraft({ x: Math.min(s.x,p.x), y: Math.min(s.y,p.y), width: Math.abs(p.x-s.x), height: Math.abs(p.y-s.y), page_number: page }); 
   }
 
@@ -159,11 +195,7 @@ export function AssetReview({
                 e.stopPropagation();
                 const container = e.currentTarget.closest('.bl-asset-sheet') as HTMLDivElement;
                 container.setPointerCapture(e.pointerId);
-                const rect = container.getBoundingClientRect();
-                const startPoint = { 
-                  x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)), 
-                  y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height)) 
-                };
+                const startPoint = getPoint(e.clientX, e.clientY, container);
                 setDraggingComment({ id: comment.id, type: 'move', startRegion: region, startPoint });
                 setTempRegion({ id: comment.id, region });
               }}
@@ -189,11 +221,7 @@ export function AssetReview({
                   e.stopPropagation();
                   const container = e.currentTarget.closest('.bl-asset-sheet') as HTMLDivElement;
                   container.setPointerCapture(e.pointerId);
-                  const rect = container.getBoundingClientRect();
-                  const startPoint = { 
-                    x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)), 
-                    y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height)) 
-                  };
+                  const startPoint = getPoint(e.clientX, e.clientY, container);
                   setDraggingComment({ id: comment.id, type: 'resize', startRegion: region, startPoint });
                   setTempRegion({ id: comment.id, region });
                 }}

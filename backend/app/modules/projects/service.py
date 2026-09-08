@@ -273,7 +273,9 @@ async def duplicate_project(
         client_id=original.client_id,
     )
 
-    # 3. Copy project settings (excluding proxy_mode and snippet_installed maybe, or copy all)
+    # 3. Copy project settings. proxy_mode/snippet_installed are deliberately excluded -
+    # the new project gets its own fresh proxy share link from create_project() above,
+    # so copying the source's proxy state here would be stale/incorrect.
     settings_patch = ProjectSettingsUpdate(
         capture_device_details=original.settings.capture_device_details,
         reanchor_on_deploy=original.settings.reanchor_on_deploy,
@@ -341,9 +343,11 @@ def _csv_safe_cell(value: str) -> str:
     text starts with =, +, -, or @ is interpreted as a formula by Excel/Sheets when
     the exported file is later opened. Prefixing with a single quote keeps the
     visible text intact but stops it from being evaluated - the M-09 acceptance test
-    this satisfies is literally "CSV formula payloads remain inert." Comment bodies
-    and author names are both attacker-reachable (a guest reviewer authors both), so
-    both need this, not just one."""
+    this satisfies is literally "CSV formula payloads remain inert." Comment bodies,
+    author names, and assignee display names are all attacker-reachable (a guest
+    reviewer authors the first two; any workspace member controls their own display
+    name and can be assigned to a comment), so all three columns need this, not just
+    one."""
     text = str(value)
     if text and text[0] in _CSV_FORMULA_LEAD_CHARS:
         return "'" + text
@@ -403,7 +407,7 @@ async def export_project_comments(
                 comment.priority,
                 _csv_safe_cell(comment.author_name),
                 _csv_safe_cell(comment.body),
-                "; ".join(assignee_names),
+                _csv_safe_cell("; ".join(assignee_names)),
                 comment.due_at.isoformat() if comment.due_at else "",
                 comment.created_at.isoformat(),
             ]

@@ -11,7 +11,7 @@ import { listShareLinks } from "../share-links/api";
 import type { ProjectOut } from "./api";
 import * as api from "./api";
 
-type MenuIconName = "archive" | "clock" | "download" | "duplicate" | "link" | "page" | "rename" | "restore" | "settings" | "share" | "trash";
+type MenuIconName = "archive" | "download" | "duplicate" | "link" | "page" | "rename" | "restore" | "settings" | "share" | "trash";
 
 function MenuIcon({ name }: { name: MenuIconName }) {
   return <svg className="bl-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -20,7 +20,6 @@ function MenuIcon({ name }: { name: MenuIconName }) {
     {name === "link" && <><path d="m9.5 14.5 5-5M11 6.5l2-1.9a3.6 3.6 0 0 1 5 5l-1.9 2M13 17.4l-2 2a3.6 3.6 0 0 1-5-5l1.9-1.9" /></>}
     {name === "rename" && <><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></>}
     {name === "page" && <><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7Z" /><path d="M14 2v5h5" /></>}
-    {name === "clock" && <><circle cx="12" cy="12" r="9" /><path d="M12 8v4l3 2" /></>}
     {name === "duplicate" && <><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></>}
     {name === "download" && <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></>}
     {name === "archive" && <><rect x="2" y="4" width="20" height="5" rx="1" /><path d="M4 9v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9M10 13h4" /></>}
@@ -129,7 +128,6 @@ export function ProjectMenu({ project, workspaceSlug, onManagePages, onShare, on
         {item("Rename project", "rename", () => { setRenameValue(project.name); setRenaming(true); setOpen(false); })}
         {onManagePages && item("Manage pages", "page", () => { setOpen(false); onManagePages(); }, { disabled: Boolean(project.archived_at), note: project.archived_at ? "Restore to edit" : undefined })}
         {!onManagePages && project.project_type !== "website" && item("Manage files", "page", () => undefined, { disabled: true, note: "Coming soon" })}
-        {project.project_type === "website" && item("Deploy history", "clock", () => undefined, { disabled: true, note: "Coming soon" })}
         <div className="bl-dropdown-sep" role="separator" />
         {item("Duplicate project", "duplicate", () => { setConfirmDuplicate(true); setOpen(false); })}
         {item("Export comments", "download", () => { setConfirmExport(true); setOpen(false); })}
@@ -173,6 +171,7 @@ function HardDeleteDialog({ project, onClose, onDeleted }: { project: ProjectOut
   const confirm = useMutation({ mutationFn: () => api.confirmHardDeleteProject(project.id, { correlation_id: preview.data!.correlation_id, project_name: typedName }), onSuccess: onDeleted });
   const isArchived = preview.data?.archived ?? false;
   const nameMatches = typedName.trim() === project.name;
+  const hasUnsafeReferences = (preview.data?.counts.unsafe_object_references ?? 0) > 0;
 
   return <Dialog title={`Delete “${project.name}”?`} onClose={onClose}>
     <div className="bl-danger-banner"><MenuIcon name="trash" /><span><strong>This cannot be undone</strong><small>Archive the project instead if you may need any part of it later.</small></span></div>
@@ -183,13 +182,16 @@ function HardDeleteDialog({ project, onClose, onDeleted }: { project: ProjectOut
       {preview.data && isArchived && <>
         <p>Permanently deleting this project removes its working data and breaks every review link shared with clients.</p>
         <dl className="bl-delete-counts">
-          <div><dt>Pages</dt><dd>{preview.data.counts.pages}</dd></div><div><dt>Comments</dt><dd>{preview.data.counts.comments}</dd></div><div><dt>Assets</dt><dd>{preview.data.counts.project_assets}</dd></div><div><dt>Revisions</dt><dd>{preview.data.counts.revisions}</dd></div><div><dt>Share links</dt><dd>{preview.data.counts.share_links}</dd></div><div><dt>Guest sessions</dt><dd>{preview.data.counts.guest_sessions}</dd></div>
+          <div><dt>Pages</dt><dd>{preview.data.counts.pages}</dd></div><div><dt>Comments</dt><dd>{preview.data.counts.comments}</dd></div><div><dt>Assets</dt><dd>{preview.data.counts.project_assets}</dd></div><div><dt>Revisions</dt><dd>{preview.data.counts.revisions}</dd></div><div><dt>Revision diffs</dt><dd>{preview.data.counts.revision_diffs}</dd></div><div><dt>Recovery logs</dt><dd>{preview.data.counts.recovery_logs}</dd></div><div><dt>Share links</dt><dd>{preview.data.counts.share_links}</dd></div><div><dt>Guest sessions</dt><dd>{preview.data.counts.guest_sessions}</dd></div><div><dt>Notifications</dt><dd>{preview.data.counts.notifications}</dd></div><div><dt>Integrations</dt><dd>{preview.data.counts.project_integrations}</dd></div><div><dt>Stored files</dt><dd>{preview.data.counts.object_keys}</dd></div><div><dt>Audit events retained</dt><dd>{preview.data.counts.retained_audit_events}</dd></div>
         </dl>
         <p className="bl-retention-note">{preview.data.retention_notice}</p>
-        <label className="bl-delete-confirm-label">Type <strong>{project.name}</strong> to confirm<input className="bl-input" value={typedName} onChange={(event) => setTypedName(event.target.value)} autoFocus autoComplete="off" /></label>
-        {confirm.isError && <p role="alert" className="bl-error">{confirm.error.message}</p>}
+        {hasUnsafeReferences && <div className="bl-state-panel" role="alert"><span className="bl-confirm-icon warning"><MenuIcon name="archive" /></span><h3>Cannot delete yet</h3><p>The dry-run found {preview.data.counts.unsafe_object_references} object reference(s) outside this project's accepted storage prefixes. Resolve them, then run the preview again before permanent deletion.</p><button type="button" className="bl-quiet" onClick={() => preview.refetch()}>Re-check</button></div>}
+        {!hasUnsafeReferences && <>
+          <label className="bl-delete-confirm-label">Type <strong>{project.name}</strong> to confirm<input className="bl-input" value={typedName} onChange={(event) => setTypedName(event.target.value)} autoFocus autoComplete="off" /></label>
+          {confirm.isError && <p role="alert" className="bl-error">{confirm.error.message}</p>}
+        </>}
       </>}
     </div>
-    <footer className="bl-dialog-actions bl-dialog-actions-bordered"><button type="button" className="bl-quiet" onClick={onClose}>Cancel</button>{preview.data && isArchived && <button type="button" className="bl-button danger" disabled={!nameMatches || confirm.isPending} onClick={() => confirm.mutate()}>{confirm.isPending ? "Deleting…" : "Delete project forever"}</button>}</footer>
+    <footer className="bl-dialog-actions bl-dialog-actions-bordered"><button type="button" className="bl-quiet" onClick={onClose}>Cancel</button>{preview.data && isArchived && !hasUnsafeReferences && <button type="button" className="bl-button danger" disabled={!nameMatches || confirm.isPending} onClick={() => confirm.mutate()}>{confirm.isPending ? "Deleting…" : "Delete project forever"}</button>}</footer>
   </Dialog>;
 }
