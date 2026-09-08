@@ -103,6 +103,7 @@ export function LoginPage() {
   return (
     <div className="lg" id="lgGate">
       <section className="lg-side">
+        {/* Brand centred at top of the left column */}
         <div className="lg-brand">
           <span className="lg-mark">B</span>
           <span><b>Backline</b><em>CLIENT REVIEW, IN ONE PLACE</em></span>
@@ -147,6 +148,9 @@ export function LoginPage() {
                   {isSubmitting ? <span className="lg-spin"></span> : null}
                   {t('auth.login.submit' as TranslationKeys)}
                 </button>
+                <p className="lg-new">
+                  No account needed — <em>first sign-in creates yours automatically.</em>
+                </p>
               </form>
             )}
 

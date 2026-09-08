@@ -129,22 +129,36 @@ body{font-family:'Schibsted Grotesk',Helvetica,Arial,sans-serif;background:var(-
 /* ================= LOGIN ================= */
 .lg{position:fixed;inset:0;z-index:200;background:var(--paper);
   display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);overflow:auto}
+
+/* Left panel — white, form vertically centered */
 .lg-side{background:var(--surface);border-right:1px solid var(--line);
-  display:flex;flex-direction:column;padding:30px 40px 0}
-.lg-stage{background:var(--paper);display:flex;flex-direction:column;
-  justify-content:center;padding:40px;overflow:hidden}
+  display:flex;flex-direction:column;padding:36px 48px}
 
-/* the mark sits on the centre line of the column, above the form */
+/* Right panel — animated soft brand gradient */
+.lg-stage{
+  display:flex;flex-direction:column;justify-content:center;
+  padding:52px 48px;overflow:hidden;position:relative;
+  background:linear-gradient(135deg,#EBF9F3 0%,var(--paper) 42%,#E4EFF9 100%);
+}
+.lg-stage::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 50% at 70% 30%,rgba(105,222,178,.18) 0%,transparent 70%),
+             radial-gradient(ellipse 40% 40% at 20% 80%,rgba(91,127,166,.10) 0%,transparent 70%);
+}
+
+/* Brand — centered above form */
 .lg-brand{display:flex;flex-direction:column;align-items:center;gap:9px;
-  text-align:center;padding:8px 0 0}
-.lg-mark{width:38px;height:38px;border-radius:8px;background:var(--ink);color:var(--mint);
-  display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:17px}
-.lg-brand b{font-size:15px;letter-spacing:-0.02em;display:block}
+  text-align:center;margin-bottom:32px}
+.lg-mark{width:42px;height:42px;border-radius:10px;background:var(--ink);color:var(--mint);
+  display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:19px;
+  box-shadow:0 4px 14px rgba(11,11,11,.22),0 0 0 1px rgba(105,222,178,.15)}
+.lg-brand b{font-size:15px;font-weight:700;letter-spacing:-0.025em;display:block;color:var(--ink)}
 .lg-brand em{font-family:var(--mono);font-size:9.5px;color:var(--ink-4);
-  letter-spacing:.07em;font-style:normal;display:block;margin-top:2px}
+  letter-spacing:.09em;font-style:normal;display:block;margin-top:1px}
 
-.lg-form{width:100%;max-width:344px;margin:0 auto;padding:34px 0 40px;flex:1}
-.lg h1{font-size:19px;font-weight:700;letter-spacing:-0.02em;margin:0 0 20px;text-align:center}
+/* Form — centred vertically by flex on .lg-side; brand is above form */
+.lg-form{width:100%;max-width:344px;margin:auto;padding:0}
+.lg h1{font-size:20px;font-weight:700;letter-spacing:-0.025em;margin:0 0 22px;text-align:center;color:var(--ink)}
 .lg-lede{margin:-12px 0 20px;color:var(--ink-3);font-size:13px;line-height:1.55;text-align:center}
 
 /* ---- google ---- */
@@ -243,8 +257,13 @@ body{font-family:'Schibsted Grotesk',Helvetica,Arial,sans-serif;background:var(-
   word-break:break-all;text-align:center}
 
 /* ---- footer ---- */
-.lg-foot{border-top:1px solid var(--line-soft);padding:16px 0 20px;
-  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+/* New-to-Backline hint (auto-creates account on first OTP verify) */
+.lg-new{margin-top:22px;padding-top:18px;border-top:1px solid var(--line-soft);
+  text-align:center;font-size:12.5px;color:var(--ink-3);line-height:1.6}
+.lg-new em{font-style:normal;font-weight:600;color:var(--ink)}
+
+.lg-foot{border-top:1px solid var(--line-soft);padding:18px 0 0;
+  margin-top:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap;
   font-size:11.5px;color:var(--ink-4)}
 .lg-foot .c{margin-right:auto;font-family:var(--mono);font-size:10px;letter-spacing:.03em}
 .lg-foot a{color:var(--ink-3);padding:4px 9px;border-radius:20px;text-decoration:none;
@@ -292,11 +311,10 @@ body{font-family:'Schibsted Grotesk',Helvetica,Arial,sans-serif;background:var(-
 @media (max-width:980px){
   .lg{grid-template-columns:1fr}
   .lg-stage{display:none}
-  .lg-side{border-right:0}
+  .lg-side{border-right:0;padding:28px 28px}
 }
 @media (max-width:430px){
-  .lg-side{padding:24px 22px 0}
-  .lg-form{padding:26px 0 32px}
+  .lg-side{padding:24px 20px}
   .lg-foot{justify-content:center}
   .lg-foot .c{margin:0 0 4px;width:100%;text-align:center}
 }
