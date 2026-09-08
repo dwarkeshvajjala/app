@@ -1,5 +1,16 @@
 # Delivery and verification ledger
 
+## 2026-09-08: Vercel frontend build regression fix
+
+- Exported the shared `PlusIcon` and `SearchIcon` used by the committed projects
+  dashboard. The exports had remained only in an unstaged local edit, so a clean
+  Linux/Vercel checkout failed during `tsc -b` even though the Windows worktree had
+  stale incremental output.
+- Verified the pushed commit from a clean checkout with `pnpm --filter @backline/web
+  build` (`tsc -b && vite build`); it passes with only the existing large-chunk warning.
+- The local multi-service Vercel emulator completed the web service and then stopped at
+  the unrelated backend service because `uv` is not installed in this environment.
+
 ## 2026-09-08: Post-login UI migration — project dialogs slice
 
 - Migrated `ProjectForm` to the Final Draft's progressive create flow with the
