@@ -1,5 +1,33 @@
 # Delivery and verification ledger
 
+## 2026-09-08: Post-login UI migration — project review workspace slice
+
+- Migrated `ProjectLayout` and the website `ProjectOverviewPage` to the Final Draft's
+  focused review workspace: compact project/environment/URL header, URL-backed page,
+  mode, viewport, orientation and zoom state, keyboard page-tab navigation, genuine
+  open-review/share actions, safe-proxy browser frame, and a dense bottom status bar.
+- Reworked the canvas around the existing private proxy and separately bundled widget.
+  Loading, timeout/failure, no-link, snippet-only-link, cross-origin-page, archived,
+  project-query and page/share-query states are explicit. No public proxy, layout mock,
+  localStorage data, or simulated network success was added.
+- Preserved widget-owned comment placement and navigation, and added a persistent
+  selected comment row/status after the side panel asks the iframe to reveal its real
+  pin. The panel launcher now uses the ink/paper/mint rail on desktop and a usable
+  bottom launcher/sheet arrangement at narrow widths; the panel's full content
+  migration remains Slice 04 scope.
+- Rebuilt viewport and version controls with grouped responsive presets, bounded custom
+  dimensions, real revision-history loading/empty/error/current states, and the shared
+  React Query key factory. Browser emulation, deploy-triggered capture and alternate
+  preview sources remain honestly unavailable rather than pretending to change server
+  or widget behavior.
+- Existing React Router structure, workspace authorization resolution, React Query API
+  calls and cache updates, project/page/share dialogs, and website-versus-asset routing
+  were retained. No backend, database, generated API declaration, or widget file was
+  changed.
+- Not run at the user's request: lint, typecheck, build, automated tests, local preview,
+  browser QA, responsive screenshot comparison, and end-to-end keyboard QA. The final
+  source diff was inspected only; release verification remains required.
+
 ## 2026-09-08: Vercel frontend build regression fix
 
 - Exported the shared `PlusIcon` and `SearchIcon` used by the committed projects

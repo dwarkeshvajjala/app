@@ -155,3 +155,82 @@ export function InfoIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function ArrowLeftIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M19 12H5M11 18l-6-6 6-6" />
+    </Icon>
+  );
+}
+
+export function PointerIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="m4 3 7 17 2.2-6.8L20 11 4 3Z" />
+    </Icon>
+  );
+}
+
+export function ReloadIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M20 6v5h-5M4 18v-5h5" />
+      <path d="M6.1 8.5A7 7 0 0 1 18.6 7L20 11M4 13l1.4 4A7 7 0 0 0 17.9 15.5" />
+    </Icon>
+  );
+}
+
+export function ExternalLinkIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M14 4h6v6M10 14 20 4" />
+      <path d="M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6" />
+    </Icon>
+  );
+}
+
+export function ZoomOutIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="M7.5 10.5h6M15.5 15.5 21 21" />
+    </Icon>
+  );
+}
+
+export function ZoomInIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="M7.5 10.5h6M10.5 7.5v6M15.5 15.5 21 21" />
+    </Icon>
+  );
+}
+
+export function PortraitIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <rect x="7" y="2.5" width="10" height="19" rx="1.5" />
+      <path d="M11 18.5h2" />
+    </Icon>
+  );
+}
+
+export function LandscapeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <rect x="2.5" y="7" width="19" height="10" rx="1.5" />
+      <path d="M18.5 11v2" />
+    </Icon>
+  );
+}
+
+export function GlobeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+    </Icon>
+  );
+}

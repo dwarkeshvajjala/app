@@ -14,9 +14,10 @@ export interface CommentRowProps {
   projectId: string;
   sequenceNumber: number;
   onNavigate: (commentId: string) => void;
+  selected?: boolean;
 }
 
-export function CommentRow({ comment, projectId, sequenceNumber, onNavigate }: CommentRowProps) {
+export function CommentRow({ comment, projectId, sequenceNumber, onNavigate, selected = false }: CommentRowProps) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -57,11 +58,15 @@ export function CommentRow({ comment, projectId, sequenceNumber, onNavigate }: C
       onClick={() => onNavigate(comment.id)}
       role="button"
       tabIndex={0}
+      aria-current={selected ? "true" : undefined}
       onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") onNavigate(comment.id);
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onNavigate(comment.id);
+        }
       }}
       title="Jump to this comment on the page"
-      className="border-black/8 flex cursor-pointer flex-col gap-2 rounded-lg border bg-white p-3 text-left dark:border-white/10 dark:bg-white/5"
+      className={`bl-comment-row border-black/8 flex cursor-pointer flex-col gap-2 rounded-lg border bg-white p-3 text-left dark:border-white/10 dark:bg-white/5 ${selected ? "is-selected" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">

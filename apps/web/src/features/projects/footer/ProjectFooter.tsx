@@ -1,10 +1,18 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
-import { CollaboratorsModal } from "../panel/CollaboratorsModal";
-import { CheckCircleIcon, InfoIcon, LockIcon, RocketIcon, ShareIcon } from "../panel/icons";
-import { ProFeatureModal } from "../panel/ProFeatureModal";
-import { UpgradeToProModal } from "../panel/UpgradeToProModal";
 import type { ProjectOut } from "../api";
+import {
+  CheckCircleIcon,
+  LandscapeIcon,
+  LockIcon,
+  PortraitIcon,
+  RocketIcon,
+  ShareIcon,
+  ZoomInIcon,
+  ZoomOutIcon,
+} from "../panel/icons";
+import { CollaboratorsModal } from "../panel/CollaboratorsModal";
 import { ViewportMenu, type ViewportOption } from "./ViewportMenu";
 import { VersionMenu } from "./VersionMenu";
 
@@ -16,34 +24,27 @@ interface ProjectFooterProps {
   workspaceSlug: string;
   workspaceName: string;
   totalComments: number;
+  commentsUnavailable?: boolean;
   currentPageId: string | null;
   onSelectPage: (pageId: string) => void;
-  mode: CanvasMode;
-  onModeChange: (mode: CanvasMode) => void;
   viewport: ViewportOption | null;
   onViewportChange: (viewport: ViewportOption | null) => void;
-  orientation?: "portrait" | "landscape";
-  onOrientationChange?: (orientation: "portrait" | "landscape") => void;
-  zoomScale?: number;
-  onZoomChange?: (scale: number) => void;
-  iframeStatus?: "loading" | "loaded" | "error";
-  onReload?: () => void;
+  orientation: "portrait" | "landscape";
+  onOrientationChange: (orientation: "portrait" | "landscape") => void;
+  zoomScale: number;
+  onZoomChange: (scale: number) => void;
+  iframeStatus: "loading" | "loaded" | "error" | "unavailable";
 }
 
-// Mirrors the reference's bottom bar. Version history, page approval, and private
-// mode are all Pro features not actually implemented yet - each just leads to the
-// shared paywall (ProFeatureModal -> UpgradeToProModal) rather than doing anything
-// real. Viewport switching and the Browse/Comment split are real, working controls.
 export function ProjectFooter({
   project,
   workspaceId,
   workspaceSlug,
   workspaceName,
   totalComments,
+  commentsUnavailable = false,
   currentPageId,
   onSelectPage,
-  mode,
-  onModeChange,
   viewport,
   onViewportChange,
   orientation,
@@ -51,142 +52,129 @@ export function ProjectFooter({
   zoomScale,
   onZoomChange,
   iframeStatus,
-  onReload,
 }: ProjectFooterProps) {
-  const [showShare, setShowShare] = useState(false);
-  const [approvalPaywall, setApprovalPaywall] = useState(false);
-  const [privateModePaywall, setPrivateModePaywall] = useState(false);
-  const [showPricing, setShowPricing] = useState(false);
+  const [showCollaborators, setShowCollaborators] = useState(false);
+  const width = viewport
+    ? orientation === "portrait"
+      ? viewport.width
+      : viewport.height
+    : null;
+  const height = viewport
+    ? orientation === "portrait"
+      ? viewport.height
+      : viewport.width
+    : null;
+  const statusLabel = iframeStatus === "loaded"
+    ? "Proxy connected"
+    : iframeStatus === "loading"
+      ? "Connecting proxy"
+      : iframeStatus === "error"
+        ? "Preview unavailable"
+        : "No review link";
 
   return (
-    <div className="flex shrink-0 items-center justify-between gap-2 border-t border-black/10 px-3 py-2 dark:border-white/10">
-      <div className="flex items-center gap-1.5">
+    <footer className="bl-review-statusbar" aria-label="Canvas status and viewport controls">
+      <div className="bl-review-status-controls">
+        <ViewportMenu viewport={viewport} onChange={onViewportChange} />
+        <div className="bl-review-segment" aria-label="Viewport orientation">
+          <button
+            type="button"
+            aria-pressed={orientation === "portrait"}
+            aria-label="Portrait orientation"
+            disabled={!viewport}
+            onClick={() => onOrientationChange("portrait")}
+          >
+            <PortraitIcon width={13} height={13} />
+          </button>
+          <button
+            type="button"
+            aria-pressed={orientation === "landscape"}
+            aria-label="Landscape orientation"
+            disabled={!viewport}
+            onClick={() => onOrientationChange("landscape")}
+          >
+            <LandscapeIcon width={13} height={13} />
+          </button>
+        </div>
+        <div className="bl-review-zoom" aria-label="Canvas zoom">
+          <button
+            type="button"
+            aria-label="Zoom out"
+            disabled={zoomScale <= 0.5}
+            onClick={() => onZoomChange(Math.max(0.5, zoomScale - 0.1))}
+          >
+            <ZoomOutIcon width={13} height={13} />
+          </button>
+          <button
+            type="button"
+            className="bl-review-zoom-value"
+            aria-label="Reset zoom to 100 percent"
+            onClick={() => onZoomChange(1)}
+          >
+            {Math.round(zoomScale * 100)}%
+          </button>
+          <button
+            type="button"
+            aria-label="Zoom in"
+            disabled={zoomScale >= 1.5}
+            onClick={() => onZoomChange(Math.min(1.5, zoomScale + 0.1))}
+          >
+            <ZoomInIcon width={13} height={13} />
+          </button>
+        </div>
+      </div>
+
+      <div className="bl-review-source-status" role="status" aria-live="polite">
+        <span className={`bl-review-source-dot is-${iframeStatus}`} aria-hidden="true" />
+        <span>{statusLabel}</span>
+        <span aria-hidden="true">·</span>
+        <span>{width && height ? `${width} × ${height}` : "Fit canvas"}</span>
+        <span aria-hidden="true">·</span>
+        <span>Current browser</span>
+      </div>
+
+      <div className="bl-review-status-actions">
+        <span className="bl-review-comment-count">
+          {commentsUnavailable ? "Comments unavailable" : `${totalComments} comment${totalComments === 1 ? "" : "s"}`}
+        </span>
         <VersionMenu projectId={project.id} currentPageId={currentPageId} onSelectPage={onSelectPage} />
-        <ViewportMenu
-          viewport={viewport}
-          onChange={onViewportChange}
-          totalComments={totalComments}
-        />
-        {viewport && onOrientationChange && (
-          <button
-            onClick={() => onOrientationChange(orientation === "portrait" ? "landscape" : "portrait")}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-black/10 dark:border-white/10 text-xs font-medium"
-            title="Toggle orientation"
-          >
-            {orientation === "portrait" ? "◫" : "▯"}
-          </button>
-        )}
-        {onZoomChange && zoomScale !== undefined && (
-          <div className="flex items-center gap-1 rounded-lg border border-black/10 px-1 py-0.5 dark:border-white/10">
-            <button onClick={() => onZoomChange(Math.max(0.25, zoomScale - 0.25))} className="w-6 h-6 flex items-center justify-center text-xs hover:bg-black/5 dark:hover:bg-white/5 rounded">-</button>
-            <span className="text-xs font-medium w-10 text-center">{Math.round(zoomScale * 100)}%</span>
-            <button onClick={() => onZoomChange(Math.min(3, zoomScale + 0.25))} className="w-6 h-6 flex items-center justify-center text-xs hover:bg-black/5 dark:hover:bg-white/5 rounded">+</button>
-          </div>
-        )}
-        {onReload && (
-          <button
-            onClick={onReload}
-            className="flex items-center gap-1.5 rounded-lg border border-black/10 px-2.5 py-1.5 text-xs font-medium dark:border-white/10"
-            title="Reload preview"
-          >
-            <span className={iframeStatus === "loading" ? "animate-spin" : ""}>↻</span>
-          </button>
-        )}
-        <button
-          onClick={() => setShowShare(true)}
-          className="flex items-center gap-1.5 rounded-lg border border-black/10 px-2.5 py-1.5 text-xs font-medium dark:border-white/10"
-        >
+        <button type="button" className="bl-review-control" onClick={() => setShowCollaborators(true)}>
           <ShareIcon width={13} height={13} />
-          Share
-        </button>
-      </div>
-
-      <div className="bg-bg-canvas flex rounded-lg p-0.5 text-xs font-medium">
-        <button
-          onClick={() => onModeChange("browse")}
-          aria-pressed={mode === "browse"}
-          aria-label="Browse mode"
-          className={`rounded-md px-3 py-1 ${
-            mode === "browse"
-              ? "from-accent-primary bg-gradient-to-r to-fuchsia-500 text-white"
-              : "text-text-muted"
-          }`}
-        >
-          Browse
+          <span>Access</span>
         </button>
         <button
-          onClick={() => onModeChange("comment")}
-          aria-pressed={mode === "comment"}
-          aria-label="Comment mode"
-          className={`rounded-md px-3 py-1 ${
-            mode === "comment"
-              ? "from-accent-primary bg-gradient-to-r to-fuchsia-500 text-white"
-              : "text-text-muted"
-          }`}
-        >
-          Comment
-        </button>
-      </div>
-
-      <div className="flex items-center gap-1.5">
-        <button
-          onClick={() => setShowPricing(true)}
-          className="from-accent-primary flex items-center gap-1.5 rounded-lg bg-gradient-to-r to-fuchsia-500 px-2.5 py-1.5 text-xs font-semibold text-white"
+          type="button"
+          className="bl-review-control bl-review-coming-soon"
+          disabled
+          title="Deploy-triggered capture is coming soon"
         >
           <RocketIcon width={13} height={13} />
-          Upgrade to Pro
+          <span>Deploy sync</span>
+          <em>Coming soon</em>
         </button>
-        <button
-          onClick={() => setApprovalPaywall(true)}
-          aria-label="Approve page"
-          title="Approve page"
-          className="flex h-7 w-7 items-center justify-center rounded-lg border border-black/10 dark:border-white/10"
-        >
-          <CheckCircleIcon width={14} height={14} />
+        <button type="button" className="bl-review-control bl-review-optional-control" disabled title="Page approval is coming soon">
+          <CheckCircleIcon width={13} height={13} />
+          <span>Approve</span>
+          <em>Coming soon</em>
         </button>
-        <button
-          onClick={() => setPrivateModePaywall(true)}
-          className="flex items-center gap-1.5 rounded-lg border border-black/10 px-2.5 py-1.5 text-xs font-medium dark:border-white/10"
-        >
+        <button type="button" className="bl-review-control bl-review-optional-control" disabled title="Private comment mode is coming soon">
           <LockIcon width={13} height={13} />
-          Private Mode
-          <InfoIcon width={13} height={13} className="text-text-muted" />
-          <span className="relative ml-0.5 h-3.5 w-6 shrink-0 rounded-full bg-black/15 dark:bg-white/15">
-            <span className="absolute top-0.5 left-0.5 h-2.5 w-2.5 rounded-full bg-white" />
-          </span>
+          <span>Private</span>
+          <em>Coming soon</em>
         </button>
+        <Link className="bl-review-control bl-review-optional-control" to={`/w/${workspaceSlug}/billing`}>
+          Plans
+        </Link>
       </div>
-
-      {showShare && (
+      {showCollaborators && (
         <CollaboratorsModal
           project={project}
           workspaceId={workspaceId}
           workspaceSlug={workspaceSlug}
           workspaceName={workspaceName}
-          onClose={() => setShowShare(false)}
+          onClose={() => setShowCollaborators(false)}
         />
       )}
-      {approvalPaywall && (
-        <ProFeatureModal
-          description="Streamline your workflow with page approval functionality. Upgrade to mark pages as approved and prevent further changes, ensuring final versions are locked and ready for production."
-          onClose={() => setApprovalPaywall(false)}
-          onUpgrade={() => {
-            setApprovalPaywall(false);
-            setShowPricing(true);
-          }}
-        />
-      )}
-      {privateModePaywall && (
-        <ProFeatureModal
-          description="Keep your internal comments within your team with private mode. Upgrade to leave private comments and streamline your feedback process within your team."
-          onClose={() => setPrivateModePaywall(false)}
-          onUpgrade={() => {
-            setPrivateModePaywall(false);
-            setShowPricing(true);
-          }}
-        />
-      )}
-      {showPricing && <UpgradeToProModal onClose={() => setShowPricing(false)} />}
-    </div>
+    </footer>
   );
 }

@@ -17,6 +17,7 @@ export const qk = {
   project: (projectId: string) => ["project", projectId] as const,
   projectPages: (projectId: string) => ["project", projectId, "pages"] as const,
   projectComments: (projectId: string) => ["project", projectId, "comments"] as const,
+  projectRevisions: (projectId: string) => ["project", projectId, "revisions"] as const,
   shareLinks: (projectId: string) => ["project", projectId, "share-links"] as const,
   hardDeletePreview: (projectId: string) => ["project", projectId, "hard-delete-preview"] as const,
   // Broad, deliberately over-inclusive prefix - invalidates every "workspace"-rooted

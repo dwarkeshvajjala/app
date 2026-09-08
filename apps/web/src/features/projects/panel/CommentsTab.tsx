@@ -16,9 +16,11 @@ interface CommentsTabProps {
   projectId: string;
   canvasRef: RefObject<HTMLIFrameElement | null>;
   currentPageId: string | null;
+  selectedCommentId?: string | null;
+  onSelectComment?: (commentId: string) => void;
 }
 
-export function CommentsTab({ projectId, canvasRef, currentPageId }: CommentsTabProps) {
+export function CommentsTab({ projectId, canvasRef, currentPageId, selectedCommentId, onSelectComment }: CommentsTabProps) {
   const { data: comments, isLoading } = useQuery({
     queryKey: qk.projectComments(projectId),
     queryFn: () => boardApi.listProjectComments(projectId),
@@ -101,6 +103,7 @@ export function CommentsTab({ projectId, canvasRef, currentPageId }: CommentsTab
   // rendered (off-screen, or the target hadn't loaded yet) can still genuinely exist -
   // this is how a reviewer actually finds it again.
   function navigateToComment(commentId: string) {
+    onSelectComment?.(commentId);
     canvasRef.current?.contentWindow?.postMessage(
       { type: "backline:scroll-to-comment", commentId },
       new URL(API_BASE_URL).origin,
@@ -156,6 +159,7 @@ export function CommentsTab({ projectId, canvasRef, currentPageId }: CommentsTab
         projectId={projectId}
         sequenceByCommentId={sequenceByCommentId}
         onNavigate={navigateToComment}
+        selectedCommentId={selectedCommentId}
       />
     </div>
   );

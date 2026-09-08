@@ -1,15 +1,13 @@
 import type { Schemas } from "@backline/types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 
 import { useWSEvent } from "../../app/WSProvider";
-import { LoadingScreen } from "../../components/LoadingScreen";
 import { API_BASE_URL, apiFetch } from "../../lib/api-client";
 import { removeProjectComment, upsertProjectComment } from "../../lib/comment-cache";
 import { qk } from "../../lib/query-keys";
-
-type PageOut = Schemas["PageOut"];
+import { AssetReview } from "../assets/AssetReview";
 import * as boardApi from "../board/api";
 import type { CommentOut } from "../board/api";
 import * as shareLinksApi from "../share-links/api";
@@ -17,12 +15,43 @@ import { ShareProjectModal } from "../workspaces/ShareProjectModal";
 import type { WorkspaceOut } from "../workspaces/api";
 import * as projectsApi from "./api";
 import { ProjectFooter, type CanvasMode } from "./footer/ProjectFooter";
-import type { ViewportOption } from "./footer/ViewportMenu";
+import { VIEWPORTS, type ViewportOption } from "./footer/ViewportMenu";
+import {
+  ArrowLeftIcon,
+  CommentsIcon,
+  ExternalLinkIcon,
+  GlobeIcon,
+  PointerIcon,
+  ReloadIcon,
+  ShareIcon,
+} from "./panel/icons";
 import { ProjectSidePanel } from "./panel/ProjectSidePanel";
-import { AssetReview } from "../assets/AssetReview";
+import { ProjectForm } from "./ProjectForm";
 import { ProjectMenu } from "./ProjectMenu";
 import { ProjectPagesModal } from "./ProjectPagesModal";
-import { ProjectForm } from "./ProjectForm";
+
+type PageOut = Schemas["PageOut"];
+
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 1.5;
+
+function clampZoom(value: number) {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(value * 10) / 10));
+}
+
+function reviewUrl(token: string) {
+  return `${window.location.origin}/review/${token}`;
+}
+
+function pageLabel(page: PageOut) {
+  if (page.title) return page.title;
+  try {
+    return new URL(page.url_normalized).pathname || "/";
+  } catch {
+    return page.url_normalized;
+  }
+}
 
 export function ProjectOverviewPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
@@ -31,57 +60,56 @@ export function ProjectOverviewPage() {
   const [showShare, setShowShare] = useState(false);
   const [showPages, setShowPages] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [mode, setMode] = useState<CanvasMode>("comment");
-  const [viewport, setViewport] = useState<ViewportOption | null>(null);
+  const [currentPageId, setCurrentPageId] = useState<string | null>(null);
+  const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
+  const [iframeStatus, setIframeStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const [retryCount, setRetryCount] = useState(0);
   const canvasRef = useRef<HTMLIFrameElement>(null);
+  const pageTabsRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
-  // FD-AUD-025: page tabs above the canvas, deep-linkable via ?page=<id> - shares
-  // ProjectPagesModal's query key/cache so add/rename/reorder there is reflected here
-  // without a second fetch.
   const activePageIdParam = searchParams.get("page");
-  const { data: pages } = useQuery({
+  const mode: CanvasMode = searchParams.get("mode") === "browse" ? "browse" : "comment";
+  const orientation = searchParams.get("orientation") === "landscape" ? "landscape" : "portrait";
+  const zoomScale = clampZoom(Number(searchParams.get("zoom") ?? 1));
+  const viewport = useMemo<ViewportOption | null>(() => {
+    const name = searchParams.get("viewport");
+    if (!name) return null;
+    if (name === "Custom") {
+      const width = Number(searchParams.get("viewportWidth"));
+      const height = Number(searchParams.get("viewportHeight"));
+      if (width >= 280 && width <= 2560 && height >= 320 && height <= 2000) {
+        return { name, width, height };
+      }
+      return null;
+    }
+    return VIEWPORTS.find((option) => option.name === name) ?? null;
+  }, [searchParams]);
+
+  const pagesQuery = useQuery({
     queryKey: qk.projectPages(projectId ?? ""),
     queryFn: () => apiFetch<PageOut[]>(`/api/v1/projects/${projectId}/pages`),
     enabled: !!projectId,
   });
-
-  // Cross-origin (the canvas is served from the API's own proxy origin, not this
-  // dashboard's) - the widget (apps/widget/src/index.ts) posts this once it knows
-  // which page it registered, so "show comments on current page only" has something to
-  // filter against. Reset on iframe navigation isn't possible to detect directly
-  // (cross-origin), so this only ever reflects the most recent page the widget itself
-  // reported - stale until the next full load reports a new one.
-  const [currentPageId, setCurrentPageId] = useState<string | null>(null);
-
-  const [iframeStatus, setIframeStatus] = useState<"loading" | "loaded" | "error">("loading");
-  const [retryCount, setRetryCount] = useState(0);
-  const [zoomScale, setZoomScale] = useState(1);
-  const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
-
-  const { data: project, isLoading } = useQuery({
+  const projectQuery = useQuery({
     queryKey: qk.project(projectId ?? ""),
     queryFn: () => projectsApi.getProject(projectId!),
     enabled: !!projectId,
   });
-
-  const { data: shareLinks } = useQuery({
+  const shareLinksQuery = useQuery({
     queryKey: qk.shareLinks(projectId ?? ""),
     queryFn: () => shareLinksApi.listShareLinks(projectId!),
     enabled: !!projectId,
   });
-
-  const { data: comments } = useQuery({
+  const commentsQuery = useQuery({
     queryKey: qk.projectComments(projectId ?? ""),
     queryFn: () => boardApi.listProjectComments(projectId!),
     enabled: !!projectId,
   });
+  const hasProxyCandidate = (shareLinksQuery.data ?? []).some(
+    (link) => link.revoked_at === null && link.mode === "proxy",
+  );
 
-  // Comments panel/Details tab share this same query - without live updates, a guest
-  // commenting through this very canvas (or via the widget elsewhere) wouldn't show up
-  // here until the query's 30s staleTime lapsed, reading as "my comment didn't save"
-  // even though it did. Same targeted-merge pattern BoardPage already uses, not a
-  // blind invalidate (14-State-Management.md §14.4).
   const upsertComment = useCallback(
     (payload: CommentOut & { project_id: string }) => {
       if (payload.project_id !== projectId) return;
@@ -104,155 +132,239 @@ export function ProjectOverviewPage() {
   useEffect(() => {
     function onMessage(event: MessageEvent) {
       if (event.source !== canvasRef.current?.contentWindow) return;
-      if (event.data?.type === "backline:page-registered") {
-        const pageId = event.data.pageId as string;
-        setCurrentPageId(pageId);
-        setIframeStatus("loaded");
-        // Keep the URL's ?page= honest when the reviewer navigates within the
-        // reviewed site itself (an internal link), not just when they click a tab.
-        setSearchParams(
-          (prev) => {
-            if (prev.get("page") === pageId) return prev;
-            const next = new URLSearchParams(prev);
-            next.set("page", pageId);
-            return next;
-          },
-          { replace: true },
-        );
-      }
+      if (event.data?.type !== "backline:page-registered") return;
+      const pageId = event.data.pageId as string;
+      setCurrentPageId(pageId);
+      setIframeStatus("loaded");
+      setSearchParams(
+        (previous) => {
+          if (previous.get("page") === pageId) return previous;
+          const next = new URLSearchParams(previous);
+          next.set("page", pageId);
+          return next;
+        },
+        { replace: true },
+      );
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [setSearchParams]);
 
   useEffect(() => {
+    if (!hasProxyCandidate) return;
     setIframeStatus("loading");
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
       setIframeStatus((current) => current === "loading" ? "error" : current);
     }, 30000);
-    return () => clearTimeout(timer);
-  }, [projectId, retryCount]);
+    return () => window.clearTimeout(timer);
+  }, [activePageIdParam, hasProxyCandidate, mode, projectId, retryCount]);
 
-  if (isLoading) {
-    return <LoadingScreen label="Loading project" />;
-  }
-
-  if (!project) {
-    return <p className="text-recovery-orphaned p-6 text-sm">Project not found.</p>;
-  }
-
-  const activeLinks = (shareLinks ?? []).filter((link) => link.revoked_at === null);
-  if (project.archived_at) {
-    return <main className="bl-wrap"><h1>This project is archived</h1><Link className="bl-button" to={`/w/${workspace.slug}?archived=true`}>Go to archived projects</Link></main>;
-  }
-  if (project.project_type && project.project_type !== "website") {
-    return <AssetReview projectId={project.id} title={project.name} workspaceSlug={workspace.slug} />;
-  }
-  // Proxy mode is embeddable regardless of whether the real site has the Review SDK
-  // installed (07-Review-SDK.md) - snippet mode only works if the client's own site
-  // already has it, so proxy is the reliable default for "show me the live site here."
-  const embedLink = activeLinks.find((link) => link.mode === "proxy") ?? activeLinks[0];
-  const canvasUrl = embedLink ? `${API_BASE_URL}/proxy/${embedLink.token}/` : null;
-
-  const sortedPages = [...(pages ?? [])].sort((a, b) => a.sort_order - b.sort_order);
-  // currentPageId (what the widget last actually reported) wins over the URL's own
-  // ?page= for which tab reads as "active" - the URL param is what *requests* a
-  // navigation, currentPageId is what's *actually* loaded right now.
-  const activePage =
-    sortedPages.find((p) => p.id === currentPageId) ??
-    sortedPages.find((p) => p.id === activePageIdParam) ??
-    null;
-
-  // Path (+query) within the reviewed site to request through the proxy - "" path
-  // means the site's own root, matching canvasUrl's existing bare-trailing-slash
-  // default. Falls back to root rather than guessing if a page's stored URL doesn't
-  // actually belong to this project's own target_origin.
-  function proxyRequestFor(page: PageOut | null): { path: string; search: URLSearchParams } {
-    if (!page) return { path: "", search: new URLSearchParams() };
-    try {
-      const pageUrl = new URL(page.url_normalized);
-      const targetUrl = new URL(project!.target_origin);
-      if (pageUrl.host !== targetUrl.host) return { path: "", search: new URLSearchParams() };
-      return { path: pageUrl.pathname.replace(/^\//, ""), search: new URLSearchParams(pageUrl.search) };
-    } catch {
-      return { path: "", search: new URLSearchParams() };
-    }
-  }
-
-  function goToPage(pageId: string) {
+  function updateViewParams(values: Record<string, string | null>) {
     setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (pageId) next.set("page", pageId);
-        else next.delete("page");
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        for (const [key, value] of Object.entries(values)) {
+          if (value === null) next.delete(key);
+          else next.set(key, value);
+        }
         return next;
       },
       { replace: true },
     );
   }
 
-  // blMode tells the widget (apps/widget/src/index.ts) whether to attach its
-  // click-to-create-comment listener at all - Browse mode leaves the site otherwise
-  // untouched (existing pins still visible for context), Comment mode is this widget's
-  // full normal behavior. Changing it (or the active page's path) changes the iframe's
-  // own src, which is what actually reloads it - there's no live channel into an
-  // already-loaded proxied page's widget instance.
-  const activePageRequest = proxyRequestFor(activePage);
-  const iframeSearch = new URLSearchParams(activePageRequest.search);
-  iframeSearch.set("blMode", mode);
-  const iframeSrc = canvasUrl
-    ? `${API_BASE_URL}/proxy/${embedLink!.token}/${activePageRequest.path}?${iframeSearch.toString()}`
-    : null;
-  const totalComments = comments?.length ?? 0;
+  function goToPage(pageId: string) {
+    setCurrentPageId(null);
+    setSelectedCommentId(null);
+    updateViewParams({ page: pageId || null });
+  }
 
-  // h-screen, not calc(100vh - Npx): this page renders under ProjectLayout, which
-  // (unlike the dashboard's WorkspaceLayout) adds no chrome above it - its own header
-  // below is already inside this box. Subtracting a header height here left exactly
-  // that much dead space under the footer, which read as an oversized footer band.
-  return (
-    <div className="flex h-screen flex-col">
-      <div className="flex items-center justify-between border-b border-black/10 px-4 py-2 dark:border-white/10">
-        <div className="flex min-w-0 items-center gap-3">
-          <Link to={`/w/${workspace.slug}`} className="text-text-muted shrink-0 text-xs underline">
-            ← Back
-          </Link>
-          <div className="min-w-0">
-            <h1 className="truncate text-sm font-semibold">{project.name}</h1>
+  function setMode(nextMode: CanvasMode) {
+    updateViewParams({ mode: nextMode === "comment" ? null : nextMode });
+  }
+
+  function setViewport(nextViewport: ViewportOption | null) {
+    updateViewParams({
+      viewport: nextViewport?.name ?? null,
+      viewportWidth: nextViewport?.name === "Custom" ? String(nextViewport.width) : null,
+      viewportHeight: nextViewport?.name === "Custom" ? String(nextViewport.height) : null,
+      orientation: nextViewport ? searchParams.get("orientation") : null,
+    });
+  }
+
+  function setZoom(nextZoom: number) {
+    const normalized = clampZoom(nextZoom);
+    updateViewParams({ zoom: normalized === 1 ? null : normalized.toFixed(1) });
+  }
+
+  function reloadPreview() {
+    setIframeStatus("loading");
+    setRetryCount((count) => count + 1);
+  }
+
+  function onPageTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number, pageIds: string[]) {
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % pageIds.length;
+    if (event.key === "ArrowLeft") nextIndex = (index - 1 + pageIds.length) % pageIds.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = pageIds.length - 1;
+    if (nextIndex === null) return;
+    event.preventDefault();
+    goToPage(pageIds[nextIndex]);
+    requestAnimationFrame(() => {
+      const tabs = pageTabsRef.current?.querySelectorAll<HTMLButtonElement>("[data-page-tab]");
+      tabs?.[nextIndex!]?.focus();
+    });
+  }
+
+  if (projectQuery.isLoading) {
+    return (
+      <main className="bl-review-gate" aria-busy="true">
+        <span className="bl-loading-mark" aria-hidden="true">B</span>
+        <div className="bl-review-gate-copy">
+          <span className="bl-review-eyebrow">Review workspace</span>
+          <h1>Opening project</h1>
+          <div className="bl-review-gate-line" aria-hidden="true"><i /></div>
+        </div>
+      </main>
+    );
+  }
+
+  if (projectQuery.error || !projectQuery.data) {
+    return (
+      <main className="bl-review-gate">
+        <span className="bl-loading-mark" aria-hidden="true">B</span>
+        <div className="bl-review-gate-copy">
+          <span className="bl-review-eyebrow">Review workspace</span>
+          <h1>{projectQuery.error ? "Couldn’t load this project" : "Project not found"}</h1>
+          <p>{projectQuery.error?.message ?? "The project may have moved or you may no longer have access."}</p>
+          <div className="bl-review-gate-actions">
+            {projectQuery.error && <button type="button" className="bl-button" onClick={() => void projectQuery.refetch()}>Try again</button>}
+            <Link className="bl-quiet" to={`/w/${workspace.slug}`}>All projects</Link>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
-          {canvasUrl && (
-            <a
-              href={canvasUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-text-muted text-xs underline"
-            >
-              Open in new tab ↗
+      </main>
+    );
+  }
+
+  const project = projectQuery.data;
+  if (project.archived_at) {
+    return (
+      <main className="bl-review-gate">
+        <span className="bl-loading-mark" aria-hidden="true">B</span>
+        <div className="bl-review-gate-copy">
+          <span className="bl-review-eyebrow">Archived project</span>
+          <h1>{project.name}</h1>
+          <p>Restore this project before opening its review workspace. Its comments and history are still retained.</p>
+          <Link className="bl-button" to={`/w/${workspace.slug}?archived=true`}>View archived projects</Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (project.project_type && project.project_type !== "website") {
+    return <AssetReview projectId={project.id} title={project.name} workspaceSlug={workspace.slug} />;
+  }
+
+  const sortedPages = [...(pagesQuery.data ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+  const activePage =
+    sortedPages.find((page) => page.id === activePageIdParam) ??
+    sortedPages.find((page) => page.id === currentPageId) ??
+    sortedPages[0] ??
+    null;
+  const activeLinks = (shareLinksQuery.data ?? []).filter((link) => link.revoked_at === null);
+  const reviewLink = activeLinks[0] ?? null;
+  const embedLink = activeLinks.find((link) => link.mode === "proxy") ?? null;
+  const canvasUrl = embedLink ? `${API_BASE_URL}/proxy/${embedLink.token}/` : null;
+
+  function proxyRequestFor(page: PageOut | null): { path: string; search: URLSearchParams } | null {
+    if (!page) return { path: "", search: new URLSearchParams() };
+    try {
+      const pageUrl = new URL(page.url_normalized);
+      const targetUrl = new URL(project.target_origin);
+      if (pageUrl.host !== targetUrl.host) return null;
+      return { path: pageUrl.pathname.replace(/^\//, ""), search: new URLSearchParams(pageUrl.search) };
+    } catch {
+      return null;
+    }
+  }
+
+  const activePageRequest = proxyRequestFor(activePage);
+  const iframeSearch = new URLSearchParams(activePageRequest?.search);
+  iframeSearch.set("blMode", mode);
+  const iframeSrc = canvasUrl && activePageRequest
+    ? `${API_BASE_URL}/proxy/${embedLink!.token}/${activePageRequest.path}?${iframeSearch.toString()}`
+    : null;
+  const displayUrl = activePage?.url_normalized || project.target_origin;
+  const topLevelComments = (commentsQuery.data ?? []).filter((comment) => !comment.parent_id);
+  const selectedCommentNumber = selectedCommentId
+    ? topLevelComments
+        .slice()
+        .sort((a, b) => a.created_at.localeCompare(b.created_at))
+        .findIndex((comment) => comment.id === selectedCommentId) + 1
+    : 0;
+  const visibleWidth = viewport
+    ? orientation === "portrait"
+      ? viewport.width
+      : viewport.height
+    : undefined;
+  const visibleHeight = viewport
+    ? orientation === "portrait"
+      ? viewport.height
+      : viewport.width
+    : undefined;
+  const pageIds = sortedPages.map((page) => page.id);
+  const effectiveFrameStatus = iframeSrc ? iframeStatus : "unavailable";
+
+  return (
+    <main className="bl-review-workspace">
+      <header className="bl-review-header">
+        <div className="bl-review-identity">
+          <Link to={`/w/${workspace.slug}`} className="bl-review-icon-button" aria-label="Back to all projects" title="All projects">
+            <ArrowLeftIcon />
+          </Link>
+          <div>
+            <div className="bl-review-title-line">
+              <h1>{project.name}</h1>
+              <span className={`bl-review-environment is-${project.environment}`}>
+                <i aria-hidden="true" />
+                {project.environment}
+              </span>
+            </div>
+            <a href={displayUrl} target="_blank" rel="noreferrer" className="bl-review-url" title="Open the live page in a new tab">
+              <span>{displayUrl.replace(/^https?:\/\//, "")}</span>
+              <ExternalLinkIcon width={10} height={10} />
             </a>
-          )}
-          <Link
-            to={`/w/${workspace.slug}/p/${project.id}/board`}
-            className="text-text-muted text-xs underline"
-          >
-            Board
-          </Link>
-          <Link
-            to={`/w/${workspace.slug}/p/${project.id}/share-links`}
-            className="text-text-muted text-xs underline"
-          >
-            Share links
-          </Link>
-          <button
-            onClick={() => setShowPages(true)}
-            className="text-text-muted text-xs underline"
-          >
-            Pages
+          </div>
+        </div>
+
+        <div className="bl-review-header-tools">
+          <div className="bl-review-mode" aria-label="Canvas mode">
+            <button type="button" aria-pressed={mode === "browse"} onClick={() => setMode("browse")}>
+              <PointerIcon width={13} height={13} />
+              Browse
+            </button>
+            <button type="button" aria-pressed={mode === "comment"} onClick={() => setMode("comment")}>
+              <CommentsIcon width={13} height={13} />
+              Comment
+            </button>
+          </div>
+          <button type="button" className="bl-review-icon-button" aria-label="Reload preview" title="Reload preview" onClick={reloadPreview} disabled={!iframeSrc}>
+            <ReloadIcon className={iframeStatus === "loading" && iframeSrc ? "bl-is-spinning" : ""} />
           </button>
-          <button
-            onClick={() => setShowShare(true)}
-            className="bg-accent-primary rounded-md px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
-          >
+          <a className="bl-review-icon-button" href={displayUrl} target="_blank" rel="noreferrer" aria-label="Open live page" title="Open live page">
+            <ExternalLinkIcon />
+          </a>
+          {reviewLink ? (
+            <a className="bl-review-control bl-review-open" href={reviewUrl(reviewLink.token)} target="_blank" rel="noreferrer">
+              Open review
+              <ExternalLinkIcon width={12} height={12} />
+            </a>
+          ) : (
+            <button type="button" className="bl-review-control" disabled title="Create a review link from Share first">Open review</button>
+          )}
+          <button type="button" className="bl-review-control" onClick={() => setShowShare(true)}>
+            <ShareIcon width={13} height={13} />
             Share
           </button>
           <ProjectMenu
@@ -263,96 +375,129 @@ export function ProjectOverviewPage() {
             onSettings={() => setShowSettings(true)}
           />
         </div>
+      </header>
+
+      <div className="bl-review-pagebar">
+        <div className="bl-review-page-tabs" ref={pageTabsRef} role="tablist" aria-label="Project pages">
+          {pagesQuery.isLoading && (
+            <div className="bl-review-tabs-loading" role="status" aria-label="Loading project pages">
+              <i /><i /><i />
+            </div>
+          )}
+          {pagesQuery.error && (
+            <div className="bl-review-page-error" role="alert">
+              <span>Pages unavailable.</span>
+              <button type="button" onClick={() => void pagesQuery.refetch()}>Retry</button>
+            </div>
+          )}
+          {!pagesQuery.isLoading && !pagesQuery.error && sortedPages.length === 0 && (
+            <span className="bl-review-page-empty">No saved pages yet. The first proxied visit can register one.</span>
+          )}
+          {sortedPages.map((page, index) => (
+            <button
+              key={page.id}
+              type="button"
+              role="tab"
+              data-page-tab
+              tabIndex={activePage?.id === page.id ? 0 : -1}
+              aria-selected={activePage?.id === page.id}
+              onClick={() => goToPage(page.id)}
+              onKeyDown={(event) => onPageTabKeyDown(event, index, pageIds)}
+            >
+              <span>{pageLabel(page)}</span>
+              {activePage?.id === page.id && <i aria-hidden="true" />}
+            </button>
+          ))}
+        </div>
+        <button type="button" className="bl-review-manage-pages" onClick={() => setShowPages(true)}>
+          Manage pages
+        </button>
       </div>
 
-      {/* relative, not a flex row with the panel as a sibling: the panel is an overlay
-          (position: absolute, see ProjectSidePanel) that floats on top of this canvas
-          rather than sharing width with it - the iframe always keeps its full,
-          unchanged viewport size, so the reviewed site's own responsive layout never
-          reflows just because a reviewer opened a side panel. */}
-      <div className="bg-bg-canvas relative min-h-0 flex-1 flex flex-col">
-        {iframeSrc ? (
-          <>
-            {sortedPages.length > 0 && (
-              <div
-                role="tablist"
-                aria-label="Pages"
-                className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-black/10 bg-white px-2 py-1 dark:border-white/10 dark:bg-[#1C1C21] z-20"
-              >
-                {sortedPages.map((page) => (
-                  <button
-                    key={page.id}
-                    role="tab"
-                    aria-selected={activePage?.id === page.id}
-                    onClick={() => goToPage(page.id)}
-                    className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap ${
-                      activePage?.id === page.id
-                        ? "bg-accent-primary text-white"
-                        : "text-text-muted hover:bg-black/5 dark:hover:bg-white/5"
-                    }`}
-                  >
-                    {page.title || page.url_normalized}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="flex h-10 shrink-0 items-center gap-2 border-b border-black/10 px-4 bg-white dark:bg-[#1C1C21] dark:border-white/10 z-20 shadow-sm">
-              <span className="text-xs text-text-muted font-medium truncate flex-1 flex items-center gap-2">
-                <span className="bg-black/5 dark:bg-white/5 px-2 py-1 rounded text-black dark:text-white flex-1 truncate font-mono">
-                  {canvasUrl}
-                </span>
-              </span>
-              <button onClick={() => setRetryCount(c => c + 1)} className="text-xs font-medium border border-black/10 dark:border-white/10 px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5">
-                Reload Frame
-              </button>
+      <section className="bl-review-main" aria-label="Website review canvas">
+        <div className={`bl-review-stage ${mode === "comment" ? "is-commenting" : "is-browsing"}`}>
+          {shareLinksQuery.isLoading ? (
+            <div className="bl-review-empty-canvas" role="status">
+              <span className="bl-review-loader" aria-hidden="true" />
+              <strong>Preparing the review source</strong>
+              <p>Checking for an active proxy review link…</p>
             </div>
-            <div className="flex flex-1 relative items-center justify-center overflow-auto bg-gray-50 dark:bg-gray-900">
-              {iframeStatus === "loading" && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 dark:bg-black/80">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-primary border-t-transparent"></div>
-                <p className="mt-4 text-sm font-medium text-gray-700 dark:text-gray-300">Loading preview...</p>
+          ) : shareLinksQuery.error ? (
+            <div className="bl-review-empty-canvas" role="alert">
+              <span className="bl-review-state-icon is-warning"><GlobeIcon /></span>
+              <strong>Couldn’t check the review link</strong>
+              <p>{shareLinksQuery.error.message}</p>
+              <button type="button" className="bl-button" onClick={() => void shareLinksQuery.refetch()}>Try again</button>
+            </div>
+          ) : embedLink && !activePageRequest ? (
+            <div className="bl-review-empty-canvas" role="alert">
+              <span className="bl-review-state-icon is-warning"><GlobeIcon /></span>
+              <strong>This saved page is outside the project URL</strong>
+              <p>Backline will not proxy a page from a different host. Update the page or project URL before reviewing it here.</p>
+              <div className="bl-review-empty-actions">
+                <button type="button" className="bl-button" onClick={() => setShowPages(true)}>Manage pages</button>
+                <button type="button" className="bl-quiet" onClick={() => setShowSettings(true)}>Check project URL</button>
               </div>
-            )}
-            {iframeStatus === "error" && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white dark:bg-gray-900 px-6 text-center">
-                <p className="mb-2 text-sm font-semibold text-red-600">Failed to load preview</p>
-                <p className="mb-6 text-sm text-gray-600 dark:text-gray-400 max-w-md">
-                  The website might be blocking iframe embedding or took too long to respond.
-                </p>
-                <div className="flex gap-4">
-                  <button onClick={() => setRetryCount(c => c + 1)} className="bl-button">Retry</button>
-                  <a href={canvasUrl!} target="_blank" rel="noreferrer" className="bl-button">Open direct link</a>
-                </div>
-              </div>
-            )}
-            <div 
-              style={{
-                width: viewport ? (orientation === "portrait" ? viewport.width : viewport.height) : "100%",
-                height: viewport ? (orientation === "portrait" ? viewport.height : viewport.width) : "100%",
-                flexShrink: 0,
-                transition: "width 0.3s, height 0.3s",
-                transform: `scale(${zoomScale})`,
-                transformOrigin: "center center",
-              }}
+            </div>
+          ) : iframeSrc ? (
+            <div
+              className={`bl-live-frame-shell ${viewport ? "is-fixed" : "is-fit"}`}
+              style={{ width: visibleWidth, height: visibleHeight, zoom: zoomScale } as CSSProperties}
             >
-              <iframe
-                key={retryCount}
-                ref={canvasRef}
-                src={iframeSrc}
-                title={`${project.name} preview`}
-                className="h-full w-full border-0 bg-white shadow-sm ring-1 ring-black/5"
-                onLoad={() => setIframeStatus("loaded")}
-              />
+              <div className="bl-live-frame-bar">
+                <span className="bl-live-frame-lights" aria-hidden="true"><i /><i /><i /></span>
+                <span className="bl-live-frame-address" title={displayUrl}>{displayUrl.replace(/^https?:\/\//, "")}</span>
+                <span className="bl-live-frame-source"><i aria-hidden="true" />Safe proxy</span>
+                <button type="button" onClick={reloadPreview} aria-label="Reload proxy preview" title="Reload proxy preview">
+                  <ReloadIcon width={13} height={13} className={iframeStatus === "loading" ? "bl-is-spinning" : ""} />
+                </button>
+              </div>
+              <div className="bl-live-frame-canvas">
+                <iframe
+                  key={`${retryCount}-${iframeSrc}`}
+                  ref={canvasRef}
+                  src={iframeSrc}
+                  title={`${project.name} preview`}
+                  onLoad={() => setIframeStatus("loaded")}
+                  onError={() => setIframeStatus("error")}
+                />
+                {iframeStatus === "loading" && (
+                  <div className="bl-iframe-state is-loading" role="status">
+                    <span className="bl-review-loader" aria-hidden="true" />
+                    <strong>Loading {displayUrl.replace(/^https?:\/\//, "")}</strong>
+                    <span className="bl-iframe-steps" aria-hidden="true"><i /><i /><i /></span>
+                    <p>Backline is loading the page through the private review proxy so its real widget pins can attach safely.</p>
+                  </div>
+                )}
+                {iframeStatus === "error" && (
+                  <div className="bl-iframe-state is-error" role="alert">
+                    <span className="bl-review-state-icon is-warning"><GlobeIcon /></span>
+                    <strong>Couldn’t load this page</strong>
+                    <p>The address may be unavailable, behind a login, or blocking the review proxy.</p>
+                    <div>
+                      <button type="button" className="bl-button" onClick={reloadPreview}>Try again</button>
+                      <a className="bl-quiet" href={displayUrl} target="_blank" rel="noreferrer">Open live page</a>
+                      <button type="button" className="bl-quiet" onClick={() => setShowSettings(true)}>Check URL</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="bl-live-frame-meta">
+                <span>{selectedCommentNumber > 0 ? `Comment ${selectedCommentNumber} selected · locating its pin` : mode === "comment" ? "Comment mode · click the page to place a pin" : "Browse mode · page interactions enabled"}</span>
+                <span>Source: proxy</span>
+              </div>
             </div>
+          ) : (
+            <div className="bl-review-empty-canvas">
+              <span className="bl-review-state-icon"><ShareIcon /></span>
+              <strong>{reviewLink ? "A proxy review link is required" : "No active review link yet"}</strong>
+              <p>{reviewLink ? "The active link uses snippet mode and cannot power this embedded canvas. Create a proxy link to review here." : "Create a proxy review link to load the live site and its genuine comment pins in this workspace."}</p>
+              <button type="button" className="bl-button mint" onClick={() => setShowShare(true)}>Open Share</button>
+              <span>Nothing is simulated until a real link exists.</span>
             </div>
-          </>
-        ) : (
-          <div className="flex h-full items-center justify-center px-6">
-            <p className="text-text-muted max-w-sm text-center text-sm">
-              No active share link yet - create one to preview the live site here.
-            </p>
-          </div>
-        )}
+          )}
+        </div>
+
         <ProjectSidePanel
           project={project}
           workspaceId={workspace.id}
@@ -360,27 +505,27 @@ export function ProjectOverviewPage() {
           workspaceName={workspace.name}
           canvasRef={canvasRef}
           currentPageId={currentPageId}
+          selectedCommentId={selectedCommentId}
+          onSelectComment={setSelectedCommentId}
         />
-      </div>
+      </section>
 
       <ProjectFooter
         project={project}
         workspaceId={workspace.id}
         workspaceSlug={workspace.slug}
         workspaceName={workspace.name}
-        totalComments={totalComments}
+        totalComments={topLevelComments.length}
+        commentsUnavailable={Boolean(commentsQuery.error)}
         currentPageId={activePage?.id ?? null}
         onSelectPage={goToPage}
-        mode={mode}
-        onModeChange={setMode}
         viewport={viewport}
         onViewportChange={setViewport}
         orientation={orientation}
-        onOrientationChange={setOrientation}
+        onOrientationChange={(nextOrientation) => updateViewParams({ orientation: nextOrientation === "portrait" ? null : nextOrientation })}
         zoomScale={zoomScale}
-        onZoomChange={setZoomScale}
-        iframeStatus={iframeStatus}
-        onReload={() => setRetryCount(c => c + 1)}
+        onZoomChange={setZoom}
+        iframeStatus={effectiveFrameStatus}
       />
 
       {showShare && (
@@ -401,6 +546,6 @@ export function ProjectOverviewPage() {
         />
       )}
       {showSettings && <ProjectForm workspace={workspace} project={project} onClose={() => setShowSettings(false)} />}
-    </div>
+    </main>
   );
 }

@@ -11,6 +11,7 @@ export interface CommentsListProps {
   projectId: string;
   sequenceByCommentId: Map<string, number>;
   onNavigate: (commentId: string) => void;
+  selectedCommentId?: string | null;
 }
 
 export function CommentsList({
@@ -23,6 +24,7 @@ export function CommentsList({
   projectId,
   sequenceByCommentId,
   onNavigate,
+  selectedCommentId,
 }: CommentsListProps) {
   return (
     <>
@@ -44,6 +46,7 @@ export function CommentsList({
                 projectId={projectId}
                 sequenceNumber={sequenceByCommentId.get(comment.id) ?? 0}
                 onNavigate={onNavigate}
+                selected={comment.id === selectedCommentId}
               />
             ));
           } else {
@@ -67,6 +70,7 @@ export function CommentsList({
                       projectId={projectId}
                       sequenceNumber={sequenceByCommentId.get(comment.id) ?? 0}
                       onNavigate={onNavigate}
+                      selected={comment.id === selectedCommentId}
                     />
                   ))}
                 </div>

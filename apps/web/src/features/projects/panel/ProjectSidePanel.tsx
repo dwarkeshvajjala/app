@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { RefObject } from "react";
 
 import type { ProjectOut } from "../api";
@@ -39,6 +39,8 @@ interface ProjectSidePanelProps {
   workspaceName: string;
   canvasRef: RefObject<HTMLIFrameElement | null>;
   currentPageId: string | null;
+  selectedCommentId?: string | null;
+  onSelectComment?: (commentId: string) => void;
 }
 
 // Collapsed by default (just the icon rail) - clicking a tab opens its panel; clicking
@@ -51,6 +53,8 @@ export function ProjectSidePanel({
   workspaceName,
   canvasRef,
   currentPageId,
+  selectedCommentId,
+  onSelectComment,
 }: ProjectSidePanelProps) {
   const [activeTab, setActiveTab] = useState<TabId | null>(null);
 
@@ -58,16 +62,25 @@ export function ProjectSidePanel({
     setActiveTab((current) => (current === id ? null : id));
   }
 
+  useEffect(() => {
+    if (!activeTab) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setActiveTab(null);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [activeTab]);
+
   return (
-    <div className="absolute inset-y-0 right-0 z-20 flex h-full">
+    <div className="bl-review-sidepanel">
       {activeTab && (
-        <div className="bg-bg-canvas flex w-full sm:w-[380px] flex-col border-l border-black/10 shadow-xl dark:border-white/10">
-          <div className="flex items-center justify-between border-b border-black/10 px-4 py-3 dark:border-white/10">
+        <div className="bl-review-drawer" role="complementary" aria-label={TAB_TITLES[activeTab]}>
+          <div className="bl-review-drawer-head">
             <h2 className="text-sm font-semibold">{TAB_TITLES[activeTab]}</h2>
             <button
               onClick={() => setActiveTab(null)}
               aria-label="Close panel"
-              className="text-text-muted hover:text-text-primary text-lg leading-none"
+              className="bl-review-drawer-close"
             >
               ×
             </button>
@@ -86,6 +99,8 @@ export function ProjectSidePanel({
                 projectId={project.id}
                 canvasRef={canvasRef}
                 currentPageId={currentPageId}
+                selectedCommentId={selectedCommentId}
+                onSelectComment={onSelectComment}
               />
             )}
             {activeTab === "mcp" && <McpTab />}
@@ -95,26 +110,17 @@ export function ProjectSidePanel({
         </div>
       )}
 
-      <div className="flex w-14 shrink-0 flex-col items-center gap-2 border-l border-black/10 bg-white py-3 dark:border-white/10 dark:bg-[#14141A]">
+      <nav className="bl-review-panel-rail" aria-label="Project panel">
         {TABS.map(({ id, label, icon: TabIcon }) => (
           <button
             key={id}
             onClick={() => toggleTab(id)}
             aria-pressed={activeTab === id}
             aria-label={label}
-            className={`flex h-24 w-11 flex-col items-center justify-center gap-2 rounded-lg border text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/50 ${
-              activeTab === id
-                ? "border-accent-primary text-accent-primary"
-                : "border-black/10 text-text-muted hover:border-black/20 dark:border-white/10 dark:hover:border-white/20"
-            }`}
+            className={`bl-review-panel-tab ${activeTab === id ? "is-active" : ""}`}
           >
             <TabIcon />
-            <span
-              className="tracking-wide"
-              style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-            >
-              {label}
-            </span>
+            <span>{label}</span>
           </button>
         ))}
 
@@ -122,21 +128,14 @@ export function ProjectSidePanel({
           onClick={() => toggleTab("ai")}
           aria-pressed={activeTab === "ai"}
           aria-label="BugHunt AI"
-          className={`mt-auto flex h-28 w-11 flex-col items-center justify-center gap-2 rounded-lg border px-1 py-2 text-xs font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/50 ${
-            activeTab === "ai" ? "border-accent-primary" : "border-black/10 dark:border-white/10"
-          }`}
+          className={`bl-review-panel-tab bl-review-ai-tab ${activeTab === "ai" ? "is-active" : ""}`}
         >
-          <span className="from-accent-primary flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br to-fuchsia-400 text-white">
+          <span className="bl-review-ai-mark">
             <SparkleIcon width={13} height={13} stroke="none" fill="currentColor" />
           </span>
-          <span
-            className="leading-none tracking-wide"
-            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-          >
-            BugHunt <span className="text-accent-primary">ai</span>
-          </span>
+          <span>BugHunt AI</span>
         </button>
-      </div>
+      </nav>
     </div>
   );
 }
