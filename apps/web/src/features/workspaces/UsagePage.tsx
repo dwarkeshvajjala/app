@@ -6,76 +6,86 @@ const MONTH_LABEL = new Date().toLocaleDateString("en-US", { month: "long", year
 
 export function UsagePage() {
   return (
-    <main className="px-6 py-8">
-      <h1 className="text-xl font-semibold">AI Usage</h1>
+    <main className="bl-wrap">
+      <header className="bl-head">
+        <div>
+          <h1>AI Usage</h1>
+          <p>Workspace totals for this calendar month.</p>
+        </div>
+      </header>
 
-      <div className="mt-6 max-w-3xl rounded-lg border border-black/10 p-6 dark:border-white/10">
-        <h2 className="text-lg font-semibold">{MONTH_LABEL}</h2>
-        <p className="text-text-muted text-sm">Workspace totals for this calendar month.</p>
-        <div className="mt-5 grid grid-cols-3 gap-6">
+      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
+        <header style={{ flex: "0 0 200px" }}>
+          <h2>{MONTH_LABEL}</h2>
+        </header>
+        <div style={{ flex: 1, padding: "20px", display: "flex", gap: "40px" }}>
           <div>
-            <p className="text-text-muted text-xs font-medium">AI runs</p>
-            <p className="mt-1 text-2xl font-bold">0</p>
-            <p className="text-text-muted mt-1 text-xs">Comment analyses and other AI runs</p>
+            <p style={{ fontSize: "12px", fontWeight: 500 }}>AI runs</p>
+            <p style={{ fontSize: "24px", fontWeight: 700, margin: "4px 0" }}>0</p>
+            <p className="bl-mono">Comment analyses</p>
           </div>
           <div>
-            <p className="text-text-muted text-xs font-medium">Total tokens</p>
-            <p className="mt-1 text-2xl font-bold">0</p>
-            <p className="text-text-muted mt-1 text-xs">0 sent · 0 received</p>
+            <p style={{ fontSize: "12px", fontWeight: 500 }}>Total tokens</p>
+            <p style={{ fontSize: "24px", fontWeight: 700, margin: "4px 0" }}>0</p>
+            <p className="bl-mono">0 sent &middot; 0 received</p>
           </div>
           <div>
-            <p className="text-text-muted text-xs font-medium">Avg per run</p>
-            <p className="mt-1 text-2xl font-bold">0</p>
-            <p className="text-text-muted mt-1 text-xs">Average across all runs this month</p>
+            <p style={{ fontSize: "12px", fontWeight: 500 }}>Avg per run</p>
+            <p style={{ fontSize: "24px", fontWeight: 700, margin: "4px 0" }}>0</p>
+            <p className="bl-mono">Average across all runs</p>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="mt-6 max-w-3xl rounded-lg border border-black/10 p-6 dark:border-white/10">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Daily usage</h2>
-            <p className="text-text-muted text-sm">Tokens sent and received for each day in {MONTH_LABEL}.</p>
+      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
+        <header style={{ flex: "0 0 200px" }}>
+          <h2>Daily usage</h2>
+        </header>
+        <div style={{ flex: 1, padding: "20px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+            <p className="bl-mono">Tokens sent and received for each day.</p>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "10px", color: "var(--bl-muted)" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "var(--bl-mint)" }} /> Received
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "var(--amber)" }} /> Sent
+              </span>
+            </div>
           </div>
-          <div className="text-text-muted flex items-center gap-3 text-xs">
-            <span className="flex items-center gap-1.5">
-              <span className="bg-accent-primary h-2 w-2 rounded-full" /> Received
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-amber-400" /> Sent
-            </span>
+          <div style={{ height: "120px", display: "grid", placeItems: "center", border: "1px dashed var(--bl-line)", borderRadius: "3px" }}>
+            <span className="bl-mono">No usage yet this month.</span>
           </div>
         </div>
-        <div className="border-black/8 mt-4 flex h-40 items-center justify-center rounded-md border border-dashed text-sm dark:border-white/10">
-          <span className="text-text-muted">No usage yet this month.</span>
-        </div>
-      </div>
+      </section>
 
-      <div className="mt-6 max-w-3xl rounded-lg border border-black/10 p-6 dark:border-white/10">
-        <h2 className="text-lg font-semibold">Features</h2>
-        <p className="text-text-muted text-sm">What counted toward usage and how much each feature used.</p>
-        <table className="mt-4 w-full text-left text-sm">
-          <thead>
-            <tr className="text-text-muted border-b border-black/10 text-xs font-semibold tracking-wide uppercase dark:border-white/10">
-              <th className="py-2 pr-4 font-semibold">Feature</th>
-              <th className="py-2 pr-4 font-semibold">Runs</th>
-              <th className="py-2 pr-4 font-semibold">Tokens</th>
-              <th className="py-2 pr-4 font-semibold">Sent</th>
-              <th className="py-2 font-semibold">Received</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="py-3 pr-4">Comment analysis</td>
-              <td className="py-3 pr-4">0</td>
-              <td className="py-3 pr-4">0</td>
-              <td className="py-3 pr-4">0</td>
-              <td className="py-3">0</td>
-            </tr>
-          </tbody>
-        </table>
-        <p className="text-text-muted mt-3 text-xs">Run a feature above to start seeing breakdowns here.</p>
-      </div>
+      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
+        <header style={{ flex: "0 0 200px" }}>
+          <h2>Features</h2>
+        </header>
+        <div style={{ flex: 1, padding: "20px" }}>
+          <table className="bl-table" style={{ border: "1px solid var(--bl-line)" }}>
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Runs</th>
+                <th>Tokens</th>
+                <th>Sent</th>
+                <th>Received</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Comment analysis</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+                <td>0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </main>
   );
 }

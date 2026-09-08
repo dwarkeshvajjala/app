@@ -85,108 +85,119 @@ export function AccountModal({ onClose }: AccountModalProps) {
 
   return (
     <Dialog title="Your account" onClose={onClose}>
-      <form onSubmit={(e) => void handleSave(e)} className="bl-form">
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "4px 0" }}>
-          <span className="bl-mark" aria-hidden="true">
-            {(user?.name ?? "?").slice(0, 1).toUpperCase()}
-          </span>
-          <div>
-            <strong style={{ fontSize: "14px" }}>{user?.name ?? "Your account"}</strong>
-            <p className="bl-mono" style={{ marginTop: "3px" }}>{user?.email ?? ""}</p>
-          </div>
-        </div>
-
-        <section>
-          <p className="bl-eyebrow" style={{ margin: "0 0 8px" }}>Profile</p>
-          <div className="bl-form-field">
-            <label htmlFor="account-name">Name</label>
-            <input 
-              id="account-name"
-              type="text" 
-              className="bl-input" 
-              value={name} 
-              onChange={e => setName(e.target.value)} 
-              required
-            />
-          </div>
-          <div className="bl-form-field" style={{ marginTop: "16px" }}>
-            <label htmlFor="account-language">Language</label>
-            <select
-              id="account-language"
-              className="bl-input"
-              value={locale}
-              onChange={e => setLocale(e.target.value)}
-            >
-              <option value="en">English (US)</option>
-              <option value="hi-IN">हिन्दी (Hindi)</option>
-            </select>
-          </div>
-        </section>
-
-        <section>
-          <p className="bl-eyebrow" style={{ margin: "0 0 8px" }}>Notification preferences</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <label className="bl-form-field" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
-              <input type="checkbox" checked={prefs.notify_on_assignment} onChange={e => setPrefs({...prefs, notify_on_assignment: e.target.checked})} />
-              <span>Notify me on assignment</span>
-            </label>
-            <label className="bl-form-field" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
-              <input type="checkbox" checked={prefs.notify_on_mention} onChange={e => setPrefs({...prefs, notify_on_mention: e.target.checked})} />
-              <span>Notify me when mentioned</span>
-            </label>
-            <label className="bl-form-field" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
-              <input type="checkbox" checked={prefs.notify_on_reply} onChange={e => setPrefs({...prefs, notify_on_reply: e.target.checked})} />
-              <span>Notify me on comment replies</span>
-            </label>
-            <label className="bl-form-field" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
-              <input type="checkbox" checked={prefs.notify_on_status_change} onChange={e => setPrefs({...prefs, notify_on_status_change: e.target.checked})} />
-              <span>Notify me on ticket status changes</span>
-            </label>
-            <label className="bl-form-field" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
-              <input type="checkbox" checked={prefs.daily_digest} onChange={e => setPrefs({...prefs, daily_digest: e.target.checked})} />
-              <span>Receive daily digest</span>
-            </label>
-          </div>
-        </section>
-
-        <section>
-          <p className="bl-eyebrow" style={{ margin: "0 0 8px" }}>Security &amp; Sessions</p>
-          {loadingSessions ? (
-            <p style={{ fontSize: "12px", color: "var(--bl-muted)" }}>Loading sessions...</p>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px", border: "1px solid var(--bl-border)", borderRadius: "4px", padding: "8px" }}>
-              {sessions.map(s => (
-                <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "13px", padding: "4px 0", borderBottom: "1px solid var(--bl-border-subtle)", paddingBottom: "8px" }}>
-                  <div>
-                    <strong>{s.os || "Unknown OS"}</strong> • {s.browser || "Unknown Browser"}
-                    {s.current && <span style={{ marginLeft: "6px", fontSize: "11px", background: "var(--bl-border)", padding: "2px 6px", borderRadius: "12px" }}>Current</span>}
-                    <p className="bl-mono" style={{ margin: "2px 0 0", color: "var(--bl-muted)" }}>
-                      {s.ip_address || "Unknown IP"} • {new Date(s.last_active_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  {!s.current && (
-                    <button type="button" onClick={() => setRevokeCandidate(s)} style={{ background: "none", border: "none", color: "var(--bl-red)", cursor: "pointer", fontSize: "12px" }}>
-                      Sign out
-                    </button>
-                  )}
-                </div>
-              ))}
+      <form onSubmit={(e) => void handleSave(e)} className="bl-form" style={{ padding: "0" }}>
+        
+        <div style={{ display: "flex", gap: "20px" }}>
+          
+          <div style={{ flex: "0 0 160px", padding: "20px", borderRight: "1px solid var(--bl-line)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <span className="bl-mark" aria-hidden="true">
+                {(user?.name ?? "?").slice(0, 1).toUpperCase()}
+              </span>
+              <div style={{ overflow: "hidden" }}>
+                <strong style={{ fontSize: "14px", display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{user?.name ?? "Your account"}</strong>
+                <p className="bl-mono" style={{ marginTop: "3px", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{user?.email ?? ""}</p>
+              </div>
             </div>
-          )}
-        </section>
-
-        <footer className="bl-form-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--bl-border)" }}>
+          </div>
+          
+          <div style={{ flex: 1, padding: "20px 20px 0 0" }}>
+            
+            <section style={{ marginBottom: "30px" }}>
+              <p className="bl-eyebrow" style={{ margin: "0 0 12px" }}>Profile</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <label className="bl-form-field" style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: 500, width: "100px" }}>Name</span>
+                  <input 
+                    type="text" 
+                    className="bl-input" 
+                    value={name} 
+                    onChange={e => setName(e.target.value)} 
+                    required
+                  />
+                </label>
+                <label className="bl-form-field" style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: 500, width: "100px" }}>Language</span>
+                  <select
+                    className="bl-select"
+                    value={locale}
+                    onChange={e => setLocale(e.target.value)}
+                    style={{ flex: 1, maxWidth: "none" }}
+                  >
+                    <option value="en">English (US)</option>
+                    <option value="hi-IN">हिन्दी (Hindi)</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+            
+            <section style={{ marginBottom: "30px" }}>
+              <p className="bl-eyebrow" style={{ margin: "0 0 12px" }}>Notification preferences</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <label className="bl-check">
+                  <input type="checkbox" checked={prefs.notify_on_assignment} onChange={e => setPrefs({...prefs, notify_on_assignment: e.target.checked})} />
+                  <span>Notify me on assignment</span>
+                </label>
+                <label className="bl-check">
+                  <input type="checkbox" checked={prefs.notify_on_mention} onChange={e => setPrefs({...prefs, notify_on_mention: e.target.checked})} />
+                  <span>Notify me when mentioned</span>
+                </label>
+                <label className="bl-check">
+                  <input type="checkbox" checked={prefs.notify_on_reply} onChange={e => setPrefs({...prefs, notify_on_reply: e.target.checked})} />
+                  <span>Notify me on comment replies</span>
+                </label>
+                <label className="bl-check">
+                  <input type="checkbox" checked={prefs.notify_on_status_change} onChange={e => setPrefs({...prefs, notify_on_status_change: e.target.checked})} />
+                  <span>Notify me on ticket status changes</span>
+                </label>
+                <label className="bl-check">
+                  <input type="checkbox" checked={prefs.daily_digest} onChange={e => setPrefs({...prefs, daily_digest: e.target.checked})} />
+                  <span>Receive daily digest</span>
+                </label>
+              </div>
+            </section>
+            
+            <section style={{ marginBottom: "20px" }}>
+              <p className="bl-eyebrow" style={{ margin: "0 0 12px" }}>Security &amp; Sessions</p>
+              {loadingSessions ? (
+                <p className="bl-mono">Loading sessions...</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {sessions.map(s => (
+                    <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px", padding: "12px", border: "1px solid var(--bl-line)", borderRadius: "3px", background: "#fff" }}>
+                      <div>
+                        <strong>{s.os || "Unknown OS"}</strong> • {s.browser || "Unknown Browser"}
+                        {s.current && <span style={{ marginLeft: "6px", fontSize: "10px", background: "var(--bl-paper)", padding: "2px 6px", borderRadius: "12px", color: "var(--bl-muted)" }}>Current</span>}
+                        <p className="bl-mono" style={{ margin: "4px 0 0" }}>
+                          {s.ip_address || "Unknown IP"} • {new Date(s.last_active_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {!s.current && (
+                        <button type="button" className="bl-quiet" onClick={() => setRevokeCandidate(s)} style={{ color: "#A33317", borderColor: "transparent" }}>
+                          Sign out
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+            
+          </div>
+          
+        </div>
+        
+        <footer className="bl-form-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderTop: "1px solid var(--bl-line)", background: "var(--bl-paper)" }}>
           <button
             type="button"
-            className="bl-button"
-            style={{ background: "var(--bl-muted)" }}
+            className="bl-quiet"
             onClick={() => void handleSignOut()}
           >
             Sign out everywhere
           </button>
           
-          <div style={{ display: "flex", gap: "8px" }}>
-            <button type="button" className="bl-button" style={{ background: "var(--bl-bg)" }} onClick={onClose}>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button type="button" className="bl-quiet" onClick={onClose}>
               Cancel
             </button>
             <button type="submit" className="bl-button" disabled={saving}>

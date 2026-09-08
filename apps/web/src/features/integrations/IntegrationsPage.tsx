@@ -1,4 +1,3 @@
-import { Button } from "@backline/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { useOutletContext } from "react-router-dom";
@@ -9,7 +8,6 @@ import * as integrationsApi from "./api";
 import { buildClickUpAuthUrl } from "./clickup-oauth-url";
 
 import clickupLogo from "../../assets/icons/clickup-svgrepo-com.svg";
-import disconnectLogo from "../../assets/icons/disconnect-2-svgrepo-com.svg";
 import slackLogo from "../../assets/icons/slack-svgrepo-com.svg";
 import trelloLogo from "../../assets/icons/trello-color-svgrepo-com.svg";
 
@@ -28,7 +26,7 @@ export function IntegrationsPage() {
   const [error, setError] = useState<string | null>(null);
 
   const queryKey = ["workspace", workspace.id, "integrations"];
-  const { data: integrations, isLoading } = useQuery({
+  const { data: integrations, isLoading, error: integrationsError } = useQuery({
     queryKey,
     queryFn: () => integrationsApi.listIntegrations(workspace.id),
   });
@@ -103,119 +101,149 @@ export function IntegrationsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-12">
-      <h1 className="text-xl font-semibold">Integrations</h1>
-      <p className="text-text-muted mt-1 text-sm">
-        Connect Slack, ClickUp, or Trello (17-Notifications-Integrations.md).
-      </p>
+    <main className="bl-wrap">
+      <header className="bl-head">
+        <div>
+          <h1>Integrations</h1>
+          <p>Connect Slack, ClickUp, or Trello (17-Notifications-Integrations.md).</p>
+        </div>
+      </header>
 
-      {error && <p className="text-recovery-orphaned mt-4 text-sm">{error}</p>}
-
-      {isLoading && <p className="text-text-muted mt-4 text-sm">Loading...</p>}
+      {error && <div className="bl-error">{error}</div>}
+      {integrationsError && (
+        <p role="alert" className="bl-error">
+          {integrationsError instanceof Error ? integrationsError.message : "Could not load integrations."}
+        </p>
+      )}
+      {isLoading && <p className="bl-mono">Loading...</p>}
 
       {integrations && integrations.length > 0 && (
-        <ul className="mt-6 flex flex-col gap-2">
-          {integrations.map((integration) => (
-            <li
-              key={integration.id}
-              className="flex items-center justify-between rounded-md border border-black/10 px-4 py-3 dark:border-white/10"
-            >
-              <span className="text-sm font-medium">{TYPE_LABELS[integration.type]}</span>
-              <button
-                className="flex items-center gap-1 text-recovery-orphaned text-xs hover:underline"
-                onClick={() => disconnectMutation.mutate(integration.id)}
-              >
-                <img src={disconnectLogo} alt="" className="h-4 w-4" />
-                Disconnect
-              </button>
-            </li>
-          ))}
-        </ul>
+        <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
+          <header style={{ flex: "0 0 200px" }}>
+            <h2>Connected</h2>
+          </header>
+          <div style={{ flex: 1, padding: "20px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {integrations.map((integration) => (
+                <div
+                  key={integration.id}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", border: "1px solid var(--bl-line)", borderRadius: "3px", background: "#fff" }}
+                >
+                  <span style={{ fontSize: "13px", fontWeight: 500 }}>{TYPE_LABELS[integration.type]}</span>
+                  <button
+                    className="bl-quiet"
+                    style={{ color: "#A33317", borderColor: "transparent", padding: "4px 8px" }}
+                    onClick={() => disconnectMutation.mutate(integration.id)}
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       )}
 
-      <form
-        className="mt-8 flex flex-col gap-3 border-t border-black/10 pt-6 dark:border-white/10"
-        onSubmit={handleConnectSlack}
-      >
-        <h2 className="flex items-center gap-2 text-sm font-medium">
-          <img src={slackLogo} alt="" className="h-5 w-5" />
-          Connect Slack
-        </h2>
-        <p className="text-text-muted text-xs">
-          Paste an Incoming Webhook URL. Team-only comments never post here unless you've
-          configured a private channel - double check before enabling that below.
-        </p>
-        <input
-          required
-          type="url"
-          placeholder="https://hooks.slack.com/services/..."
-          value={slackWebhookUrl}
-          onChange={(event) => setSlackWebhookUrl(event.target.value)}
-          className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-transparent"
-        />
-        <Button type="submit" disabled={connectSlackMutation.isPending}>
-          Connect Slack
-        </Button>
-      </form>
+      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
+        <header style={{ flex: "0 0 200px" }}>
+          <h2>Slack</h2>
+        </header>
+        <div style={{ flex: 1, padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <img src={slackLogo} alt="" className="bl-icon" style={{ width: "24px", height: "24px" }} />
+            <p style={{ fontSize: "12px", fontWeight: 500 }}>Connect Slack</p>
+          </div>
+          <p className="bl-mono">
+            Paste an Incoming Webhook URL. Team-only comments never post here unless you've
+            configured a private channel.
+          </p>
+          <form onSubmit={handleConnectSlack} style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+            <input
+              required
+              type="url"
+              placeholder="https://hooks.slack.com/services/..."
+              value={slackWebhookUrl}
+              onChange={(event) => setSlackWebhookUrl(event.target.value)}
+              className="bl-input"
+            />
+            <button type="submit" className="bl-button" disabled={connectSlackMutation.isPending}>
+              Connect
+            </button>
+          </form>
+        </div>
+      </section>
 
-      <form
-        className="mt-8 flex flex-col gap-3 border-t border-black/10 pt-6 dark:border-white/10"
-        onSubmit={handleConnectTrello}
-      >
-        <h2 className="flex items-center gap-2 text-sm font-medium">
-          <img src={trelloLogo} alt="" className="h-5 w-5" />
-          Connect Trello
-        </h2>
-        <p className="text-text-muted text-xs">
-          Paste your personal API key + token from Trello's token generation page, and the
-          list ID new cards should be created in.
-        </p>
-        <input
-          required
-          placeholder="API key"
-          value={trelloApiKey}
-          onChange={(event) => setTrelloApiKey(event.target.value)}
-          className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-transparent"
-        />
-        <input
-          required
-          placeholder="Token"
-          value={trelloToken}
-          onChange={(event) => setTrelloToken(event.target.value)}
-          className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-transparent"
-        />
-        <input
-          required
-          placeholder="List ID"
-          value={trelloListId}
-          onChange={(event) => setTrelloListId(event.target.value)}
-          className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-transparent"
-        />
-        <Button type="submit" disabled={connectTrelloMutation.isPending}>
-          Connect Trello
-        </Button>
-      </form>
+      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
+        <header style={{ flex: "0 0 200px" }}>
+          <h2>Trello</h2>
+        </header>
+        <div style={{ flex: 1, padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <img src={trelloLogo} alt="" className="bl-icon" style={{ width: "24px", height: "24px" }} />
+            <p style={{ fontSize: "12px", fontWeight: 500 }}>Connect Trello</p>
+          </div>
+          <p className="bl-mono">
+            Paste your personal API key + token from Trello's token generation page, and the
+            list ID new cards should be created in.
+          </p>
+          <form onSubmit={handleConnectTrello} style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "4px" }}>
+            <input
+              required
+              placeholder="API key"
+              value={trelloApiKey}
+              onChange={(event) => setTrelloApiKey(event.target.value)}
+              className="bl-input"
+              style={{ flex: 1, minWidth: "150px" }}
+            />
+            <input
+              required
+              placeholder="Token"
+              value={trelloToken}
+              onChange={(event) => setTrelloToken(event.target.value)}
+              className="bl-input"
+              style={{ flex: 1, minWidth: "150px" }}
+            />
+            <input
+              required
+              placeholder="List ID"
+              value={trelloListId}
+              onChange={(event) => setTrelloListId(event.target.value)}
+              className="bl-input"
+              style={{ flex: 1, minWidth: "150px" }}
+            />
+            <button type="submit" className="bl-button" disabled={connectTrelloMutation.isPending}>
+              Connect
+            </button>
+          </form>
+        </div>
+      </section>
 
-      <form
-        className="mt-8 flex flex-col gap-3 border-t border-black/10 pt-6 dark:border-white/10"
-        onSubmit={handleConnectClickUp}
-      >
-        <h2 className="flex items-center gap-2 text-sm font-medium">
-          <img src={clickupLogo} alt="" className="h-5 w-5" />
-          Connect ClickUp
-        </h2>
-        <p className="text-text-muted text-xs">
-          Enter the List ID new tasks should be created in, then authorize with ClickUp.
-        </p>
-        <input
-          required
-          placeholder="List ID"
-          value={clickupListId}
-          onChange={(event) => setClickupListId(event.target.value)}
-          className="rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-transparent"
-        />
-        <Button type="submit">Continue to ClickUp</Button>
-      </form>
+      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
+        <header style={{ flex: "0 0 200px" }}>
+          <h2>ClickUp</h2>
+        </header>
+        <div style={{ flex: 1, padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <img src={clickupLogo} alt="" className="bl-icon" style={{ width: "24px", height: "24px" }} />
+            <p style={{ fontSize: "12px", fontWeight: 500 }}>Connect ClickUp</p>
+          </div>
+          <p className="bl-mono">
+            Enter the List ID new tasks should be created in, then authorize with ClickUp.
+          </p>
+          <form onSubmit={handleConnectClickUp} style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+            <input
+              required
+              placeholder="List ID"
+              value={clickupListId}
+              onChange={(event) => setClickupListId(event.target.value)}
+              className="bl-input"
+            />
+            <button type="submit" className="bl-button">
+              Continue
+            </button>
+          </form>
+        </div>
+      </section>
     </main>
   );
 }

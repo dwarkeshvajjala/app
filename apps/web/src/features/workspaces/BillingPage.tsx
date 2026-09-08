@@ -26,32 +26,44 @@ export function BillingPage() {
   const planLabel = workspace.plan.charAt(0).toUpperCase() + workspace.plan.slice(1);
 
   return (
-    <main className="px-6 py-8">
-      <h1 className="text-xl font-semibold">Billing</h1>
+    <main className="bl-wrap">
+      <header className="bl-head">
+        <div>
+          <h1>Billing</h1>
+          <p>Manage your plan and features.</p>
+        </div>
+      </header>
 
-      <div className="mt-6 max-w-lg overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
-        <div className="p-6">
-          <p className="text-text-muted text-sm font-medium">Your Plan</p>
-          <p className="mt-1 text-3xl font-bold">{planLabel}</p>
-          <p className="text-text-muted mt-4 text-sm font-medium">Your plan includes:</p>
-          <ul className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
-            {FREE_PLAN_FEATURES.map((feature) => (
-              <li key={feature} className="flex items-start gap-2">
-                <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-current" />
-                {feature}
-              </li>
-            ))}
-          </ul>
+      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
+        <header style={{ flex: "0 0 200px" }}>
+          <h2>Your Plan</h2>
+        </header>
+        <div style={{ flex: 1, padding: "20px", display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <p style={{ fontSize: "12px", fontWeight: 500 }}>Current Plan</p>
+              <p style={{ fontSize: "24px", fontWeight: 700, margin: "4px 0" }}>{planLabel}</p>
+            </div>
+            <button
+              onClick={() => setShowUpgrade(true)}
+              className="bl-button"
+            >
+              Upgrade
+            </button>
+          </div>
+          <div style={{ paddingTop: "20px", borderTop: "1px solid var(--bl-line)" }}>
+            <p style={{ fontSize: "12px", fontWeight: 500, marginBottom: "12px" }}>Your plan includes:</p>
+            <ul style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", fontSize: "12px", color: "var(--bl-muted)" }}>
+              {FREE_PLAN_FEATURES.map((feature) => (
+                <li key={feature} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ width: "4px", height: "4px", borderRadius: "50%", background: "currentColor" }} />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-        <div className="bg-bg-canvas flex justify-end border-t border-black/10 px-6 py-3 dark:border-white/10">
-          <button
-            onClick={() => setShowUpgrade(true)}
-            className="from-accent-primary rounded-lg bg-gradient-to-r to-fuchsia-500 px-5 py-2.5 text-sm font-semibold text-white"
-          >
-            Upgrade
-          </button>
-        </div>
-      </div>
+      </section>
 
       {showUpgrade && <UpgradeToProModal onClose={() => setShowUpgrade(false)} />}
     </main>
