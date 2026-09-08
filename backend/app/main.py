@@ -30,7 +30,6 @@ from app.modules.proxy.fallback_router import router as proxy_fallback_router
 from app.modules.proxy.router import router as proxy_router
 from app.modules.realtime.pubsub import run_subscriber
 from app.modules.realtime.router import router as realtime_router
-from app.modules.search.router import router as search_router
 from app.modules.share_links.router import router as share_links_router
 from app.modules.snapshot_engine.router import router as snapshots_router
 from app.modules.storage.r2_client import ensure_bucket_exists
@@ -84,7 +83,6 @@ register_exception_handlers(app)
 
 app.add_middleware(AuthOriginMiddleware)
 app.include_router(account_router, prefix="/api/v1")
-app.include_router(search_router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(workspaces_router, prefix="/api/v1")
 app.include_router(projects_router, prefix="/api/v1")

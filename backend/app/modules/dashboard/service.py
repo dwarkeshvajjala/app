@@ -135,6 +135,14 @@ async def summary(
     result = await DashboardRepository(db).summary(workspace_id, user_id)
     statuses = {row["_id"]: row["count"] for row in result["statuses"]}
     personal = result["personal"][0] if result["personal"] else {}
+    project_statuses: dict[str, dict[str, int]] = {}
+    for row in result.get("project_statuses", []):
+        pid = row["_id"]["project_id"]
+        status = row["_id"]["status"]
+        if pid not in project_statuses:
+            project_statuses[pid] = {}
+        project_statuses[pid][status] = row["count"]
+
     return DashboardOut(
         projects=result["active_projects"],
         archived_projects=result["archived_projects"],
@@ -145,7 +153,11 @@ async def summary(
         waiting_on_client=personal.get("waiting_on_client", 0),
         overdue=personal.get("overdue", 0),
         project_stats=[
-            ProjectStatsOut(project_id=row["_id"], **{k: v for k, v in row.items() if k != "_id"})
+            ProjectStatsOut(
+                project_id=row["_id"],
+                status_counts=project_statuses.get(row["_id"], {}),
+                **{k: v for k, v in row.items() if k != "_id"},
+            )
             for row in result["projects"]
         ],
     )

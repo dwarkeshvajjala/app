@@ -29,6 +29,7 @@ export function AccountModal({ onClose }: AccountModalProps) {
   
   const [sessions, setSessions] = useState<SessionOut[]>([]);
   const [saving, setSaving] = useState(false);
+  const [sessionError, setSessionError] = useState(false);
   const [loadingSessions, setLoadingSessions] = useState(true);
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export function AccountModal({ onClose }: AccountModalProps) {
         setLoadingSessions(false);
       }
     }).catch(() => {
-      if (active) setLoadingSessions(false);
+      if (active) { setLoadingSessions(false); setSessionError(true); }
     });
     return () => { active = false; };
   }, []);
@@ -159,7 +160,7 @@ export function AccountModal({ onClose }: AccountModalProps) {
             
             <section style={{ marginBottom: "20px" }}>
               <p className="bl-eyebrow" style={{ margin: "0 0 12px" }}>Security &amp; Sessions</p>
-              {loadingSessions ? (
+              {sessionError ? <p role="alert">Sessions could not load. Close and reopen your account to retry.</p> : loadingSessions ? (
                 <p className="bl-mono">Loading sessions...</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -193,7 +194,7 @@ export function AccountModal({ onClose }: AccountModalProps) {
             className="bl-quiet"
             onClick={() => void handleSignOut()}
           >
-            Sign out everywhere
+            Sign out this session
           </button>
           
           <div style={{ display: "flex", gap: "10px" }}>

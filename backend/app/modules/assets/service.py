@@ -45,17 +45,17 @@ def inspect_asset(data: bytes, project_type: str) -> tuple[str, int, int | None,
         except (PdfReadError, ValueError, RecursionError) as exc:
             raise ValidationError("This PDF could not be read.") from exc
 
-    # Simple SVG detection
+    # SVG requires a sanitizer and sandboxed delivery; reject new uploads until both exist.
     header = data[:1024].lower()
     if b"<svg" in header:
-        return "image/svg+xml", 1, None, None
+        raise ValidationError("SVG uploads are not supported. Export as PNG, JPG, WebP or GIF.")
 
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("error", Image.DecompressionBombWarning)
             with Image.open(io.BytesIO(data)) as img:
                 if img.format not in ("PNG", "JPEG", "WEBP", "GIF"):
-                    raise ValidationError("Choose PNG, JPG, WebP, GIF, or SVG images.")
+                    raise ValidationError("Choose PNG, JPG, WebP or GIF images.")
                 content_type = Image.MIME[img.format]
                 width, height = img.size
                 img.verify()

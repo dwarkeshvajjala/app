@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { useAuth } from "../auth/AuthContext";
 import { qk } from "../../lib/query-keys";
 import { createWorkspace, listWorkspaces } from "./api";
 import type { WorkspaceOut } from "./api";
@@ -18,14 +17,13 @@ function slugify(name: string): string {
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/^-+|-+$/g, "") || "workspace";
 }
 
 export function WorkspaceSwitcherPopover({
   currentWorkspace,
   onClose,
 }: WorkspaceSwitcherPopoverProps) {
-  const { switchWorkspace } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const popRef = useRef<HTMLDivElement>(null);
@@ -34,15 +32,22 @@ export function WorkspaceSwitcherPopover({
 
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+  const busy = useRef(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
-  const { data: workspaces = [] } = useQuery({
+  const { data: workspaces = [], isLoading, isError, refetch } = useQuery({
     queryKey: qk.workspaces(),
     queryFn: listWorkspaces,
   });
 
   // Close on outside click
   useOnClickOutside(popRef, onClose);
+
+  useEffect(() => {
+    const previous = document.activeElement;
+    popRef.current?.focus();
+    return () => { if (previous instanceof HTMLElement && previous.isConnected) previous.focus(); };
+  }, []);
 
   // Close on Escape
   useEffect(() => {
@@ -54,34 +59,45 @@ export function WorkspaceSwitcherPopover({
   }, [onClose]);
 
   async function handleSwitch(ws: WorkspaceOut) {
+    if (busy.current) return;
     if (ws.id === currentWorkspace.id) {
       onClose();
       return;
     }
-    await switchWorkspace(ws.id);
-    navigate(`/w/${ws.slug}`);
-    onClose();
+    busy.current = true;
+    setCreating(true);
+    setCreateError(null);
+    try {
+      // The destination layout owns token switching, avoiding a race with the old route.
+      navigate(`/w/${ws.slug}`);
+      onClose();
+    } finally {
+      busy.current = false;
+      setCreating(false);
+    }
   }
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
-    if (!newName.trim()) return;
+    if (!newName.trim() || busy.current) return;
+    busy.current = true;
     setCreating(true);
     setCreateError(null);
     try {
       const ws = await createWorkspace(newName.trim());
-      await queryClient.invalidateQueries({ queryKey: qk.workspaces() });
-      await switchWorkspace(ws.id);
+      queryClient.setQueryData<WorkspaceOut[]>(qk.workspaces(), (old) => [...(old ?? []), ws]);
       navigate(`/w/${ws.slug}`);
       onClose();
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : "Could not create workspace.");
     } finally {
+      busy.current = false;
       setCreating(false);
     }
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.target instanceof HTMLInputElement) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
       const next = Math.min(focusIndex + 1, workspaces.length - 1);
@@ -102,10 +118,13 @@ export function WorkspaceSwitcherPopover({
       ref={popRef}
       className="bl-ws-pop"
       role="dialog"
+      tabIndex={-1}
       aria-label="Switch workspace"
       onKeyDown={handleKeyDown}
     >
       <div className="bl-ws-pop-list" role="listbox" aria-label="Workspaces">
+        {isLoading && <p role="status">Loading workspaces…</p>}
+        {isError && <p role="alert">Could not load workspaces. <button onClick={() => void refetch()}>Retry</button></p>}
         {workspaces.map((ws, i) => (
           <button
             key={ws.id}
@@ -113,6 +132,8 @@ export function WorkspaceSwitcherPopover({
             className={`bl-ws-item${ws.id === currentWorkspace.id ? " selected" : ""}`}
             role="option"
             aria-selected={ws.id === currentWorkspace.id}
+            disabled={creating}
+            onFocus={() => setFocusIndex(i)}
             onClick={() => void handleSwitch(ws)}
           >
             <span className="bl-ws-item-check" aria-hidden="true">
@@ -129,13 +150,14 @@ export function WorkspaceSwitcherPopover({
         <input
           className="bl-input"
           placeholder="Workspace name"
+          aria-label="Workspace name"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           maxLength={120}
           required
         />
         {slugPreview && (
-          <p className="bl-ws-slug-preview">Slug: {slugPreview}</p>
+          <p className="bl-ws-slug-preview">Slug: {slugPreview} (a suffix is added if taken)</p>
         )}
         {createError && (
           <p className="bl-error" role="alert" style={{ margin: 0 }}>{createError}</p>

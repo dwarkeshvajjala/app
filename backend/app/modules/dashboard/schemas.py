@@ -48,6 +48,7 @@ class ProjectStatsOut(BaseModel):
     open: int
     resolved: int
     last_activity_at: datetime | None
+    status_counts: dict[str, int] = Field(default_factory=dict)
 
 
 class DashboardOut(BaseModel):

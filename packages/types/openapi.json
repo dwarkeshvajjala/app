@@ -164,76 +164,6 @@
         }
       }
     },
-    "/api/v1/workspaces/{workspace_id}/search": {
-      "get": {
-        "tags": [
-          "dashboard"
-        ],
-        "summary": "Search",
-        "operationId": "search_api_v1_workspaces__workspace_id__search_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "workspace_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workspace Id"
-            }
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 200,
-              "title": "Q"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 50,
-              "minimum": 1,
-              "default": 20,
-              "title": "Limit"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SearchResultsOut"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/auth/google/callback": {
       "post": {
         "tags": [
@@ -1791,6 +1721,76 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/search": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Search",
+        "operationId": "search_api_v1_workspaces__workspace_id__search_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResultsOut"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -6953,6 +6953,13 @@
               }
             ],
             "title": "Last Activity At"
+          },
+          "status_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Status Counts"
           }
         },
         "type": "object",
@@ -7332,78 +7339,6 @@
         },
         "type": "object",
         "title": "RevisionRecoverySummary"
-      },
-      "SearchOut": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/SearchResult"
-            },
-            "type": "array",
-            "title": "Items"
-          },
-          "has_more": {
-            "type": "boolean",
-            "title": "Has More",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "items"
-        ],
-        "title": "SearchOut"
-      },
-      "SearchResult": {
-        "properties": {
-          "kind": {
-            "type": "string",
-            "enum": [
-              "project",
-              "ticket",
-              "person",
-              "client"
-            ],
-            "title": "Kind"
-          },
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "title": {
-            "type": "string",
-            "title": "Title"
-          },
-          "project_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Project Id"
-          },
-          "page_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Page Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "kind",
-          "id",
-          "title"
-        ],
-        "title": "SearchResult"
       },
       "SearchResultOut": {
         "properties": {

@@ -170,6 +170,14 @@ class DashboardRepository:
                             }
                         }
                     ],
+                    "project_statuses": [
+                        {
+                            "$group": {
+                                "_id": {"project_id": "$_page.project_id", "status": "$status"},
+                                "count": {"$sum": 1},
+                            }
+                        }
+                    ],
                     "personal": [
                         {
                             "$group": {
@@ -283,16 +291,20 @@ class DashboardRepository:
     async def search_projects(
         self, workspace_id: str, matcher: dict[str, Any], limit: int
     ) -> list[dict[str, Any]]:
-        cursor = self.db.projects.find(
-            {"workspace_id": workspace_id, "archived_at": None, "name": matcher},
-            {"name": 1, "project_type": 1},
-        ).limit(limit)
+        cursor = (
+            self.db.projects.find(
+                {"workspace_id": workspace_id, "archived_at": None, "name": matcher},
+                {"name": 1, "project_type": 1},
+            )
+            .limit(limit)
+            .max_time_ms(2000)
+        )
         return [doc async for doc in cursor]
 
     async def search_comments(
         self, pipeline: list[dict[str, Any]], limit: int
     ) -> list[dict[str, Any]]:
-        return await self.db.comments.aggregate(pipeline).to_list(length=limit)
+        return await self.db.comments.aggregate(pipeline, maxTimeMS=2000).to_list(length=limit)
 
     async def search_members(
         self, workspace_id: str, matcher: dict[str, Any], limit: int
@@ -321,4 +333,4 @@ class DashboardRepository:
             {"$limit": limit},
             {"$replaceRoot": {"newRoot": "$user"}},
         ]
-        return await self.db.memberships.aggregate(pipeline).to_list(length=limit)
+        return await self.db.memberships.aggregate(pipeline, maxTimeMS=2000).to_list(length=limit)

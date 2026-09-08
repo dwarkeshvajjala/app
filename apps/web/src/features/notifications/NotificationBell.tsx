@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { useToast } from "../../components/Toast";
+import { apiFetch, ApiError } from "../../lib/api-client";
 
 import { useWSEvent } from "../../app/WSProvider";
 import { BellIcon } from "../../components/icons";
@@ -10,8 +12,6 @@ import { useAuth } from "../auth/AuthContext";
 import * as notificationsApi from "./api";
 import type { NotificationOut } from "./api";
 
-const UNREAD_COUNT_KEY = qk.notificationsUnread();
-const LIST_KEY = qk.notificationsList();
 
 // Map notification types to human-readable descriptions (FD-AUD-006)
 function describe(notification: NotificationOut): string {
@@ -38,7 +38,11 @@ function describe(notification: NotificationOut): string {
 }
 
 export function NotificationBell() {
-  const { user } = useAuth();
+  const { user, workspaceId } = useAuth();
+  const { workspaceSlug } = useParams();
+  const { toast } = useToast();
+  const UNREAD_COUNT_KEY = [...qk.notificationsUnread(), workspaceId, user?.id];
+  const LIST_KEY = [...qk.notificationsList(), workspaceId, user?.id];
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -51,15 +55,15 @@ export function NotificationBell() {
     staleTime: 30_000,
   });
 
-  const { data: notifications } = useQuery({
+  const { data: notifications, isLoading, isError, refetch } = useQuery({
     queryKey: LIST_KEY,
     queryFn: () => notificationsApi.listNotifications(),
     enabled: open,
   });
 
   const invalidate = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_KEY });
-    queryClient.invalidateQueries({ queryKey: LIST_KEY });
+    queryClient.invalidateQueries({ queryKey: qk.notificationsUnread() });
+    queryClient.invalidateQueries({ queryKey: qk.notificationsList() });
   }, [queryClient]);
 
   useWSEvent(
@@ -73,21 +77,36 @@ export function NotificationBell() {
   );
 
   async function handleMarkAllRead() {
+    try {
     await notificationsApi.markAllRead();
     invalidate();
+    } catch { toast("Could not mark notifications as read.", "error"); }
   }
 
   async function handleClickNotification(notification: NotificationOut) {
     // Mark as read then navigate to target_route if provided
-    if (!notification.read_at) {
+    try { if (!notification.read_at) {
       await notificationsApi.markRead(notification.id);
       invalidate();
-    }
-    const route = (notification as NotificationOut & { target_route?: string }).target_route;
-    if (route) {
+    } } catch { toast("Could not mark this notification as read.", "error"); }
+    const base = workspaceSlug ? `/w/${workspaceSlug}` : "/";
+    const payload = notification.payload as Record<string, unknown>;
+    const project = typeof payload.project_id === "string" ? payload.project_id : null;
+    const comment = typeof payload.comment_id === "string" ? payload.comment_id : null;
+    const fallback = project && workspaceSlug ? `${base}/p/${encodeURIComponent(project)}/board${comment ? `?comment=${encodeURIComponent(comment)}` : ""}` : base;
+    const route = notification.target_route;
       setOpen(false);
-      navigate(route);
-    }
+      if (project) {
+        try {
+          await apiFetch(`/api/v1/projects/${encodeURIComponent(project)}`);
+          if (comment) await apiFetch(`/api/v1/comments/${encodeURIComponent(comment)}`);
+        } catch (error) {
+          toast(error instanceof ApiError && [403, 404].includes(error.status) ? "This notification target is no longer available." : "Could not open the notification target. Try again.", "error");
+          navigate(base);
+          return;
+        }
+      }
+      navigate(route?.startsWith(`${base}/`) ? route : fallback);
   }
 
   function handleToggle() {
@@ -118,7 +137,9 @@ export function NotificationBell() {
             <button type="button" onClick={handleMarkAllRead}>Mark all read</button>
           </div>
           <ul role="list">
-            {(notifications ?? []).length === 0 && (
+            {isLoading && <li role="status">Loading notifications…</li>}
+            {isError && <li role="alert">Could not load notifications. <button onClick={() => void refetch()}>Retry</button></li>}
+            {!isLoading && !isError && (notifications ?? []).length === 0 && (
               <li className="bl-notif-empty">No notifications yet.</li>
             )}
             {(notifications ?? []).map((notification) => {

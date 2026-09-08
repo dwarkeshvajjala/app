@@ -3,6 +3,7 @@ from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
+from app.modules.auth.repository import UserRepository
 from app.modules.notifications import events as notification_events
 from app.modules.notifications.repository import NotificationRepository
 from app.modules.notifications.schemas import NotificationOut
@@ -64,6 +65,16 @@ async def _create_and_broadcast(
     recipients"), rather than trusting every future call site to get that right."""
     if not await MembershipRepository(db).find(workspace_id=workspace_id, user_id=user_id):
         return None
+    preference = {
+        notification_events.COMMENT_ASSIGNED: "notify_on_assignment",
+        notification_events.COMMENT_REPLY: "notify_on_reply",
+        notification_events.COMMENT_MENTION: "notify_on_mention",
+        notification_events.COMMENT_STATUS_CHANGED: "notify_on_status_change",
+    }.get(type)
+    if preference:
+        user = await UserRepository(db).find_by_id(user_id)
+        if user is None or not user.get("preferences", {}).get(preference, True):
+            return None
     doc = await NotificationRepository(db).create(
         workspace_id=workspace_id,
         user_id=user_id,

@@ -73,23 +73,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/workspaces/{workspace_id}/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Search */
-        get: operations["search_api_v1_workspaces__workspace_id__search_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/auth/google/callback": {
         parameters: {
             query?: never;
@@ -516,6 +499,23 @@ export interface paths {
         head?: never;
         /** Update Client */
         patch: operations["update_client_api_v1_workspaces__workspace_id__clients__client_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search */
+        get: operations["search_api_v1_workspaces__workspace_id__search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/workspaces/{workspace_id}/tickets": {
@@ -2182,6 +2182,10 @@ export interface components {
             resolved: number;
             /** Last Activity At */
             last_activity_at: string | null;
+            /** Status Counts */
+            status_counts?: {
+                [key: string]: number;
+            };
         };
         /** ProjectUpdate */
         ProjectUpdate: {
@@ -2353,32 +2357,6 @@ export interface components {
              * @default 0
              */
             permanently_orphaned: number;
-        };
-        /** SearchOut */
-        SearchOut: {
-            /** Items */
-            items: components["schemas"]["SearchResult"][];
-            /**
-             * Has More
-             * @default false
-             */
-            has_more: boolean;
-        };
-        /** SearchResult */
-        SearchResult: {
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "project" | "ticket" | "person" | "client";
-            /** Id */
-            id: string;
-            /** Title */
-            title: string;
-            /** Project Id */
-            project_id?: string | null;
-            /** Page Id */
-            page_id?: string | null;
         };
         /**
          * SearchResultOut
@@ -2928,40 +2906,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    search_api_v1_workspaces__workspace_id__search_get: {
-        parameters: {
-            query: {
-                q: string;
-                limit?: number;
-            };
-            header?: never;
-            path: {
-                workspace_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SearchResultsOut"];
-                };
             };
             /** @description Validation Error */
             422: {
@@ -3982,6 +3926,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClientOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_api_v1_workspaces__workspace_id__search_get: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResultsOut"];
                 };
             };
             /** @description Validation Error */

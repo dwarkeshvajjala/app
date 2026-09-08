@@ -43,15 +43,15 @@ export function GlobalSearch({ workspaceId, workspaceSlug }: { workspaceId: stri
   }, [query]);
 
   const activeQuery = debouncedQuery;
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isError, refetch } = useQuery({
     queryKey: qk.search(workspaceId, activeQuery),
     queryFn: () => searchWorkspace(workspaceId, activeQuery),
     enabled: activeQuery.length > 0,
-    placeholderData: (previous) => previous,
   });
 
   // Flatten grouped items for keyboard navigation
-  const flatItems = data?.items ?? [];
+  const grouped = query.trim() && activeQuery === query.trim() ? groupResults(data?.items ?? []) : [];
+  const flatItems = grouped.flatMap((group) => group.items);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -62,7 +62,8 @@ export function GlobalSearch({ workspaceId, workspaceSlug }: { workspaceId: stri
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.key === "k" && (event.metaKey || event.ctrlKey)) || (event.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA")) {
+      const editing = event.target instanceof HTMLElement && (event.target.isContentEditable || !!event.target.closest("input, textarea, select"));
+      if ((event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) || (event.key === "/" && !editing && !event.ctrlKey && !event.metaKey && !event.altKey)) {
         event.preventDefault();
         input.current?.focus();
       }
@@ -81,9 +82,9 @@ export function GlobalSearch({ workspaceId, workspaceSlug }: { workspaceId: stri
     if (result.kind === "member") return `${base}/members`;
     // comment and ticket both navigate to the tickets view with the comment selected
     if (result.project_id) {
-      return `${base}/p/${result.project_id}?ticket=${encodeURIComponent(result.id)}`;
+      return `${base}/p/${result.project_id}/board?comment=${encodeURIComponent(result.id)}`;
     }
-    return `${base}/tickets?comment_id=${encodeURIComponent(result.id)}`;
+    return `${base}/tickets?ticket=${encodeURIComponent(result.id)}`;
   }
 
   function open(result: SearchItem) {
@@ -105,7 +106,6 @@ export function GlobalSearch({ workspaceId, workspaceSlug }: { workspaceId: stri
     }
   }
 
-  const grouped = activeQuery ? groupResults(flatItems) : [];
 
   return (
     <div className="bl-global-search" ref={containerRef}>
@@ -114,6 +114,7 @@ export function GlobalSearch({ workspaceId, workspaceSlug }: { workspaceId: stri
         <input
           ref={input}
           aria-label="Search this workspace"
+          maxLength={200}
           aria-controls="bl-search-results"
           aria-activedescendant={flatItems[activeIndex] ? `bl-sr-${flatItems[activeIndex].id}` : undefined}
           placeholder="Search projects, comments, or people…"
@@ -121,12 +122,12 @@ export function GlobalSearch({ workspaceId, workspaceSlug }: { workspaceId: stri
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={handleInputKeyDown}
           role="combobox"
-          aria-expanded={!!activeQuery}
+          aria-expanded={!!query.trim()}
           aria-autocomplete="list"
         />
-        <kbd>{shortcut}</kbd>
+        <kbd title="Search: / or Cmd/Ctrl+K">/ · {shortcut}</kbd>
       </label>
-      {activeQuery && (
+      {query.trim() && (
         <section
           id="bl-search-results"
           ref={popover}
@@ -135,7 +136,8 @@ export function GlobalSearch({ workspaceId, workspaceSlug }: { workspaceId: stri
           role="listbox"
         >
           {isFetching && <p>Searching…</p>}
-          {!isFetching && flatItems.length === 0 && <p>No results in this workspace.</p>}
+          {isError && <p role="alert">Search failed. <button onClick={() => void refetch()}>Retry</button></p>}
+          {!isError && !isFetching && activeQuery === query.trim() && flatItems.length === 0 && <p>No results in this workspace.</p>}
           {grouped.map(({ section, items }) => (
             <div key={section} className="bl-search-section">
               <p className="bl-search-section-label">{SECTION_LABELS[section] ?? section}</p>

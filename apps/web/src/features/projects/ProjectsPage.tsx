@@ -21,20 +21,7 @@ import { PlusIcon, SearchIcon } from "../../components/icons";
 
 const TYPE_LABELS: Record<string, string> = { website: "Website", image: "Images", pdf: "PDF" };
 
-// Only aggregate open/resolved per project exists today (ProjectStatsOut) - no
-// per-project breakdown by workflow status yet, only a workspace-wide one
-// (DashboardOut.statuses). Until that per-project breakdown exists on the backend,
-// each card's "open" count is split across the four open statuses using this fixed,
-// illustrative ratio so the health bar reads like the real thing it will become -
-// swapping in real numbers later only touches this constant and the two lines that
-// use it below, nothing else.
-const PLACEHOLDER_OPEN_SPLIT: Record<"todo" | "in_progress" | "in_review" | "blocked", number> = {
-  todo: 0.35,
-  in_progress: 0.3,
-  in_review: 0.2,
-  blocked: 0.15,
-};
-const BAR_STATUSES = ["todo", "in_progress", "in_review", "blocked"] as const;
+const BAR_STATUSES = ["todo", "in_progress", "in_review", "blocked", "wont_fix"] as const;
 
 interface PickerOption { id: string; label: string; sub: string }
 
@@ -88,10 +75,10 @@ function paletteFor(seed: string) {
   return PREVIEW_PALETTES[hash % PREVIEW_PALETTES.length]!;
 }
 
-function ProjectArtwork({ project, open }: { project: api.ProjectOut; open: number }) {
+function ProjectArtwork({ project }: { project: api.ProjectOut }) {
   const palette = paletteFor(project.id || project.name);
   const type = project.project_type ?? "website";
-  const pins = Math.min(open, 3);
+
 
   return (
     <div className={`bl-project-art bl-project-art-${type}`} aria-hidden="true">
@@ -149,9 +136,7 @@ function ProjectArtwork({ project, open }: { project: api.ProjectOut; open: numb
           <rect x="186" y="130" width="67" height="4" rx="2" fill="#C9CECA" />
         </svg>
       )}
-      {Array.from({ length: pins }).map((_, index) => (
-        <span key={index} className={`bl-preview-pin pin-${index + 1}`}>{index + 1}</span>
-      ))}
+
     </div>
   );
 }
@@ -193,7 +178,7 @@ export function ProjectsPage() {
   const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const headline = archived ? "Archived projects" : search ? `Results for "${search}"` : type !== "all" ? `${TYPE_LABELS[type] ?? "Projects"} projects` : firstName ? `${timeGreeting}, ${firstName}` : timeGreeting;
   const needsReply = summary.data?.needs_reply ?? 0;
-  const fullyResolved = (projects.data ?? []).filter((p) => !p.archived_at && (stats.get(p.id)?.total ?? 0) > 0 && (stats.get(p.id)?.open ?? 0) === 0).map((p) => p.name);
+  const fullyResolved = (projects.data ?? []).filter((p) => !p.archived_at && (stats.get(p.id)?.total ?? 0) > 0 && stats.get(p.id)?.resolved === stats.get(p.id)?.total).map((p) => p.name);
 
   function projectCard(p: api.ProjectOut) {
     const s = stats.get(p.id);
@@ -203,9 +188,9 @@ export function ProjectsPage() {
     const displayUrl = isWebsite ? p.target_origin.replace(/^https?:\/\//, "") : p.project_type === "pdf" ? "PDF document" : "Image set";
     return <article key={p.id} className={`bl-project ${p.archived_at ? "archived" : ""}`}>
       <div className="bl-project-preview">
-        <ProjectArtwork project={p} open={open} />
+        <ProjectArtwork project={p} />
         <div className="bl-browser"><span aria-hidden="true"><i /><i /><i /></span><span>{displayUrl}</span></div>
-        <span className="bl-preview-type">{p.project_type ?? "website"}</span>
+        <span className="bl-preview-type">{p.project_type ?? "website"} · illustration</span>
         {!p.archived_at && <Link className="bl-project-preview-link" to={destination} aria-label={`Open ${p.name}`} />}
         {!p.archived_at && view === "cards" && (
           <div className="bl-project-overlay">
@@ -223,7 +208,7 @@ export function ProjectsPage() {
         <p className="bl-project-url">{displayUrl}</p>
         {total > 0 && (
           <div className="bl-project-bar" role="img" aria-label={`${resolved} of ${total} comments resolved`}>
-            {BAR_STATUSES.map((k) => open > 0 && <i key={k} style={{ flex: Math.max(open * PLACEHOLDER_OPEN_SPLIT[k], 0.0001), background: STATUS_COLORS[k] }} />)}
+            {BAR_STATUSES.map((k) => (s?.status_counts?.[k] ?? 0) > 0 && <i key={k} style={{ flex: s?.status_counts?.[k] ?? 0, background: STATUS_COLORS[k] }} />)}
             {resolved > 0 && <i style={{ flex: resolved, background: STATUS_COLORS.resolved }} />}
           </div>
         )}
@@ -255,7 +240,7 @@ export function ProjectsPage() {
           </header>
           {attention.isLoading ? (
             <div className="bl-attention-empty" aria-hidden="true"><div className="bl-skeleton" style={{ height: 12, width: 240, borderRadius: 3 }} /></div>
-          ) : (attention.data?.items.length ?? 0) > 0 ? (
+          ) : attention.isError ? (<p role="alert">Could not load items waiting on you. <button onClick={() => void attention.refetch()}>Retry</button></p>) : (attention.data?.items.length ?? 0) > 0 ? (
             <div>{attention.data?.items.map((t) => <Link key={t.id} to={`/w/${workspace.slug}/tickets?ticket=${t.id}&project_id=${t.project_id}`}><small>{t.project_name} · {t.page_title}</small><strong>{t.body}</strong><span>{t.author_name} · {timeAgo(t.created_at)}</span></Link>)}</div>
           ) : (
             <div className="bl-attention-empty">
@@ -274,7 +259,7 @@ export function ProjectsPage() {
           visible grid" input; the omnisearch in the persistent topbar (⌘K) is the
           different, more powerful "find anything in this workspace" one. */}
       <div className="bl-toolbar wrap">
-        <span className="bl-mono">{visible.length} PROJECTS</span>
+        <span className="bl-mono">{visible.length} PROJECTS</span>{(search || type !== "all" || params.get("client")) && <button className="bl-quiet" onClick={() => { const next = new URLSearchParams(params); ["search", "type", "client"].forEach((key) => next.delete(key)); setParams(next); }}>Clear filters</button>}
         <label className="bl-search"><span className="bl-search-icon" aria-hidden="true"><SearchIcon /></span><input aria-label="Filter projects" placeholder="Filter by name or URL…" value={search} onChange={(e) => filter("search", e.target.value)} /></label>
         <select aria-label="Filter by client" className="bl-select" value={params.get("client") ?? ""} onChange={(e) => filter("client", e.target.value)}><option value="">All clients</option>{clients.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
         <div className="bl-tool-right">

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Avatar } from "@backline/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useWSEvent } from "../WSProvider";
 
 import { qk } from "../../lib/query-keys";
@@ -79,7 +79,7 @@ export function WorkspaceLayout() {
     return <Navigate to="/" replace />;
   }
   if (result.status === "error") {
-    return <p className="text-recovery-orphaned p-6 text-sm">{result.message}</p>;
+    return <main className="bl-review-gate"><h1>Could not open workspace</h1><p role="alert">{result.message}</p><button onClick={() => window.location.reload()}>Retry</button><Link to="/">Choose another workspace</Link></main>;
   }
   if (result.status === "switching") {
     return <LoadingScreen label={`Opening ${result.workspace.name}`} />;
@@ -117,7 +117,7 @@ export function WorkspaceLayout() {
             {mobileNavigationOpen ? <CloseIcon /> : <MenuIcon />}
           </button>
           <span className="bl-mobile-brand"><BrandMark compact /></span>
-          <GlobalSearch workspaceId={workspace.id} workspaceSlug={workspace.slug} />
+          <GlobalSearch key={workspace.id} workspaceId={workspace.id} workspaceSlug={workspace.slug} />
           <div className="bl-topbar-actions">
             <button type="button" className="bl-button bl-topbar-create" onClick={() => setCreateProjectOpen(true)}>
               <PlusIcon /> <span>New project</span>
@@ -138,6 +138,7 @@ export function WorkspaceLayout() {
           </div>
         )}
         <div id="workspace-content" className="bl-route-content" tabIndex={-1}>
+          {location.pathname !== `/w/${workspace.slug}` && <nav aria-label="Breadcrumb" className="bl-mono"><Link to={`/w/${workspace.slug}`}>{workspace.name}</Link> / <span aria-current="page">{location.pathname.split("/").pop()?.replace(/-/g, " ")}</span></nav>}
           <Outlet context={{ workspace }} />
         </div>
       </div>
