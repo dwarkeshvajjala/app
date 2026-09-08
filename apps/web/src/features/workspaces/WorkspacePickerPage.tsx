@@ -1,4 +1,3 @@
-import { Button } from "@backline/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -51,54 +50,90 @@ export function WorkspacePickerPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-16">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{t('workspacePicker.title' as TranslationKeys)}</h1>
-        <button className="text-text-muted text-xs underline" onClick={() => logout()}>
-          {t('account.signOut' as TranslationKeys)}
-        </button>
+    <main className="wsp">
+      <div className="wsp-card">
+        {/* Brand */}
+        <div className="wsp-head">
+          <span className="lg-mark">B</span>
+          <span><b>Backline</b><em>CLIENT REVIEW, IN ONE PLACE</em></span>
+        </div>
+
+        <div className="wsp-body">
+          {/* Title + sign out */}
+          <div className="wsp-title">
+            <h1>{t('workspacePicker.title' as TranslationKeys)}</h1>
+            <button className="wsp-signout" onClick={() => logout()}>
+              {t('account.signOut' as TranslationKeys)}
+            </button>
+          </div>
+          {user && <p className="wsp-email">{user.email}</p>}
+
+          {/* Loading state */}
+          {isLoading && <p className="wsp-loading">Loading workspaces…</p>}
+
+          {/* Workspace list */}
+          {workspaces && workspaces.length > 0 && (
+            <div className="wsp-list">
+              {workspaces.map((ws) => (
+                <button
+                  key={ws.id}
+                  className="wsp-item"
+                  onClick={() => enterWorkspace(ws.id, ws.slug)}
+                >
+                  <span className="wsp-mark">{ws.name.slice(0, 1).toUpperCase()}</span>
+                  <span className="wsp-item-name">{ws.name}</span>
+                  <span className="wsp-item-arrow">
+                    {t('workspacePicker.select' as TranslationKeys)}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <path d="M5 12h14M13 6l6 6-6 6" />
+                    </svg>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {workspaces && workspaces.length === 0 && (
+            <p className="wsp-empty">
+              You don't belong to any workspaces yet — create one below to get started.
+            </p>
+          )}
+
+          {/* Divider */}
+          <div className="wsp-div" />
+
+          {/* New workspace form */}
+          <form className="wsp-form" onSubmit={handleCreate}>
+            <h2>{t('workspacePicker.newWorkspace' as TranslationKeys)}</h2>
+            <input
+              type="text"
+              required
+              placeholder="Acme Corp"
+              value={newWorkspaceName}
+              onChange={(event) => setNewWorkspaceName(event.target.value)}
+              spellCheck="false"
+            />
+            {error && (
+              <p className="wsp-err">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16h.01" /></svg>
+                <span>{error}</span>
+              </p>
+            )}
+            <button type="submit" className="wsp-submit" disabled={isSubmitting}>
+              {isSubmitting ? <span className="lg-spin" /> : null}
+              {t('workspacePicker.newWorkspace' as TranslationKeys)}
+            </button>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <div className="wsp-foot">
+          <span className="c">&copy; {new Date().getFullYear()} Backline</span>
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+          <a href="#">Support</a>
+        </div>
       </div>
-      {user && <p className="text-text-muted text-sm">Signed in as {user.email}</p>}
-
-      {isLoading && <p className="text-text-muted text-sm">Loading...</p>}
-
-      {workspaces && workspaces.length > 0 && (
-        <ul className="flex flex-col gap-2">
-          {workspaces.map((ws) => (
-            <li key={ws.id}>
-              <button
-                className="hover:bg-bg-canvas flex w-full items-center justify-between rounded-md border border-black/10 px-4 py-3 text-left transition-colors dark:border-white/10"
-                onClick={() => enterWorkspace(ws.id, ws.slug)}
-              >
-                <span className="font-medium">{ws.name}</span>
-                <span className="text-text-muted text-sm">{t('workspacePicker.select' as TranslationKeys)} &rarr;</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {workspaces && workspaces.length === 0 && (
-        <p className="text-text-muted text-sm">
-          You don't belong to any workspaces yet - create one below.
-        </p>
-      )}
-
-      <form className="mt-8 flex flex-col gap-3" onSubmit={handleCreate}>
-        <h2 className="text-sm font-medium">{t('workspacePicker.newWorkspace' as TranslationKeys)}</h2>
-        <input
-          type="text"
-          required
-          placeholder="Acme Corp"
-          value={newWorkspaceName}
-          onChange={(event) => setNewWorkspaceName(event.target.value)}
-          className="rounded-md border border-black/10 px-3 py-2 dark:border-white/10 dark:bg-transparent"
-        />
-        {error && <p className="text-recovery-orphaned text-sm">{error}</p>}
-        <Button type="submit" disabled={isSubmitting}>
-          {t('workspacePicker.newWorkspace' as TranslationKeys)}
-        </Button>
-      </form>
     </main>
   );
 }
