@@ -9,6 +9,7 @@ import { useDocumentTitle } from "../../lib/use-document-title";
 import { listMembers } from "../workspaces/api";
 import type { WorkspaceOut } from "../workspaces/api";
 import { listActivity } from "./api";
+import type { Schemas } from "@backline/types";
 
 // One badge colour per event category (same "small local colour map" convention
 // PRIORITY_META/STATUS_META use in the comments panel), so the timeline reads at a
@@ -37,7 +38,7 @@ export function ActivityPage() {
   function page(value: number) { setParams({ type: filter, offset: String(value) }); }
 
   const groups = useMemo(() => {
-    const result = new Map<string, NonNullable<typeof query.data>["items"]>();
+    const result = new Map<string, Schemas["ActivityListOut"]["items"]>();
     for (const event of query.data?.items ?? []) {
       const date = new Date(event.created_at).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
       result.set(date, [...(result.get(date) ?? []), event]);

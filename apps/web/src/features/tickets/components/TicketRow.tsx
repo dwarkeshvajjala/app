@@ -34,17 +34,31 @@ export function TicketRow({
   const assigneeIds = ticket.assignee_ids?.length ? ticket.assignee_ids : [];
 
   return (
-    <div className="bl-tk">
+    <div 
+      className="bl-tk" 
+      role="button" 
+      tabIndex={0} 
+      onClick={() => onOpen(ticket.id)}
+      onKeyDown={(e) => {
+        // Only activate for the row itself - a bubbled Enter/Space from the
+        // nested StatusSelect, priority <select>, tag chips, or the
+        // "Unassigned" button would otherwise both block their own native
+        // keyboard behavior (e.g. Space opening a <select>) and wrongly open
+        // the ticket detail on top of it.
+        if (e.target !== e.currentTarget) return;
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(ticket.id); }
+      }}
+    >
       <span className="bl-tk-prio" style={{ background: priority.color }} title={`${priority.label} priority`} />
       <div className="bl-tk-main">
-        <button type="button" className="bl-ticket-title" onClick={() => onOpen(ticket.id)}>
+        <span className="bl-ticket-title">
           {ticket.body}
-        </button>
+        </span>
         <span className="bl-tk-s">
           {ticket.project_name} · {ticket.is_standalone ? "Team ticket" : ticket.page_title}
         </span>
       </div>
-      <span className="bl-tk-status">
+      <span className="bl-tk-status" onClick={(e) => e.stopPropagation()}>
         <StatusSelect ticket={ticket} disabled={update.isPending} onChange={(status) => update.mutate({ id: ticket.id, patch: { status } })} />
       </span>
       <select
@@ -52,20 +66,21 @@ export function TicketRow({
         aria-label={`Priority for ${ticket.body.slice(0, 40)}`}
         disabled={update.isPending}
         value={ticket.priority ?? "medium"}
+        onClick={(e) => e.stopPropagation()}
         onChange={(e) => update.mutate({ id: ticket.id, patch: { priority: e.target.value as "high" | "medium" | "low" } })}
       >
         {["high", "medium", "low"].map((p) => (
           <option key={p}>{p}</option>
         ))}
       </select>
-      <div className="bl-tk-tags">
+      <div className="bl-tk-tags" onClick={(e) => e.stopPropagation()}>
         {ticket.tags?.slice(0, 2).map((tag) => (
           <button type="button" className="bl-chip" key={tag} onClick={() => onFilterTag(tag)}>
             {tag}
           </button>
         ))}
       </div>
-      <span className="bl-tk-asg" title={assigneeIds.length ? `Assigned to ${assigneeIds.map((id) => memberName(members, id)).join(", ")}` : "Unassigned"}>
+      <span className="bl-tk-asg" title={assigneeIds.length ? `Assigned to ${assigneeIds.map((id) => memberName(members, id)).join(", ")}` : "Unassigned"} onClick={(e) => e.stopPropagation()}>
         {assigneeIds.length === 0 ? (
           <button type="button" className="bl-quiet" style={{ border: 0, background: "none", color: "var(--ink-4)", padding: "2px 4px" }} onClick={() => onOpen(ticket.id)}>
             Unassigned

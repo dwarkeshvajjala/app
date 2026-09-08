@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, useState } from "react";
 
 import { useOnClickOutside } from "../../../lib/use-click-outside";
@@ -46,7 +47,6 @@ export const VIEWPORT_GROUPS: ViewportGroup[] = [
 ];
 
 // Kept as a flat export for callers that need to resolve a URL-persisted preset.
-// eslint-disable-next-line react-refresh/only-export-components
 export const VIEWPORTS = VIEWPORT_GROUPS.flatMap((group) => group.options);
 
 interface ViewportMenuProps {
