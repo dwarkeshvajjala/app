@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
+import { LoadingScreen } from "../../components/LoadingScreen";
 import * as integrationsApi from "./api";
 import { CLICKUP_PENDING_KEY } from "./IntegrationsPage";
 
@@ -40,13 +41,20 @@ export function ClickUpOAuthCallbackPage() {
       });
   }, [searchParams, navigate]);
 
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-      {error ? (
-        <p className="text-recovery-orphaned">{error}</p>
-      ) : (
-        <p className="text-text-muted">Connecting ClickUp...</p>
-      )}
-    </main>
-  );
+  if (error) {
+    return (
+      <main className="bl-review-gate">
+        <span className="bl-loading-mark" aria-hidden="true">B</span>
+        <div className="bl-review-gate-copy">
+          <span className="bl-review-eyebrow">Integrations</span>
+          <h1>Couldn't connect ClickUp</h1>
+          <p>{error}</p>
+          <div className="bl-review-gate-actions">
+            <Link className="bl-quiet" to="/">Back to dashboard</Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+  return <LoadingScreen label="Connecting ClickUp" />;
 }

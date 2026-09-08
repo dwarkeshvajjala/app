@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
+import { LoadingScreen } from "../../components/LoadingScreen";
 import { useAuth } from "./AuthContext";
 
 export function AuthCallbackPage() {
@@ -27,18 +28,20 @@ export function AuthCallbackPage() {
       });
   }, [searchParams, loginWithGoogleCode, navigate]);
 
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-      {error ? (
-        <>
-          <p className="text-recovery-orphaned">{error}</p>
-          <a href="/login" className="text-sm underline">
-            Back to sign in
-          </a>
-        </>
-      ) : (
-        <p className="text-text-muted">Signing you in...</p>
-      )}
-    </main>
-  );
+  if (error) {
+    return (
+      <main className="bl-review-gate">
+        <span className="bl-loading-mark" aria-hidden="true">B</span>
+        <div className="bl-review-gate-copy">
+          <span className="bl-review-eyebrow">Sign in</span>
+          <h1>Couldn't sign you in</h1>
+          <p>{error}</p>
+          <div className="bl-review-gate-actions">
+            <Link className="bl-quiet" to="/login">Back to sign in</Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+  return <LoadingScreen label="Signing you in" />;
 }

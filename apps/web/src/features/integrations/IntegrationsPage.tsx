@@ -3,6 +3,7 @@ import { type FormEvent, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import { useDocumentTitle } from "../../lib/use-document-title";
+import { LoadingScreen } from "../../components/LoadingScreen";
 import type { WorkspaceOut } from "../workspaces/api";
 import * as integrationsApi from "./api";
 import { buildClickUpAuthUrl } from "./clickup-oauth-url";
@@ -115,11 +116,11 @@ export function IntegrationsPage() {
           {integrationsError instanceof Error ? integrationsError.message : "Could not load integrations."}
         </p>
       )}
-      {isLoading && <p className="bl-mono">Loading...</p>}
+      {isLoading && <LoadingScreen />}
 
       {integrations && integrations.length > 0 && (
-        <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
-          <header style={{ flex: "0 0 200px" }}>
+        <section className="bl-attention bl-settings-section">
+          <header>
             <h2>Connected</h2>
           </header>
           <div style={{ flex: 1, padding: "20px" }}>
@@ -132,7 +133,7 @@ export function IntegrationsPage() {
                   <span style={{ fontSize: "13px", fontWeight: 500 }}>{TYPE_LABELS[integration.type]}</span>
                   <button
                     className="bl-quiet"
-                    style={{ color: "#A33317", borderColor: "transparent", padding: "4px 8px" }}
+                    style={{ color: "var(--bl-error)", borderColor: "transparent", padding: "4px 8px" }}
                     onClick={() => disconnectMutation.mutate(integration.id)}
                   >
                     Disconnect
@@ -144,8 +145,8 @@ export function IntegrationsPage() {
         </section>
       )}
 
-      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
-        <header style={{ flex: "0 0 200px" }}>
+      <section className="bl-attention bl-settings-section">
+        <header>
           <h2>Slack</h2>
         </header>
         <div style={{ flex: 1, padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -173,8 +174,8 @@ export function IntegrationsPage() {
         </div>
       </section>
 
-      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
-        <header style={{ flex: "0 0 200px" }}>
+      <section className="bl-attention bl-settings-section">
+        <header>
           <h2>Trello</h2>
         </header>
         <div style={{ flex: 1, padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -218,8 +219,8 @@ export function IntegrationsPage() {
         </div>
       </section>
 
-      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
-        <header style={{ flex: "0 0 200px" }}>
+      <section className="bl-attention bl-settings-section">
+        <header>
           <h2>ClickUp</h2>
         </header>
         <div style={{ flex: 1, padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>

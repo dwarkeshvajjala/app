@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { ComponentType, SVGProps } from "react";
 import { Link, useOutletContext, useSearchParams } from "react-router-dom";
+import { LoadingScreen } from "../../components/LoadingScreen";
 import { BoltIcon, BuildingIcon, CommentBubbleIcon, FolderIcon, LinkIcon, PersonIcon } from "../../components/icons";
 import { qk } from "../../lib/query-keys";
 import { useDocumentTitle } from "../../lib/use-document-title";
@@ -62,7 +63,7 @@ export function ActivityPage() {
       )}
     </div>
 
-    {query.isLoading && <p role="status">Loading activity…</p>}
+    {query.isLoading && <LoadingScreen />}
     {query.error && <p role="alert" className="bl-error">{query.error.message}</p>}
 
     {!query.isLoading && !query.error && (

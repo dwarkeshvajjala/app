@@ -34,8 +34,8 @@ export function BillingPage() {
         </div>
       </header>
 
-      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
-        <header style={{ flex: "0 0 200px" }}>
+      <section className="bl-attention bl-settings-section">
+        <header>
           <h2>Your Plan</h2>
         </header>
         <div style={{ flex: 1, padding: "20px", display: "flex", flexDirection: "column", gap: "20px" }}>

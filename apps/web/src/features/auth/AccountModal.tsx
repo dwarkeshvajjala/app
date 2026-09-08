@@ -173,7 +173,7 @@ export function AccountModal({ onClose }: AccountModalProps) {
                         </p>
                       </div>
                       {!s.current && (
-                        <button type="button" className="bl-quiet" onClick={() => setRevokeCandidate(s)} style={{ color: "#A33317", borderColor: "transparent" }}>
+                        <button type="button" className="bl-quiet" onClick={() => setRevokeCandidate(s)} style={{ color: "var(--bl-error)", borderColor: "transparent" }}>
                           Sign out
                         </button>
                       )}

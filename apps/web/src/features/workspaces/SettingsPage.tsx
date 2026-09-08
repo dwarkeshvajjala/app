@@ -2,7 +2,7 @@ import { Avatar } from "@backline/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
-
+import { useToast } from "../../components/Toast";
 import { qk } from "../../lib/query-keys";
 import { useDocumentTitle } from "../../lib/use-document-title";
 import { useUnsavedChanges } from "../../lib/use-unsaved-changes";
@@ -12,6 +12,7 @@ import type { WorkspaceOut } from "./api";
 export function SettingsPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
   useDocumentTitle('Settings');
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [name, setName] = useState(workspace.name);
   
@@ -22,6 +23,10 @@ export function SettingsPage() {
     mutationFn: (newName: string) => workspacesApi.updateWorkspace(workspace.id, newName),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: qk.workspaces() });
+      toast("Workspace name updated.", "success");
+    },
+    onError: () => {
+      toast("Could not update workspace name.", "error");
     },
   });
 
@@ -34,8 +39,8 @@ export function SettingsPage() {
         </div>
       </header>
 
-      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
-        <header style={{ flex: "0 0 200px" }}>
+      <section className="bl-attention bl-settings-section">
+        <header>
           <h2>Workspace Avatar</h2>
         </header>
         <div style={{ flex: 1, padding: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px", flexWrap: "wrap" }}>
@@ -53,8 +58,8 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
-        <header style={{ flex: "0 0 200px" }}>
+      <section className="bl-attention bl-settings-section">
+        <header>
           <h2>Workspace Name</h2>
         </header>
         <div style={{ flex: 1, padding: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px", flexWrap: "wrap" }}>
@@ -78,11 +83,6 @@ export function SettingsPage() {
             </button>
           </div>
         </div>
-        {(renameMutation.isSuccess || renameMutation.isError) && (
-          <div style={{ padding: "0 20px 20px", fontSize: "11px", textAlign: "right", color: renameMutation.isError ? "#A33317" : "var(--mint-deep)" }}>
-            {renameMutation.isError ? "Could not update workspace name." : "Workspace name updated."}
-          </div>
-        )}
       </section>
     </main>
   );

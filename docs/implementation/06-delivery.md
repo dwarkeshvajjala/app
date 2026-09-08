@@ -1,5 +1,115 @@
 # Delivery and verification ledger
 
+## 2026-09-08: Slice 09 verification pass — fixes, extended coverage, and checks run
+
+Verified the "Post-login UI consistency audit and polish (Slice 09)" entry below against
+`backline.css` and a live build, since it had only been source-inspected. Found and fixed
+real defects, extended coverage to routes the audit's own "every post-login and guest
+route" mandate had missed, and this time actually ran the checks it had deferred.
+
+**Confirmed defects found and fixed:**
+
+- **Real bug (broken token, same class of mistake as the earlier settings-family
+  fix):** `IntegrationsPage.tsx`'s disconnect button was changed from a hardcoded
+  `#A33317` to `var(--bl-error)` - but no `--bl-error` custom property existed anywhere
+  in `backline.css`, so the text would have rendered in an unstyled/inherited color
+  instead of the intended error red. Added `--bl-error:#A33317` to the `:root` legacy
+  alias block instead of reverting to a hardcoded hex, so the token now actually backs
+  the reference and is available for reuse.
+- **Missed one-off colors (the audit's own stated goal, applied to instances it didn't
+  reach):** `MembersPage.tsx`'s "Remove" member button and `AccountModal.tsx`'s "Sign
+  out" session button still had raw `#A33317` inline styles instead of the new token.
+  Switched both to `var(--bl-error)`.
+
+**Coverage gaps found and fixed (routes/components the "audit every post-login and
+guest route" mandate should have reached but didn't):**
+
+- `ComingSoonModal.tsx` (invoked live from the already-migrated `McpServerPage` and
+  `ProjectTypePlaceholderPage`) was still a hand-rolled `fixed inset-0 z-50` Tailwind
+  overlay div, unlike its sibling `ProFeatureModal`/`UpgradeToProModal`/
+  `CollaboratorsModal`, which the panel slice had already moved onto the shared
+  `Dialog` component. Rebuilt it on `Dialog` with the same `bl-form`/`bl-scope-badge`
+  pattern `ProFeatureModal` uses - same copy and behavior, now with native focus
+  containment/return and Escape instead of a manual click-to-close div.
+- `apps/web/src/features/share-links/ShareLinksPage.tsx` - the full share-link manager
+  linked from `ShareProjectModal` ("Manage all share links"), `CollaboratorsModal`, and
+  `AssetReview`'s "Share" link - was entirely unmigrated raw Tailwind (`text-text-muted`,
+  `border-black/10`, `dark:` variants, a bare `<select>`, no shared `Dialog`, no
+  confirmation before revoking a link). Rebuilt on `bl-wrap`/`bl-head`/`bl-table`/
+  `bl-empty` for the link list, the same `.bl-create-link`/`.bl-setting-row`/
+  `.bl-switch` fields `ShareProjectModal`'s create form already established for a "New
+  share link" `.bl-settings-section` card, `.bl-access-state` for the active/revoked
+  status pill, and a `Dialog`-based revoke confirmation (`bl-dialog-intro` +
+  `bl-dialog-actions-bordered`, matching `ClientsPage`'s archive-confirm pattern)
+  instead of revoking on a single unconfirmed click. Also switched its query key from an
+  inline `["project", projectId, "share-links"]` array to the existing `qk.shareLinks()`
+  factory so it shares cache invalidation with `ShareProjectModal` correctly.
+- `NotificationBell.tsx` (global topbar chrome shown on every authenticated page, listed
+  in Slice 01's own scope but never actually migrated) was still raw Tailwind
+  (`bg-bg-surface`, `border-black/10`, `dark:` variants, a manual `position:fixed`
+  click-outside backdrop with hand-rolled `zIndex` values). Rebuilt on the existing
+  `.bl-dropdown`/`.bl-dropdown-pop`/`.bl-dropdown-trigger` popover system (same one
+  `ProjectsPage`'s filter pickers use) and the shared `useOnClickOutside` hook instead of
+  a manual backdrop div; added `.bl-notif-panel`/`.bl-notif-head`/`.bl-notif-empty`/
+  `.bl-notif-badge` to `backline.css` alongside the pre-existing `.bl-notif-item`/
+  `.bl-notif-route` rules, using `var(--amber)` for the unread badge instead of the old
+  Tailwind `recovery-orphaned` red (amber is this brand's "waiting for you" color per
+  AGENTS.md, not a warning/error). The topbar icon-button sizing rule
+  (`.bl-topbar-actions>.relative>button`) depended on a bare Tailwind `.relative`
+  wrapper class as its CSS hook; extended it to also match
+  `.bl-topbar-actions>.bl-dropdown>.bl-dropdown-trigger` so the bell keeps the same
+  34px topbar sizing as its siblings under its new, correctly-named wrapper.
+- `NotFoundPage.tsx` (the router's catch-all `*` route) and the loading/error states of
+  `AuthCallbackPage.tsx` and `ClickUpOAuthCallbackPage.tsx` (Google/ClickUp OAuth
+  redirect landings) were still raw Tailwind full-screen divs. Rebuilt all three on the
+  existing `.bl-review-gate`/`.bl-loading-mark`/`.bl-review-gate-copy`/
+  `.bl-review-eyebrow` full-screen gate pattern `ProjectLayout.tsx` already uses for its
+  own error/not-found states, and `<LoadingScreen>` for the in-progress states.
+
+**Found but deliberately not fixed here (out of scope for a quick verification pass,
+flagged as separate follow-up tasks):**
+
+- `apps/web/src/features/board/BoardPage.tsx` and its `BoardHeader`/`KanbanBoard`/
+  `ListTable` subcomponents (the project-level comment kanban/list at
+  `/w/:workspaceSlug/p/:projectId/board`, linked live from `ActivityPage`'s feed rows)
+  are still entirely on the pre-migration Tailwind system. This is confirmed reachable,
+  not dead code, and was missed by every one of Slices 01-09 despite the "audit every
+  post-login route" mandate - but it's a multi-file, feature-rich surface (drag/live
+  WebSocket updates, ClickUp/Trello task creation, bulk actions) whose full migration is
+  slice-sized work, not a quick fix. Flagged for a dedicated follow-up pass rather than
+  rushed here.
+- `apps/web/src/features/workspaces/WorkspaceHomePage.tsx`, and the `ProjectCard.tsx`/
+  `NewProjectMenu.tsx`/`NewProjectModal.tsx` it alone consumes, are dead code (not
+  imported by `router.tsx` or anything else reachable - superseded by `ProjectsPage.tsx`)
+  still sitting in raw Tailwind. Left untouched and flagged for deletion rather than
+  migrated, since migrating unreachable code would be wasted work.
+- A pre-existing, low-severity one-off: `CommentRow.tsx`'s "Delete thread" menu row uses
+  an inline `color:"#A8401F"` (matching `.bl-button.danger`'s background, not the
+  `--bl-error` token) instead of the established `.bl-dropdown-item.danger` class. Left
+  as-is - harmless, pre-dates this pass, and outside the 8 files this slice touched.
+
+**Verification run (deferred by the original slice prompt, actually executed for this
+verification pass):** `tsc -b --noEmit` passes with zero errors; `eslint .` reports 0
+errors (4 pre-existing warnings in files unrelated to this pass -
+`ActivityPage.tsx`'s pre-existing `useMemo` dependency warning, and unrelated
+`react-refresh/only-export-components` warnings in `BrowserMenu.tsx`/`ViewportMenu.tsx`);
+`vite build` succeeds with only the pre-existing large-chunk warning. The `/login` route
+was loaded in a local dev server (no backend available, so only backend-independent
+pages could be checked) and rendered correctly with no CSS regressions. Not run: full
+authenticated browser/keyboard/responsive QA of the specific pages changed (`Members`,
+`Settings`, `Integrations`, `Billing`, `Usage`, `Mcp`, `Clients`, `Activity`,
+`ShareLinksPage`, the notification popover) - these need a running backend and a real
+session, which were not available in this environment.
+
+## 2026-09-08: Post-login UI consistency audit and polish (Slice 09)
+
+- Completed a consistency pass across the post-login settings family and guest routes (`SettingsPage`, `IntegrationsPage`, `BillingPage`, `UsagePage`, `McpServerPage`, `MembersPage`, `ClientsPage`, `ActivityPage`) to align with `backline-Final Draft.html` and `backline.css`.
+- Standardized the left-to-right settings layouts using a new `.bl-settings-section` class in `backline.css`, eliminating inline `display: flex; gap: 40px` and fixed-width header overrides that had broken the brand geometry.
+- Consolidate loading states by replacing unstyled `<p className="bl-mono">Loading...</p>` or `Loading clients…` text with the shared `<LoadingScreen />` component across all audited routes.
+- Standardized empty state heading structures and replaced raw text glyphs (like `🔍`) with proper `@backline/ui` icons (`SearchIcon`).
+- Switched the workspace rename success/error feedback in `SettingsPage` from hardcoded inline text to use the shared `useToast` pattern.
+- Not run at the user's request: lint, typecheck, build, automated tests, local preview, browser QA, and responsive screenshot comparison. The source diff was inspected, but visual verification is still required.
+
 ## 2026-09-08: Guest review entry and asset review slice (Slice 08) — verification and fixes
 
 A prior session had already restyled `ReviewEntryPage`, `GuestBoard`, and `AssetReview`
