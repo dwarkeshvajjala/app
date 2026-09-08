@@ -1,4 +1,4 @@
-import { Avatar, Button } from "@backline/ui";
+import { Avatar } from "@backline/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
@@ -26,59 +26,64 @@ export function SettingsPage() {
   });
 
   return (
-    <main className="px-6 py-8">
-      <h1 className="text-xl font-semibold">Settings</h1>
+    <main className="bl-wrap">
+      <header className="bl-head">
+        <div>
+          <h1>Settings</h1>
+          <p>Manage your workspace avatar and name.</p>
+        </div>
+      </header>
 
-      <div className="mt-6 max-w-lg overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
-        <div className="flex items-center gap-4 p-5">
-          <Avatar name={workspace.name} size={56} />
-          <div>
-            <h2 className="text-sm font-semibold">Workspace Avatar</h2>
-            <p className="text-text-muted mt-1 text-sm">This is your workspace avatar.</p>
-            <p className="text-text-muted text-sm">Click on the avatar to upload a new image (max 5MB)</p>
+      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
+        <header style={{ flex: "0 0 200px" }}>
+          <h2>Workspace Avatar</h2>
+        </header>
+        <div style={{ flex: 1, padding: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+            <Avatar name={workspace.name} size={56} />
+            <div>
+              <p style={{ fontSize: "12px", fontWeight: 500, marginBottom: "4px" }}>Avatar</p>
+              <p className="bl-mono">Click on the avatar to upload a new image (max 5MB)</p>
+            </div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <p style={{ fontSize: "10px", color: "var(--bl-muted)", marginBottom: "8px" }}>Avatar uploads aren't available yet.</p>
+            <button className="bl-button" disabled>Save</button>
           </div>
         </div>
-        <div className="bg-bg-canvas flex items-center justify-between border-t border-black/10 px-5 py-3 dark:border-white/10">
-          <p className="text-text-muted text-xs">
-            Avatar uploads aren't available yet - coming soon.
-          </p>
-          <Button variant="secondary" disabled title="Not available yet" aria-label="Save workspace avatar">
-            Save
-          </Button>
-        </div>
-      </div>
+      </section>
 
-      <div className="mt-6 max-w-lg overflow-hidden rounded-lg border border-black/10 dark:border-white/10">
-        <div className="p-5">
-          <h2 className="text-sm font-semibold">Workspace Name</h2>
-          <label className="mt-3 flex flex-col gap-1 text-sm">
-            Workspace Name
+      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
+        <header style={{ flex: "0 0 200px" }}>
+          <h2>Workspace Name</h2>
+        </header>
+        <div style={{ flex: 1, padding: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "20px", flexWrap: "wrap" }}>
+          <div>
+            <p style={{ fontSize: "12px", fontWeight: 500, marginBottom: "4px" }}>Name</p>
+            <p className="bl-mono">This is your workspace's visible name within Backline.</p>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              aria-invalid={!name.trim()}
-              className="rounded-md border border-black/10 px-3 py-2 dark:border-white/10 dark:bg-transparent aria-[invalid=true]:border-red-500 aria-[invalid=true]:focus:ring-red-500"
+              className="bl-input"
+              style={{ width: "220px" }}
             />
-          </label>
+            <button 
+              className="bl-button mint"
+              disabled={!nameChanged || renameMutation.isPending}
+              onClick={() => renameMutation.mutate(name.trim())}
+            >
+              Save
+            </button>
+          </div>
         </div>
-        <div className="bg-bg-canvas flex items-center justify-between border-t border-black/10 px-5 py-3 dark:border-white/10">
-          <p className="text-text-muted text-xs">This is your workspace's visible name within Backline.</p>
-          <Button
-            variant="secondary"
-            aria-label="Save workspace name"
-            disabled={!nameChanged || renameMutation.isPending}
-            onClick={() => renameMutation.mutate(name.trim())}
-          >
-            Save
-          </Button>
-        </div>
-        {renameMutation.isSuccess && (
-          <p className="text-status-resolved px-5 pb-3 text-xs">Workspace name updated.</p>
+        {(renameMutation.isSuccess || renameMutation.isError) && (
+          <div style={{ padding: "0 20px 20px", fontSize: "11px", textAlign: "right", color: renameMutation.isError ? "#A33317" : "var(--mint-deep)" }}>
+            {renameMutation.isError ? "Could not update workspace name." : "Workspace name updated."}
+          </div>
         )}
-        {renameMutation.isError && (
-          <p className="text-recovery-orphaned px-5 pb-3 text-xs">Could not update workspace name.</p>
-        )}
-      </div>
+      </section>
     </main>
   );
 }

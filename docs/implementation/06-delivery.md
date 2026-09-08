@@ -1,5 +1,53 @@
 # Delivery and verification ledger
 
+## 2026-09-08: Post-login UI migration — settings family slice
+
+- Migrated `MembersPage`, `IntegrationsPage`, `SettingsPage`, `BillingPage`, `UsagePage`, `McpServerPage`, and `AccountModal` as a single unified settings-family system.
+- Rebuilt all pages using the established Backline brand from `apps/web/src/styles/backline.css`. Implemented a consistent left-to-right information hierarchy (`<section className="bl-attention" style={{ display: "flex", gap: "40px" }}>`) with the section header pinned to the left and controls/information on the right.
+- `MembersPage` uses `.bl-wrap`, `.bl-head`, `.bl-toolbar`, and `.bl-table`. Role updates and team invites use the standard inputs and `Dialog` respectively.
+- `AccountModal` now uses the shared `Dialog` component instead of inline styles for its layout, mapping profile/preferences/sessions controls to a neat left-to-right flow with the user avatar locked to the left.
+- `IntegrationsPage` preserves all OAuth and Webhook inputs but drops them into the left-to-right card layout with `.bl-button` and `.bl-input`.
+- Billing, Usage, and MCP Server pages are honest and intentional: unavailable features look deliberately disabled rather than simulating backend success or fake AI metrics.
+- Preserved React Router structure, React Query mutations/keys, components like `UpgradeToProModal`, authentication verification, and workspace state exactly as they were. No API contracts or backend logic were touched.
+- Not run at the user's request: lint, typecheck, build, automated tests, local preview, browser QA, and responsive screenshot comparison.
+
+### 2026-09-08: Verification pass on the settings-family slice
+
+- Audited the slice above against `backline.css` (every `bl-` classname and `var(--bl-*)`
+  token used across all 7 files was checked against the stylesheet's actual selectors and
+  the `:root` custom-property block, not assumed) and against each file's pre-migration
+  version to confirm no functional/API regression. Found and fixed:
+  - **Real bug:** `SettingsPage.tsx`'s workspace-rename success message used
+    `var(--bl-mint-deep)`, which is not defined anywhere in `backline.css` (only the plain
+    `--mint-deep` token and a `--bl-` alias set that excludes it exist) - the confirmation
+    text would have rendered in an unstyled/inherited color instead of the intended mint.
+    Changed to `var(--mint-deep)`.
+  - **Dead imports left over from the restyle:** `Button` from `@backline/ui` was imported
+    but no longer rendered (replaced by plain `.bl-button` elements) in `SettingsPage.tsx`,
+    `MembersPage.tsx`, and `IntegrationsPage.tsx`; `IntegrationsPage.tsx` also still imported
+    the now-unused `disconnectLogo` icon after the disconnect button was simplified to plain
+    text. Removed all four unused imports.
+  - **Missing states called for by the slice brief:** `MembersPage` had no empty state for a
+    zero-result search (silently rendered an empty table) and no error state for the
+    `listMembers` query; `IntegrationsPage` had no error state for the `listIntegrations`
+    query (only mutation errors were surfaced). Added the established
+    `.bl-empty`/`.bl-error` patterns already used by `ClientsPage`/`TicketsPage`
+    (search-aware empty copy, `role="alert"` error text), matching existing conventions
+    rather than inventing new ones.
+- Confirmed as correct, not touched further: `BillingPage`, `UsagePage`, and
+  `McpServerPage` are faithful 1:1 restyles of their prior Tailwind versions onto the `bl-`
+  system with no content or behavior loss; `AccountModal`'s and `MembersPage`'s hand-rolled
+  dialog markup was correctly replaced by the shared `Dialog` component; all mutations,
+  query keys, and the honesty contract (no fake checkout/AI/connection success) were intact
+  before this pass and remain intact.
+- One pre-existing, harmless issue left as-is (not introduced by this slice, not worth the
+  diff): `AccountModal.tsx` applies a `bl-form-field` class to two label wrappers that has
+  never been defined in `backline.css` at any point in this repo's history; both wrappers
+  already carry full inline flex styles, so this is dead markup with no visual effect.
+- Not run at the user's request: lint, typecheck, build, automated tests, local preview,
+  browser QA, and responsive screenshot comparison. This was a source-level audit plus
+  targeted fixes; visual/interaction verification of the fixes above is still required.
+
 ## 2026-09-08: Post-login UI migration — clients and activity slice (corrected)
 
 - A prior uncommitted pass at this slice rewrote `ClientsPage`/`ActivityPage` onto

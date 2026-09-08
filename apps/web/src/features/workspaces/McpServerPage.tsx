@@ -28,45 +28,62 @@ export function McpServerPage() {
   const [comingSoon, setComingSoon] = useState<string | null>(null);
 
   return (
-    <main className="px-6 py-8">
-      <h1 className="text-xl font-semibold">MCP Server</h1>
-      <p className="text-text-muted mt-2 max-w-2xl text-sm">
-        Give your AI agent direct access to Backline feedback. Analyze comments, implement
-        changes, and resolve threads without leaving your workflow.
-      </p>
+    <main className="bl-wrap">
+      <header className="bl-head">
+        <div>
+          <h1>MCP Server</h1>
+          <p>
+            Give your AI agent direct access to Backline feedback. Analyze comments, implement
+            changes, and resolve threads without leaving your workflow.
+          </p>
+        </div>
+      </header>
 
-      <h2 className="mt-6 text-sm font-semibold">Connect</h2>
-      <div className="mt-3 grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
-        {AGENTS.map((agent) => (
-          <div
-            key={agent.name}
-            className="flex items-start justify-between gap-3 rounded-lg border border-black/10 p-4 dark:border-white/10"
-          >
-            <div>
-              <p className="text-sm font-semibold">{agent.name}</p>
-              <p className="text-text-muted mt-1 text-xs">{agent.description}</p>
-            </div>
-            <button
-              onClick={() => setComingSoon(`Connecting ${agent.name} to MCP`)}
-              className="shrink-0 rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
-            >
-              Connect
-            </button>
+      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
+        <header style={{ flex: "0 0 200px" }}>
+          <h2>Connect</h2>
+        </header>
+        <div style={{ flex: 1, padding: "20px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {AGENTS.map((agent) => (
+              <div
+                key={agent.name}
+                style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "16px", border: "1px solid var(--bl-line)", borderRadius: "3px", background: "#fff" }}
+              >
+                <div>
+                  <p style={{ fontSize: "14px", fontWeight: 600 }}>{agent.name}</p>
+                  <p className="bl-mono" style={{ marginTop: "4px" }}>{agent.description}</p>
+                </div>
+                <button
+                  onClick={() => setComingSoon(`Connecting ${agent.name} to MCP`)}
+                  className="bl-quiet"
+                >
+                  Connect
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <button
-        onClick={() => setComingSoon("Adding a custom MCP connection")}
-        className="mt-4 rounded-md border border-black/10 px-3 py-1.5 text-xs font-medium dark:border-white/10"
-      >
-        + Add other MCP
-      </button>
+          <button
+            onClick={() => setComingSoon("Adding a custom MCP connection")}
+            className="bl-quiet"
+            style={{ marginTop: "16px" }}
+          >
+            + Add other MCP
+          </button>
+        </div>
+      </section>
 
-      <h2 className="mt-8 text-sm font-semibold">Personal Access Token</h2>
-      <p className="text-text-muted mt-2 max-w-2xl text-sm">
-        Personal access tokens aren't available yet - coming soon.
-      </p>
+      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
+        <header style={{ flex: "0 0 200px" }}>
+          <h2>Personal Access Token</h2>
+        </header>
+        <div style={{ flex: 1, padding: "20px" }}>
+          <p className="bl-mono">
+            Personal access tokens aren't available yet - coming soon.
+          </p>
+        </div>
+      </section>
 
       {comingSoon && <ComingSoonModal feature={comingSoon} onClose={() => setComingSoon(null)} />}
     </main>

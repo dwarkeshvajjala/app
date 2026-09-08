@@ -1,4 +1,4 @@
-import { Avatar, Button } from "@backline/ui";
+import { Avatar } from "@backline/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { useOutletContext } from "react-router-dom";
@@ -16,6 +16,8 @@ import type { WorkspaceOut } from "./api";
 function canManageMembers(role: string | null): boolean {
   return role === "owner" || role === "admin";
 }
+
+import { Dialog } from "../../components/Dialog";
 
 interface AddMemberModalProps {
   onInvite: (email: string, role: "admin" | "member") => Promise<void>;
@@ -43,51 +45,41 @@ function AddMemberModal({ onInvite, onClose }: AddMemberModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Add member"
-        onClick={(event) => event.stopPropagation()}
-        className="bg-bg-surface flex w-full max-w-sm flex-col gap-3 rounded-lg p-5 dark:bg-[#14141A]"
-      >
-        <div className="flex items-start justify-between gap-2">
-          <h2 className="text-sm font-semibold">Add member</h2>
-          <button onClick={onClose} aria-label="Close" className="text-text-muted text-lg leading-none">
-            ×
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1 text-sm">
-            Email
-            <input
-              required
-              type="email"
-              autoFocus
-              placeholder="teammate@company.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="rounded-md border border-black/10 px-3 py-2 dark:border-white/10 dark:bg-transparent"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            Role
-            <select
-              value={role}
-              onChange={(event) => setRole(event.target.value as "admin" | "member")}
-              className="rounded-md border border-black/10 px-2 py-2 dark:border-white/10 dark:bg-transparent"
-            >
-              <option value="member">Member</option>
-              <option value="admin">Admin</option>
-            </select>
-          </label>
-          {error && <p className="text-recovery-orphaned text-sm">{error}</p>}
-          <Button type="submit" disabled={isSubmitting}>
+    <Dialog title="Add member" onClose={onClose}>
+      <form onSubmit={handleSubmit} className="bl-form">
+        <label>
+          Email
+          <input
+            required
+            type="email"
+            autoFocus
+            placeholder="teammate@company.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="bl-input"
+          />
+        </label>
+        <label>
+          Role
+          <select
+            value={role}
+            onChange={(event) => setRole(event.target.value as "admin" | "member")}
+            className="bl-select"
+            style={{ width: "100%", maxWidth: "none" }}
+          >
+            <option value="member">Member</option>
+            <option value="admin">Admin</option>
+          </select>
+        </label>
+        {error && <div className="bl-error">{error}</div>}
+        <footer className="bl-form-actions">
+          <button type="button" className="bl-quiet" onClick={onClose}>Cancel</button>
+          <button type="submit" className="bl-button mint" disabled={isSubmitting}>
             Send invite
-          </Button>
-        </form>
-      </div>
-    </div>
+          </button>
+        </footer>
+      </form>
+    </Dialog>
   );
 }
 
@@ -100,7 +92,7 @@ export function MembersPage() {
   const [search, setSearch] = useState("");
   const [showAddMember, setShowAddMember] = useState(false);
 
-  const { data: members, isLoading } = useQuery({
+  const { data: members, isLoading, error: membersError } = useQuery({
     queryKey: qk.members(workspace.id),
     queryFn: () => workspacesApi.listMembers(workspace.id),
   });
@@ -142,50 +134,72 @@ export function MembersPage() {
   const projectCount = projects?.length ?? 0;
 
   return (
-    <main className="px-6 py-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Team Members</h1>
+    <main className="bl-wrap">
+      <header className="bl-head">
+        <div>
+          <h1>Team Members</h1>
+          <p>Manage who has access to this workspace.</p>
+        </div>
         {canManage && (
-          <Button onClick={() => setShowAddMember(true)}>+ Add Member</Button>
+          <div className="bl-head-actions">
+            <button className="bl-button mint" onClick={() => setShowAddMember(true)}>+ Add Member</button>
+          </div>
         )}
+      </header>
+
+      <div className="bl-toolbar wrap">
+        <div className="bl-search" style={{ maxWidth: "340px" }}>
+          <span style={{ fontSize: "16px" }}>🔍</span>
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by name or email..."
+            aria-label="Search members"
+          />
+        </div>
       </div>
 
-      <input
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder="Search by name or email..."
-        aria-label="Search members"
-        className="mt-4 w-full max-w-sm rounded-md border border-black/10 px-3 py-2 text-sm dark:border-white/10 dark:bg-transparent"
-      />
+      {isLoading && <p className="bl-mono">Loading...</p>}
+      {membersError && (
+        <p role="alert" className="bl-error">
+          {membersError instanceof Error ? membersError.message : "Could not load members."}
+        </p>
+      )}
 
-      {isLoading && <p className="text-text-muted mt-6 text-sm">Loading...</p>}
+      {members && visibleMembers.length === 0 && (
+        <div className="bl-empty">
+          <h2>{search ? "No members match" : "No members yet"}</h2>
+          <p>{search ? "Try another name or email." : "Invite a teammate to get started."}</p>
+        </div>
+      )}
 
-      {members && (
-        <div className="mt-6 overflow-x-auto">
-          <table className="w-full text-left text-sm">
+      {members && visibleMembers.length > 0 && (
+        <div className="bl-table-wrap">
+          <table className="bl-table">
             <thead>
-              <tr className="text-text-muted border-b border-black/10 text-xs font-semibold tracking-wide uppercase dark:border-white/10">
-                <th className="py-2 pr-4 font-semibold">Name</th>
-                <th className="py-2 pr-4 font-semibold">Role</th>
-                <th className="py-2 pr-4 font-semibold">Project</th>
-                {canManage && <th className="py-2 font-semibold" />}
+              <tr>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Projects</th>
+                {canManage && <th></th>}
               </tr>
             </thead>
             <tbody>
               {visibleMembers.map((member) => (
-                <tr key={member.id} className="border-b border-black/5 dark:border-white/5">
-                  <td className="py-3 pr-4">
-                    <div className="flex items-center gap-2.5">
-                      <Avatar name={member.name} avatarUrl={member.avatar_url} size={32} />
+                <tr key={member.id}>
+                  <td>
+                    <div className="bl-text-button">
+                      <Avatar name={member.name} avatarUrl={member.avatar_url} size={29} />
                       <div>
-                        <p className="font-medium">{member.name}</p>
-                        <p className="text-text-muted text-xs">{member.email}</p>
+                        <strong>{member.name}</strong>
+                        <small>{member.email}</small>
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 pr-4">
+                  <td>
                     {canManage && member.role !== "owner" ? (
                       <select
+                        className="bl-select"
                         value={member.role}
                         onChange={(event) =>
                           roleMutation.mutate({
@@ -194,23 +208,25 @@ export function MembersPage() {
                           })
                         }
                         aria-label={`Change role for ${member.name}`}
-                        className="rounded border border-black/10 bg-transparent px-2 py-1 text-xs capitalize dark:border-white/10"
                       >
                         <option value="admin">Admin</option>
                         <option value="member">Member</option>
                       </select>
                     ) : (
-                      <span className="capitalize">{member.role}</span>
+                      <span style={{ textTransform: "capitalize", fontSize: "12px", padding: "0 6px" }}>{member.role}</span>
                     )}
                   </td>
-                  <td className="text-text-muted py-3 pr-4">
-                    {projectCount} Project{projectCount === 1 ? "" : "s"}
+                  <td>
+                    <span style={{ fontSize: "12px", color: "var(--bl-muted)" }}>
+                      {projectCount} Project{projectCount === 1 ? "" : "s"}
+                    </span>
                   </td>
                   {canManage && (
-                    <td className="py-3 text-right">
+                    <td style={{ textAlign: "right" }}>
                       {member.role !== "owner" && (
                         <button
-                          className="text-recovery-orphaned text-xs underline"
+                          className="bl-quiet"
+                          style={{ color: "#A33317", borderColor: "transparent" }}
                           onClick={() => removeMutation.mutate(member.id)}
                         >
                           Remove
@@ -222,7 +238,9 @@ export function MembersPage() {
               ))}
             </tbody>
           </table>
-          <p className="text-text-muted mt-3 text-xs">{visibleMembers.length} users</p>
+          <div style={{ padding: "12px 14px", fontSize: "10px", color: "var(--bl-muted)", borderTop: "1px solid var(--bl-line)" }}>
+            {visibleMembers.length} users
+          </div>
         </div>
       )}
 
