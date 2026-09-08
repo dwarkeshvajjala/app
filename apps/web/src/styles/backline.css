@@ -1,6 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
-:root{--bl-ink:#0B0B0B;--bl-muted:#62665F;--bl-paper:#F1F2F0;--bl-surface:#fff;--bl-line:#DDDEDA;--bl-mint:#69DEB2;--bl-mono:'JetBrains Mono',monospace}
+:root{
+  /* ── Backline design tokens (shared across app + login) ────────────── */
+  --ink:#0B0B0B; --ink-2:#3A3D3A; --ink-3:#6B6E6B; --ink-4:#9A9D99;
+  --paper:#F1F2F0; --surface:#FFFFFF;
+  --line:#DDDEDA; --line-soft:#E9EAE6;
+  --mint:#69DEB2; --mint-deep:#0A6B4B; --mint-tint:#E3F8EF;
+  --amber:#E8B833; --amber-tint:#FBF1D6; --amber-ink:#6B520B;
+  --r:3px;
+  --sans:"Schibsted Grotesk",Helvetica,Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+
+  /* ── Legacy bl- aliases (keep existing components working) ─────────── */
+  --bl-ink:#0B0B0B; --bl-muted:#62665F; --bl-paper:#F1F2F0; --bl-surface:#fff;
+  --bl-line:#DDDEDA; --bl-mint:#69DEB2; --bl-mono:'JetBrains Mono',monospace;
+}
 .bl-review{height:100vh;display:flex;flex-direction:column}.bl-review-head{display:flex;align-items:center;gap:14px;padding:12px 18px;background:#fff;border-bottom:1px solid var(--bl-line)}.bl-review-head h1{font-weight:600;font-size:14px;flex:1}.bl-review-tools{padding:10px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--bl-line);flex-wrap:wrap}.bl-review-body{display:grid;grid-template-columns:minmax(0,1fr) 340px;flex:1;min-height:0}.bl-asset-stage{overflow:auto;padding:24px;text-align:center}.bl-asset-stage>.bl-mono{margin-bottom:18px}.bl-asset-stage>.bl-quiet{margin-top:16px}.bl-asset-sheet{position:relative;display:inline-block;max-width:100%;box-shadow:0 4px 30px #0001;background:white;vertical-align:top;touch-action:pan-y}.bl-asset-sheet.commenting{cursor:crosshair;touch-action:none}.bl-asset-sheet>img,.bl-asset-sheet>canvas{display:block;max-width:100%;height:auto;max-height:none;width:900px;user-select:none}.bl-asset-sheet>img{width:auto}.bl-asset-pin{position:absolute;min-width:22px;min-height:22px;border:2px solid;border-radius:3px;text-align:left;background:#69DEB214;z-index:3}.bl-asset-pin>span{display:grid;place-items:center;position:absolute;top:-12px;left:-12px;width:23px;height:23px;border:1px solid #fff;border-radius:50%;font:600 10px var(--bl-mono);color:#0B0B0B}.bl-asset-pin.selected{outline:2px solid #0B0B0B;outline-offset:2px}.bl-draft-region{position:absolute;border:2px solid #0A6B4B;background:#69DEB233;pointer-events:none;z-index:4}.bl-review-comments{overflow:auto;border-left:1px solid var(--bl-line);background:#fff}.bl-review-comments>header{padding:16px;border-bottom:1px solid var(--bl-line)}.bl-review-comments h2{font-size:14px;font-weight:600}.bl-review-comments .bl-form{padding:16px}.bl-review-comment{display:block;text-align:left;width:100%;padding:16px;border-bottom:1px solid var(--bl-line)}.bl-review-comment:hover{background:#F5F8F1}.bl-review-comment small{font-size:10px;color:var(--bl-muted)}.bl-review-comment p{font-size:12px;margin:8px 0;line-height:1.6}.bl-review-comments .bl-form>p{color:var(--bl-ink);white-space:pre-wrap}.bl-review .bl-form-actions{flex-wrap:wrap}@media(max-width:800px){.bl-review{height:auto;min-height:100vh}.bl-review-body{grid-template-columns:1fr}.bl-review-comments{border-left:0;border-top:1px solid var(--bl-line)}.bl-asset-stage{padding:16px}}
 body{font-family:'Schibsted Grotesk',Helvetica,Arial,sans-serif;background:var(--bl-paper);color:var(--bl-ink)}
 .bl-app{display:grid;grid-template-columns:264px minmax(0,1fr);min-height:100vh}
