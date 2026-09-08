@@ -45,6 +45,7 @@ export function TicketCalendar({ tickets, update, onOpen }: { tickets: api.Ticke
         onClick={() => onOpen(t.id)}
         style={{ borderLeftColor: STATUS_COLORS[t.status] }}
         aria-label={`View ticket: ${t.body}`}
+        title={`${t.body} · ${t.project_name}`}
         className={draggedId === t.id ? "bl-dragging" : undefined}
       >
         {t.body}

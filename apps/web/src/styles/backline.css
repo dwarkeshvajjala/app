@@ -1186,3 +1186,41 @@ button{letter-spacing:inherit}
 .bl-connector-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border:1px solid var(--line);border-radius:3px;background:#fff}
 .bl-connector-id{display:grid;place-items:center;width:28px;height:28px;flex:none;border-radius:3px;color:#fff;font:600 11px var(--mono)}
 .bl-connector-name{display:flex;min-width:0;flex:1;align-items:center;gap:10px;font-size:12.5px;font-weight:600}
+
+/* ========================================================================
+   WORKSPACE TICKETS — dense list row, sortable/filterable table, popovers
+   ======================================================================== */
+.bl-tk{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;border-bottom:1px solid var(--line-soft);background:#fff}
+.bl-tk:last-child{border-bottom:0}
+.bl-tk:hover{background:#FAFBFA}
+.bl-tk-prio{width:4px;height:30px;border-radius:2px;flex:none}
+.bl-tk-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.bl-tk-main .bl-ticket-title{-webkit-line-clamp:1;max-width:none}
+.bl-tk-s{display:block;font:10px var(--mono);color:var(--ink-4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bl-tk-tags{width:132px;flex:none;display:flex;gap:4px;flex-wrap:wrap}
+.bl-tk-asg{flex:none;display:flex;align-items:center}
+.bl-tk-asg>span{display:flex;margin-left:-6px}
+.bl-tk-asg>span:first-child{margin-left:0}
+.bl-tk-due{flex:none;white-space:nowrap}
+.bl-tk-status{flex:none;width:150px}
+.bl-tk-prio-select{flex:none;width:96px}
+@media(max-width:900px){.bl-tk{flex-wrap:wrap;padding:12px}.bl-tk-status,.bl-tk-prio-select{width:auto}.bl-tk-due{margin-left:auto}.bl-tk-tags{width:auto}}
+
+/* sortable column headers - the same button reaches the same sort state the
+   toolbar's Sort popover controls, so a header click and a popover pick agree */
+.bl-th-sort{display:inline-flex;align-items:center;gap:4px;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit}
+.bl-th-sort:hover{color:var(--ink)}
+.bl-th-sort .bl-th-ar{color:var(--ink)}
+/* filterable cell values - a plain-looking button until hovered, so the table
+   doesn't read as a form full of controls */
+.bl-cellf{display:inline-flex;align-items:center;border-radius:20px;font:inherit;color:inherit;text-align:left;max-width:100%}
+.bl-cellf:hover{box-shadow:0 0 0 1px currentColor inset}
+.bl-cellf:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+.bl-ticket-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* an inline "not built yet" control, e.g. the new-ticket screenshot picker -
+   looks like a real dropzone but takes no input, so it can't be mistaken for
+   a working upload that silently drops files */
+.bl-attach-disabled{display:flex;align-items:center;gap:9px;padding:12px;border:1px dashed var(--line);border-radius:3px;color:var(--ink-4);font-size:11.5px;background:var(--paper)}
+.bl-attach-disabled svg{flex:none;color:var(--ink-4)}
