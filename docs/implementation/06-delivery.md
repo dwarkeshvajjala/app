@@ -1,5 +1,82 @@
 # Delivery and verification ledger
 
+## 2026-09-08: Guest review entry and asset review slice (Slice 08) — verification and fixes
+
+A prior session had already restyled `ReviewEntryPage`, `GuestBoard`, and `AssetReview`
+onto the `bl-`/reference-HTML visual language, but left the change uncommitted and never
+recorded in this ledger. This entry covers auditing that work against `backline-Final
+Draft.html`, `apps/web/src/styles/backline.css`, and the generated API types, and fixing
+what verification found before committing it.
+
+**Confirmed defects found and fixed:**
+
+- **Functional bug (guest board always looked empty):** `GuestBoard.tsx` grouped board
+  items under invented status keys (`new`/`prog`/`rev`/`block`/`done`) that don't exist
+  on `GuestBoardItemOut.status` (`todo`/`in_progress`/`in_review`/`blocked`/`resolved`/
+  `wont_fix` per `packages/types`). Every column's `items.length` was always `0`, so a
+  client with real board items would see "No items yet." Fixed to group by the real
+  `WORKFLOW_STATUSES` from `@backline/ui`, and to color the read-only status pill with
+  `STATUS_COLORS` like the real ticket `StatusSelect` does.
+- **Type error (would fail `tsc -b`):** `AssetReview.tsx`'s comment list read
+  `c.assignee_names` off a `CommentOut`, which only carries `assignee_id`/`assignee_ids`
+  - `assignee_names` only exists on the unrelated `GuestBoardItemOut`. Removed the
+    invalid read; `tsc -b --noEmit` and `vite build` now both pass clean.
+- **Unstyled/broken UI (real regression, not just missing polish):** the gate
+  (`ReviewEntryPage`'s name/passcode modal, its "You're in"/"Taking you to the
+  site"/loading/error states) and the asset comment composer's tag-pill picker used
+  class names lifted verbatim from the reference HTML's own embedded `<style>`
+  (`scrim`, `modal`, `gate`, `modal-head/body/foot`, `field`, `hint`, `btn-solid`,
+  `btn-quiet`, `cp-sec`, `cp-tags`, `cp-tag`, `cp-foot`, `cp-cancel`, `cp-post`, `ball`,
+  `ballrow`) that were never ported into `backline.css` - none of those selectors exist
+  there, so every guest who opened a review link would have hit a completely unstyled
+  gate and comment composer. Ported the needed rules into `backline.css` under the
+  project's `bl-` naming convention (`bl-gate-*` for the gate, `.bl-review-comments
+  .cp-*` scoped to the composer) instead of adding the bare reference-HTML class names,
+  to avoid polluting the global class namespace; reused the existing `bl-button`/
+  `bl-quiet` button system instead of adding a second `btn-solid`/`btn-quiet` one, and
+  reused the existing `bl-chip`/`bl-chip-row` instead of the unstyled `ball`/`ballrow`.
+- **Missing slice-required coverage:** guest session recovery and leave/re-enter
+  controls, named explicitly in the slice brief, were entirely absent. A guest who
+  refreshed `ReviewEntryPage` (or an asset/PDF/image guest, who has no widget and lives
+  entirely inside `AssetReview`) was re-asked for their name every time, with no way to
+  intentionally end a guest identity. Added `features/review/guest-session.ts`
+  (sessionStorage, same key/scope contract as `apps/widget/src/guest-session.ts`) so
+  `ReviewEntryPage` recovers an existing session before showing the gate and persists a
+  new one on creation; added a `.bl-guest-bar` ("Reviewing **X** as Y" + "Leave review")
+  to `AssetReview` and `GuestBoard`, reusing the reference HTML's `.gbar` guest banner
+  concept instead of `AssetReview`'s prior hardcoded-hex "Restricted Mode" banner, which
+  also violated the amber/ink token contract.
+- **Missing slice-required coverage:** offline messaging. Guest surfaces render outside
+  `WorkspaceLayout` and never get its WebSocket-derived `bl-conn-banner` (that store is
+  scoped to the authenticated workspace socket). Added `lib/use-online-status.ts`
+  (`navigator.onLine` + online/offline events) and reused the existing `.bl-conn-banner
+  .offline` styling in both `AssetReview` and `GuestBoard`.
+
+**Confirmed correct, not changed:** the guest re-anchoring restriction already in the
+uncommitted diff (drag-to-move/resize an *existing* pin is blocked for guests via
+`!guest` guards on the pointer-down handlers; placing a *new* draft pin/comment remains
+allowed) matches the permission contract recorded in the 2026-09-08 cross-session audit
+entry below - guest manual reanchoring stays member-only, and the frontend now matches
+that instead of only relying on the backend's 401.
+
+**Verification run:** `tsc -b --noEmit` (apps/web) passes with zero errors; `eslint` on
+every touched/added file (`ReviewEntryPage.tsx`, `GuestBoard.tsx`, `AssetReview.tsx`,
+`guest-session.ts`, `use-online-status.ts`) reports nothing; `vite build` succeeds with
+only the pre-existing large-chunk warning. A scripted className scan confirmed every
+`bl-`/`cp-`/`gate`-family class referenced by the three migrated files now has a
+matching selector in `backline.css` (the only unmatched names are `ml-2`, a real
+Tailwind utility class still active app-wide, and the fully inline-styled
+`bl-asset-pin-resize-handle`/`bl-asset-pin-border`/`cp-body`, which never needed a CSS
+rule). Not run: backend tests, live browser/guest-journey QA, and responsive/mobile
+keyboard screenshot comparison - these need a running backend and were out of scope for
+this pass.
+
+**Left untouched:** `apps/web/src/features/integrations/IntegrationsPage.tsx` had an
+unrelated uncommitted local modification (a `LoadingScreen`/`bl-settings-section`/
+`var(--bl-error)` cleanup) present in the working tree that this session did not make.
+It was excluded from this commit to preserve it as the existing, unrelated user change
+it appears to be.
+
 ## 2026-09-08: Post-login UI migration — settings family slice
 
 - Migrated `MembersPage`, `IntegrationsPage`, `SettingsPage`, `BillingPage`, `UsagePage`, `McpServerPage`, and `AccountModal` as a single unified settings-family system.

@@ -1,8 +1,8 @@
-import { StatusBadge } from "@backline/ui";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@backline/ui";
 
 import { qk } from "../../lib/query-keys";
+import { useOnlineStatus } from "../../lib/use-online-status";
+import { STATUS_COLORS, STATUS_LABELS, WORKFLOW_STATUSES } from "../../lib/workflow";
 import * as reviewApi from "./api";
 
 // FD-AUD-042/M-04 "show ticket board to client" - a read-only, client-safe list.
@@ -12,13 +12,17 @@ import * as reviewApi from "./api";
 export function GuestBoard({
   projectId,
   guestToken,
+  guestName,
   onBack,
+  onLeave,
   continueLabel,
   onContinue,
 }: {
   projectId: string;
   guestToken: string;
+  guestName?: string;
   onBack: () => void;
+  onLeave?: () => void;
   continueLabel?: string;
   onContinue?: () => void;
 }) {
@@ -26,48 +30,104 @@ export function GuestBoard({
     queryKey: qk.guestBoard(projectId, guestToken),
     queryFn: () => reviewApi.getGuestBoard(projectId, guestToken),
   });
+  const online = useOnlineStatus();
+
+  // Real workflow statuses (todo/in_progress/in_review/blocked/resolved/wont_fix),
+  // not the reference HTML's abbreviated column ids - grouping by anything else
+  // silently hides every card since GuestBoardItemOut.status only ever uses these.
+  const grouped = data?.items.reduce((acc, item) => {
+    const s = item.status || "todo";
+    if (!acc[s]) acc[s] = [];
+    acc[s].push(item);
+    return acc;
+  }, {} as Record<string, typeof data.items>) ?? {};
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-lg flex-col gap-4 px-6 py-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Board</h1>
-        <button onClick={onBack} className="text-text-muted text-sm underline">
+    <div className="bl-review" style={{ background: "var(--bl-paper)", minHeight: "100vh" }}>
+      <header className="bl-review-head">
+        <h1>Board</h1>
+        {onContinue && (
+          <button className="bl-button" onClick={onContinue} style={{ marginLeft: "auto" }}>
+            {continueLabel ?? "Continue to site"}
+          </button>
+        )}
+        <button onClick={onBack} className="bl-quiet">
           Back
         </button>
+      </header>
+
+      {guestName && (
+        <div className="bl-guest-bar">
+          <span>
+            Viewing as <b>{guestName}</b> · Guest review
+          </span>
+          {onLeave && (
+            <button type="button" className="bl-guest-bar-out" onClick={onLeave}>
+              Leave review
+            </button>
+          )}
+        </div>
+      )}
+
+      {!online && (
+        <div className="bl-conn-banner offline" role="status" aria-live="polite">
+          You are offline. The board will refresh once you reconnect.
+        </div>
+      )}
+
+      <div className="bl-review-body" style={{ display: "block", padding: "20px" }}>
+        {isLoading && <p className="bl-mono">Loading board...</p>}
+        {error && <p className="bl-error">Could not load the board.</p>}
+
+        {data && data.items.length === 0 && (
+          <div className="bl-empty">
+            <h2>No items yet</h2>
+            <p>The board is currently empty.</p>
+          </div>
+        )}
+
+        {data && data.items.length > 0 && (
+          <div className="bl-board">
+            {WORKFLOW_STATUSES.map((statusKey) => {
+              const items = grouped[statusKey] || [];
+              if (items.length === 0) return null; // hide empty columns for guests
+              return (
+                <section key={statusKey}>
+                  <h2>
+                    {STATUS_LABELS[statusKey]}
+                    <span>{items.length}</span>
+                  </h2>
+                  {items.map((item) => (
+                    <article key={item.id}>
+                      <small>#{item.id}</small>
+                      <p className="bl-ticket-title">{item.body}</p>
+
+                      <div style={{ marginTop: "12px", display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
+                        <div
+                          className="bl-status-select"
+                          style={{ borderLeftColor: STATUS_COLORS[statusKey], cursor: "default", opacity: 0.8, pointerEvents: "none" }}
+                        >
+                          {STATUS_LABELS[statusKey]}
+                        </div>
+                        {item.due_at && (
+                          <div className="bl-date" style={{ cursor: "default", opacity: 0.8, pointerEvents: "none" }}>
+                            {new Date(item.due_at).toLocaleDateString()}
+                          </div>
+                        )}
+                        {item.assignee_names && item.assignee_names.length > 0 && (
+                          <div className="bl-chip" style={{ opacity: 0.8 }}>
+                            {item.assignee_names.join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </section>
+              );
+            })}
+          </div>
+        )}
       </div>
-
-      {isLoading && <p className="text-text-muted text-sm">Loading...</p>}
-      {error && <p className="text-recovery-orphaned text-sm">Could not load the board.</p>}
-
-      {data && data.items.length === 0 && (
-        <p className="text-text-muted text-sm">No items yet.</p>
-      )}
-
-      {data && data.items.length > 0 && (
-        <ul className="flex flex-col gap-2">
-          {data.items.map((item) => (
-            <li
-              key={item.id}
-              className="flex flex-col gap-2 rounded-md border border-black/10 p-3 dark:border-white/10"
-            >
-              <p className="text-sm">{item.body}</p>
-              <div className="text-text-muted flex flex-wrap items-center gap-2 text-xs">
-                <StatusBadge status={item.status} />
-                {item.due_at && <span>Due {new Date(item.due_at).toLocaleDateString()}</span>}
-                {item.assignee_names && item.assignee_names.length > 0 && (
-                  <span>{item.assignee_names.join(", ")}</span>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {onContinue && (
-        <Button onClick={onContinue} className="mt-auto">
-          {continueLabel ?? "Continue to site"}
-        </Button>
-      )}
-    </main>
+    </div>
   );
 }
