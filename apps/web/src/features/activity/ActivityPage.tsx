@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import type { ComponentType, SVGProps } from "react";
 import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import { BoltIcon, BuildingIcon, CommentBubbleIcon, FolderIcon, LinkIcon, PersonIcon } from "../../components/icons";
 import { qk } from "../../lib/query-keys";
@@ -8,14 +9,22 @@ import { listMembers } from "../workspaces/api";
 import type { WorkspaceOut } from "../workspaces/api";
 import { listActivity } from "./api";
 
-function getEventIcon(type: string) {
-  if (type.startsWith("comment.")) return CommentBubbleIcon;
-  if (type.startsWith("project.")) return FolderIcon;
-  if (type.startsWith("client.")) return BuildingIcon;
-  if (type.startsWith("share_link.")) return LinkIcon;
-  if (type.startsWith("member.")) return PersonIcon;
-  return BoltIcon;
+// One badge colour per event category (same "small local colour map" convention
+// PRIORITY_META/STATUS_META use in the comments panel), so the timeline reads at a
+// glance instead of every row carrying an identical grey dot.
+const EVENT_META: Record<string, { icon: ComponentType<SVGProps<SVGSVGElement>>; color: string }> = {
+  comment: { icon: CommentBubbleIcon, color: "#5B7FA6" },
+  project: { icon: FolderIcon, color: "#0A6B4B" },
+  client: { icon: BuildingIcon, color: "#C2542E" },
+  share_link: { icon: LinkIcon, color: "#8E6BAE" },
+  member: { icon: PersonIcon, color: "#B08A1E" },
+};
+
+function eventMeta(type: string) {
+  return EVENT_META[type.split(".")[0]] ?? { icon: BoltIcon, color: "#62665F" };
 }
+
+const FILTERS = ["comment.", "project.", "client.", "share_link.", "member."];
 
 export function ActivityPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
@@ -25,7 +34,7 @@ export function ActivityPage() {
   const query = useQuery({ queryKey: [...qk.activity(workspace.id), offset, filter], queryFn: () => listActivity(workspace.id, offset, filter) });
   const members = useQuery({ queryKey: qk.members(workspace.id), queryFn: () => listMembers(workspace.id) });
   function page(value: number) { setParams({ type: filter, offset: String(value) }); }
-  
+
   const groups = useMemo(() => {
     const result = new Map<string, NonNullable<typeof query.data>["items"]>();
     for (const event of query.data?.items ?? []) {
@@ -36,40 +45,73 @@ export function ActivityPage() {
   }, [query.data?.items]);
 
   return <main className="bl-wrap">
-    <header className="bl-head"><div><p className="bl-eyebrow">Workspace</p><h1>Activity</h1><p>What changed across your workspace.</p></div></header>
+    <header className="bl-head">
+      <div>
+        <p className="bl-eyebrow">Workspace</p>
+        <h1>Activity</h1>
+        <p>What changed across your workspace.</p>
+      </div>
+    </header>
+
     <div className="bl-tabs">
       <button aria-pressed={filter === ""} onClick={() => setParams({ type: "", offset: "0" })}>Everything</button>
-      {['comment.', 'project.', 'client.', 'share_link.', 'member.'].map((t) => 
-        <button key={t} aria-pressed={filter === t} onClick={() => setParams({ type: t, offset: "0" })}>{t.replace('.', '').charAt(0).toUpperCase() + t.replace('.', '').slice(1)}</button>
+      {FILTERS.map((t) =>
+        <button key={t} aria-pressed={filter === t} onClick={() => setParams({ type: t, offset: "0" })}>
+          {t.replace('.', '').charAt(0).toUpperCase() + t.replace('.', '').slice(1)}
+        </button>
       )}
     </div>
-    {query.isLoading && <p role="status">Loading activity…</p>}{query.error && <p role="alert" className="bl-error">{query.error.message}</p>}
-    <div className="bl-activity">
-      {groups.map(([date, events]) => (
-        <section key={date} style={{ marginBottom: '2rem' }}>
-          <h2 className="bl-group-title" style={{ position: 'sticky', top: 0, background: 'var(--bg-base)', padding: '0.5rem 0', zIndex: 1 }}>{date}</h2>
-          {events.map((event) => (
-            <article key={event.id} style={{ display: 'flex', gap: '1rem', padding: '1rem 0', borderBottom: '1px solid var(--border-subtle)' }}>
-              <span className="bl-avatar" style={{ background: 'var(--bg-elevated)' }}>
-                {(() => { const EventIcon = getEventIcon(event.type); return <EventIcon width="18" height="18" />; })()}
-              </span>
-              <div style={{ flex: 1 }}>
-                <p>
-                  <strong>{members.data?.find((m) => m.user_id === event.actor_id)?.name ?? (event.actor_type === "system" ? "Backline" : event.actor_type === "guest" ? "Reviewer" : "Team member")}</strong> 
-                  <span style={{ color: 'var(--text-subtle)' }}> · {event.type.replace(/\./g, ' ').replace(/_/g, ' ')}</span>
-                </p>
-                {event.name && <p style={{ marginTop: '0.25rem' }}>{event.name}</p>}
-                {event.project_id && <Link className="bl-chip" style={{ marginTop: '0.5rem', display: 'inline-block' }} to={`/w/${workspace.slug}/p/${event.project_id}/board${event.comment_id ? `?comment=${event.comment_id}` : ''}`}>Open project →</Link>}
-              </div>
-              <time dateTime={event.created_at} style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                {new Date(event.created_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-              </time>
-            </article>
-          ))}
+
+    {query.isLoading && <p role="status">Loading activity…</p>}
+    {query.error && <p role="alert" className="bl-error">{query.error.message}</p>}
+
+    {!query.isLoading && !query.error && (
+      groups.length > 0 ? groups.map(([date, events]) => (
+        <section key={date}>
+          <h2 className="bl-group-title">{date}</h2>
+          <div className="bl-activity" style={{ marginBottom: '20px' }}>
+            {events.map((event) => {
+              const meta = eventMeta(event.type);
+              const EventIcon = meta.icon;
+              return (
+                <article key={event.id}>
+                  <span className="bl-avatar" style={{ background: meta.color }}>
+                    <EventIcon width="14" height="14" style={{ color: '#fff' }} />
+                  </span>
+                  <div>
+                    <p style={{ margin: 0 }}>
+                      <strong>{members.data?.find((m) => m.user_id === event.actor_id)?.name ?? (event.actor_type === "system" ? "Backline" : event.actor_type === "guest" ? "Reviewer" : "Team member")}</strong>
+                      {' ' + event.type.replace(/\./g, ' ').replace(/_/g, ' ')}
+                      {event.name && ` · ${event.name}`}
+                    </p>
+                    {event.project_id &&
+                      <Link className="bl-chip" to={`/w/${workspace.slug}/p/${event.project_id}/board${event.comment_id ? `?comment=${event.comment_id}` : ''}`}>
+                        View project →
+                      </Link>
+                    }
+                  </div>
+                  <time dateTime={event.created_at}>
+                    {new Date(event.created_at).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                  </time>
+                </article>
+              );
+            })}
+          </div>
         </section>
-      ))}
-    </div>
-    {query.data?.total === 0 && <div className="bl-empty"><h2>No activity yet</h2><p>Changes will appear here as your team works.</p></div>}
-    {query.data && query.data.total > 50 && <div className="bl-pagination"><button disabled={offset === 0} onClick={() => page(Math.max(0, offset - 50))}>Previous</button><span>{offset + 1}–{Math.min(offset + 50, query.data.total)} of {query.data.total}</span><button disabled={offset + 50 >= query.data.total} onClick={() => page(offset + 50)}>Next</button></div>}
+      )) : (
+        <div className="bl-empty">
+          <h2>No activity yet</h2>
+          <p>Changes will appear here as your team works.</p>
+        </div>
+      )
+    )}
+
+    {query.data && query.data.total > 50 &&
+      <div className="bl-pagination">
+        <button disabled={offset === 0} onClick={() => page(Math.max(0, offset - 50))}>Previous</button>
+        <span>{offset + 1}–{Math.min(offset + 50, query.data.total)} of {query.data.total}</span>
+        <button disabled={offset + 50 >= query.data.total} onClick={() => page(offset + 50)}>Next</button>
+      </div>
+    }
   </main>;
 }

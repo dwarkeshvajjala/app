@@ -1,5 +1,56 @@
 # Delivery and verification ledger
 
+## 2026-09-08: Post-login UI migration — clients and activity slice (corrected)
+
+- A prior uncommitted pass at this slice rewrote `ClientsPage`/`ActivityPage` onto
+  classnames copied verbatim from `backline-Final Draft.html`'s own embedded
+  stylesheet (`.wrap`, `.head`, `.toolbar`, `.search`, `.rows`, `.cl-row`, `.cl-head`,
+  `.act`, `.act-day`, `.act-ic`, `.card-new`, `.sel`, `.kbd`, `.btn-new`, `.btn-solid`,
+  `.btn-quiet`, `.modal-body`, `.modal-foot`, `.field`, `.req`, `.hint`, `.ghost-btn`,
+  `.chipf`, `.top-right`, `.seg`, `.plus`). None of those selectors exist in
+  `apps/web/src/styles/backline.css` — confirmed by grepping the stylesheet for every
+  one of them — so both pages would have rendered with no brand styling at all
+  (default block/inline layout, no ink/paper/mint treatment, no 3px geometry). This
+  violated the base prompt's "follow the established Backline brand from
+  apps/web/src/styles/backline.css" / "reuse existing … shared components" rule. This
+  entry replaces that pass; the earlier log text above it is no longer accurate and is
+  superseded by this one.
+- Rebuilt `ClientsPage` on the real `bl-` design system already used by every other
+  migrated route: `.bl-wrap`/`.bl-head`/`.bl-head-actions`, `.bl-toolbar.wrap` +
+  `.bl-search` (the same label/icon-span/input markup `ProjectsPage` uses) with an
+  Escape-to-clear key handler, `.bl-table`/`.bl-table-wrap` for the row list (the same
+  primitive the pre-existing `ClientsPage` and `MembersPage` tables use), `.bl-avatar`
+  + `.bl-text-button` for the client/contact lockup, `.bl-chip`/`.bl-chip-row` for the
+  linked-project list capped at 3 with a "+N more" chip, `.bl-select` for the existing
+  row-actions dropdown, and `.bl-empty` for the empty state. The add/edit dialog now
+  uses `Dialog` + `.bl-compact-form`/`.bl-required`/`.bl-input` (the same field
+  grouping `ProjectForm`/`ProjectMenu`'s rename dialog use) and the archive
+  confirmation uses `.bl-dialog-intro` + `.bl-dialog-actions` with `.bl-quiet`
+  (cancel) / `.bl-button danger` (confirm) — the same confirm-footer pattern
+  `ProjectMenu`'s `ConfirmAction` uses — instead of an unstyled ad hoc footer.
+- Rebuilt `ActivityPage` on `.bl-tabs` for the event-type filter (the same
+  underline-tab component `ProjectsPage`'s type tabs use, not a bespoke `.seg`),
+  `.bl-group-title` for day headers, and the pre-existing `.bl-activity` card/article
+  list (already defined in `backline.css` for exactly this page). Added one
+  genuinely new but on-brand touch: a per-event-category color (`EVENT_META`, a
+  `Record` of `{icon, color}` keyed by the event-type prefix), the same "small local
+  colour map applied via inline `style`" convention `PRIORITY_META`/`STATUS_META`
+  already use in the comments panel, painted onto the existing `.bl-avatar` icon slot
+  instead of introducing new circular icon CSS. Pagination uses the existing
+  `.bl-pagination` component instead of one-off inline styles.
+- No behavior/data-contract changes: client-side search against the loaded client
+  array, the archive/create/update mutations and their query-key invalidation, and
+  activity's offset/event-type/date-grouping query all match the pre-existing
+  contracts exactly — only markup and class names changed.
+- Also reverted one unrelated stray whitespace change (trailing spaces on a
+  ` ```text ` fence line) in `docs/implementation/10-ui-migration-chat-prompts.md`
+  left over from the same prior pass.
+- Not run at the user's request: lint, typecheck, build, automated tests, local
+  preview, browser interaction QA, keyboard journey QA, and responsive screenshot
+  comparison. Every classname used was verified against `backline.css` by direct
+  grep (not assumed), but the file has not been rendered in a browser in this pass —
+  visual/responsive verification is still required before this is considered done.
+
 ## 2026-09-08: Post-login UI migration — workspace tickets slice
 
 - Migrated `TicketsPage` and its component tree to the Final Draft's workflow surface,
