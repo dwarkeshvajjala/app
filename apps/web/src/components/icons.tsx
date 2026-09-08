@@ -98,3 +98,20 @@ export function BoltIcon(props: SVGProps<SVGSVGElement>) {
     </Icon>
   );
 }
+
+export function SearchIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m15.5 15.5 4.5 4.5" />
+    </Icon>
+  );
+}
+
+export function PlusIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <path d="M12 5v14M5 12h14" />
+    </Icon>
+  );
+}
