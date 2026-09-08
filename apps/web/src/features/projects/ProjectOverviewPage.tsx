@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 
 import { useWSEvent } from "../../app/WSProvider";
+import { LoadingScreen } from "../../components/LoadingScreen";
 import { API_BASE_URL, apiFetch } from "../../lib/api-client";
 import { removeProjectComment, upsertProjectComment } from "../../lib/comment-cache";
 import { qk } from "../../lib/query-keys";
@@ -131,7 +132,7 @@ export function ProjectOverviewPage() {
   }, [projectId, retryCount]);
 
   if (isLoading) {
-    return <p className="text-text-muted p-6 text-sm">Loading...</p>;
+    return <LoadingScreen label="Loading project" />;
   }
 
   if (!project) {

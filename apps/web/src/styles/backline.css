@@ -437,10 +437,18 @@ body.lg-on .app,body.lg-on .toast{visibility:hidden}
 .bl-live-dot{width:5px;height:5px;border-radius:50%;background:var(--mint-deep);display:inline-block;animation:bl-live-pulse 1.8s ease-in-out infinite}
 @keyframes bl-live-pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* Slim resolved/open proportion bar - built only from real per-project counts
-   (ProjectStatsOut.open/resolved), never a fabricated multi-status breakdown. */
-.bl-project-bar{height:4px;border-radius:3px;background:var(--bl-line);overflow:hidden;margin-top:12px}
-.bl-project-bar i{display:block;height:100%;background:var(--bl-mint);border-radius:3px 0 0 3px;transition:width .2s ease}
+/* Per-project health bar. The "resolved" segment is real (ProjectStatsOut.resolved
+   of .total); the open count is split across todo/in-progress/in-review/blocked
+   segments using a fixed placeholder ratio (see PLACEHOLDER_OPEN_SPLIT in
+   ProjectsPage) until the dashboard endpoint returns a real per-project status
+   breakdown - today it only aggregates that by status workspace-wide. Swapping in
+   real numbers later is a one-line change to how the segments are computed, not
+   to this markup/CSS. */
+.bl-project-bar{display:flex;height:4px;border-radius:3px;overflow:hidden;gap:1.5px;margin-top:12px}
+.bl-project-bar i{display:block;height:100%}
+.bl-legend{display:flex;flex-wrap:wrap;gap:13px;margin:2px 0 16px;font:10px var(--bl-mono);color:var(--bl-muted)}
+.bl-legend span{display:flex;align-items:center;gap:5px}
+.bl-legend i{width:7px;height:7px;border-radius:2px;display:block}
 
 /* A touch of life on hover to match the prototype's card affordances. */
 .bl-project-letter{transition:transform .18s ease}
@@ -457,4 +465,82 @@ body.lg-on .app,body.lg-on .toast{visibility:hidden}
 /* Tactile press feedback on the controls people click most. */
 .bl-button:active,.bl-quiet:active,.bl-tabs>button:active,.bl-tabs>a:active,.bl-segment button:active,.bl-project-actions button:active{transform:scale(.97)}
 .bl-button,.bl-quiet,.bl-tabs>button,.bl-tabs>a,.bl-segment button,.bl-project-actions button{transition:transform .1s ease,background .12s ease,border-color .12s ease,color .12s ease}
+
+/* ── Generic dropdown/popover menu ───────────────────────────────────────── */
+/* Backs three things: the project card's "⋯" options menu (ProjectMenu), and the
+   sort/layout popovers on ProjectsPage - one component of CSS instead of three,
+   per UX-AUD-001 (one design-token source rather than a parallel style per menu). */
+.bl-dropdown{position:relative;display:inline-flex}
+.bl-dropdown-trigger{display:flex;align-items:center;justify-content:center;gap:6px;width:28px;height:28px;border-radius:3px;color:var(--bl-muted);border:1px solid transparent;background:none;font-size:12px}
+.bl-dropdown-trigger:hover{background:var(--bl-paper);color:var(--bl-ink)}
+.bl-dropdown-trigger[aria-expanded="true"]{background:var(--bl-paper);color:var(--bl-ink)}
+.bl-dropdown-trigger.labeled{width:auto;height:32px;padding:0 11px;border-color:var(--bl-line);background:#fff}
+.bl-dropdown-trigger.labeled:hover{border-color:var(--ink-4)}
+.bl-dropdown-pop{position:absolute;right:0;top:calc(100% + 6px);min-width:220px;max-width:calc(100vw - 32px);background:#fff;border:1px solid var(--bl-line);border-radius:4px;box-shadow:0 12px 30px rgba(11,11,11,.14);z-index:60;padding:4px;overflow:hidden;animation:bl-pop-in .12s ease}
+@keyframes bl-pop-in{from{opacity:0;transform:translateY(-2px)}to{opacity:1;transform:none}}
+.bl-dropdown-label{font:9.5px var(--bl-mono);text-transform:uppercase;letter-spacing:.07em;color:var(--bl-muted);padding:7px 10px 4px}
+.bl-dropdown-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:8px 10px;font-size:12.5px;border-radius:3px;color:var(--bl-ink)}
+.bl-dropdown-item:hover:not(:disabled){background:var(--bl-paper)}
+.bl-dropdown-item:disabled{opacity:.5;cursor:not-allowed}
+.bl-dropdown-item.danger{color:#A33317}
+.bl-dropdown-item.danger:hover:not(:disabled){background:#FFF6F1}
+.bl-dropdown-item .stack{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;text-align:left}
+.bl-dropdown-item .stack small{font-size:10px;color:var(--bl-muted);font-weight:400}
+.bl-dropdown-item .tick{margin-left:auto;color:var(--mint-deep);opacity:0;flex:none;display:flex}
+.bl-dropdown-item[aria-checked="true"] .tick{opacity:1}
+.bl-dropdown-sep{height:1px;background:var(--bl-line);margin:4px 2px}
+
+/* ── Merged project-list header ──────────────────────────────────────────── */
+/* One header instead of two: the greeting/date row now also carries "New project"
+   (previously a second full-width bar of its own), and the plain-text filter input
+   moved down into the toolbar next to sort/view - so there's exactly one
+   search-styled control per screen instead of two stacked ones. */
+.bl-head-actions{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.bl-toolbar .bl-search{max-width:230px;padding:5px 9px}
+.bl-toolbar .bl-search input{font-size:12.5px}
+
+/* ── Waiting-on-you: fixed footprint whether full or empty ──────────────── */
+/* Same box, same rough height, whether it's holding real threads or the empty
+   state - so clearing your last reply-owed comment doesn't yank the tabs/grid
+   below it up the page. */
+.bl-attention{min-height:150px;display:flex;flex-direction:column}
+.bl-attention-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:26px 20px;text-align:center}
+.bl-attention-empty p{margin:0;font-size:12.5px;color:var(--bl-muted);max-width:44ch;line-height:1.5}
+.bl-attention-empty p b{color:var(--bl-ink)}
+
+/* ── Live hero preview ────────────────────────────────────────────────────
+   A scaled-down live iframe of the project's own site, so its actual look is
+   visible from the dashboard without opening it. Known limitation: a site that
+   sends X-Frame-Options/CSP frame-ancestors will render blank here (the browser
+   enforces that before we ever see it) - the browser-chrome bar above it still
+   names the real URL, so that reads as "nothing to preview" rather than broken. */
+.bl-project-frame{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
+.bl-project-frame iframe{position:absolute;top:0;left:0;width:400%;height:400%;transform:scale(.25);transform-origin:top left;border:0;background:#fff}
+.bl-project-frame::after{content:"";position:absolute;inset:auto 0 0 0;height:35%;background:linear-gradient(to bottom,transparent,rgba(255,255,255,.9))}
+.bl-project-preview{overflow:hidden}
+.bl-browser{position:relative;z-index:3}
+.bl-preview-type{z-index:3}
+@media (max-width:640px){.bl-project-frame{display:none}}
+
+/* ── Profile control, moved into the persistent topbar (was the sidebar
+   footer) - top-right, next to search/notifications, matching where people
+   already expect an account menu to live. ─────────────────────────────────── */
+.bl-account-btn{width:32px;height:32px;border-radius:3px;display:grid;place-items:center;padding:0;overflow:hidden;border:1px solid transparent;flex:none}
+.bl-account-btn:hover{border-color:var(--bl-line)}
+
+/* ── Branded full-page loading gate ──────────────────────────────────────── */
+/* Replaces plain unstyled "Loading..." text that used to render alone in the
+   top-left corner of an otherwise blank page while auth/workspace state resolves. */
+.bl-loading-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:var(--paper);color:var(--ink-3)}
+.bl-loading-mark{width:40px;height:40px;border-radius:9px;background:var(--ink);color:var(--mint);display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:17px;animation:bl-loading-pulse 1.4s ease-in-out infinite}
+@keyframes bl-loading-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.06);opacity:.85}}
+.bl-loading-bar{width:120px;height:3px;border-radius:3px;background:var(--line-soft);overflow:hidden}
+.bl-loading-bar i{display:block;width:40%;height:100%;background:var(--mint);border-radius:3px;animation:bl-loading-bar-slide 1.1s ease-in-out infinite}
+@keyframes bl-loading-bar-slide{0%{transform:translateX(-140%)}100%{transform:translateX(350%)}}
+.bl-loading-screen p{font-family:var(--mono);font-size:11px;letter-spacing:.06em;margin:0}
+
+@media (max-width:640px){
+  .bl-head-actions{width:100%;justify-content:space-between}
+  .bl-toolbar .bl-search{max-width:none;order:10;flex-basis:100%}
+}
 

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { useParams } from "react-router-dom";
 
+import { LoadingScreen } from "../../components/LoadingScreen";
 import { API_BASE_URL, ApiError } from "../../lib/api-client";
 import { qk } from "../../lib/query-keys";
 import * as reviewApi from "./api";
@@ -134,7 +135,7 @@ export function ReviewEntryPage() {
   }
 
   if (isLoading) {
-    return <p className="text-text-muted p-6 text-center text-sm">Loading...</p>;
+    return <LoadingScreen label="Opening review" />;
   }
 
   if (resolveError) {

@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 
+import { LoadingScreen } from "../../components/LoadingScreen";
 import { useWorkspaceContext } from "./useWorkspaceContext";
 
 // An open project (the review canvas, its board, its share-links) is its own focused
@@ -12,7 +13,7 @@ export function ProjectLayout() {
   const result = useWorkspaceContext();
 
   if (result.status === "loading") {
-    return <p className="text-text-muted p-6 text-sm">Loading workspace...</p>;
+    return <LoadingScreen />;
   }
   if (result.status === "not-found") {
     return <Navigate to="/" replace />;
@@ -21,7 +22,7 @@ export function ProjectLayout() {
     return <p className="text-recovery-orphaned p-6 text-sm">{result.message}</p>;
   }
   if (result.status === "switching") {
-    return <p className="text-text-muted p-6 text-sm">Opening {result.workspace.name}...</p>;
+    return <LoadingScreen label={`Opening ${result.workspace.name}`} />;
   }
 
   return <Outlet context={{ workspace: result.workspace }} />;

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { useOutletContext, useParams, useSearchParams } from "react-router-dom";
 
+import { LoadingScreen } from "../../components/LoadingScreen";
 import * as integrationsApi from "../integrations/api";
 import type { WorkspaceOut } from "../workspaces/api";
 import * as workspacesApi from "../workspaces/api";
@@ -280,7 +281,7 @@ export function BoardPage() {
   }
 
   if (isLoading) {
-    return <p className="text-text-muted p-6 text-sm">Loading...</p>;
+    return <LoadingScreen label="Loading board" />;
   }
 
   return (

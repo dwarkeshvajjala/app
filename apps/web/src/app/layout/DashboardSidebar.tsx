@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { NavLink, useLocation } from "react-router-dom";
-import { useAuth } from "../../features/auth/AuthContext";
 import { useTranslation } from "react-i18next";
 import type { TranslationKeys } from "../../lib/i18n";
-import { AccountModal } from "../../features/auth/AccountModal";
 import { getDashboard } from "../../features/tickets/api";
 import type { WorkspaceOut } from "../../features/workspaces/api";
 import { WorkspaceSwitcherPopover } from "../../features/workspaces/WorkspaceSwitcherPopover";
@@ -12,14 +10,13 @@ import { qk } from "../../lib/query-keys";
 import { STATUS_COLORS, STATUS_LABELS, WORKFLOW_STATUSES } from "../../lib/workflow";
 import { ActivityClockIcon, AssignedToMeIcon, ChevronDownIcon, ClientsIcon, ProjectsIcon, TicketsIcon } from "./sidebar-icons";
 
-// onSignOut is no longer accepted here: sign-out now lives entirely inside
-// AccountModal (which calls useAuth().logout() itself), reached via the account
-// button below - a caller-supplied callback would just go unused.
+// Account/sign-out no longer lives here: it's the AccountButton in the topbar
+// (WorkspaceLayout) now, top-right next to search/notifications instead of a text
+// button at the bottom of this nav.
 export function DashboardSidebar({ workspace }: { workspace: WorkspaceOut }) {
   const base = `/w/${workspace.slug}`;
   const location = useLocation();
   const { t } = useTranslation();
-  const { user } = useAuth();
   const { data } = useQuery({ queryKey: qk.dashboard(workspace.id), queryFn: () => getDashboard(workspace.id) });
   const links = [
     { to: base, label: t('sidebar.projects' as TranslationKeys), icon: ProjectsIcon, count: data?.projects },
@@ -31,7 +28,6 @@ export function DashboardSidebar({ workspace }: { workspace: WorkspaceOut }) {
   function active(to: string) { return location.pathname + location.search === to; }
 
   const [showWsPop, setShowWsPop] = useState(false);
-  const [showAccount, setShowAccount] = useState(false);
 
   return <aside className="bl-rail">
     {/* Workspace switcher trigger */}
@@ -67,18 +63,6 @@ export function DashboardSidebar({ workspace }: { workspace: WorkspaceOut }) {
     </nav>
     <footer className="bl-rail-footer">
       <div className="bl-plan"><strong className="capitalize">{workspace.plan} plan</strong><span className="bl-mono">{data?.projects ?? "—"} active projects</span><p>One place for your team's client reviews.</p><NavLink className="bl-button mint" to={`${base}/billing`}>Compare plans</NavLink></div>
-      <div className="bl-account">
-        <button
-          type="button"
-          className="bl-quiet"
-          style={{ flex: 1, textAlign: "left", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-          aria-label="Open account settings"
-          onClick={() => setShowAccount(true)}
-        >
-          {user?.name || "Your account"}
-        </button>
-      </div>
     </footer>
-    {showAccount && <AccountModal onClose={() => setShowAccount(false)} />}
   </aside>;
 }

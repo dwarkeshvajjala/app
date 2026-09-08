@@ -1,14 +1,34 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
+import { Avatar } from "@backline/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Navigate, Outlet } from "react-router-dom";
 import { useWSEvent } from "../WSProvider";
 
 import { qk } from "../../lib/query-keys";
+import { LoadingScreen } from "../../components/LoadingScreen";
 import { useWorkspaceContext } from "./useWorkspaceContext";
 import { DashboardSidebar } from "./DashboardSidebar";
+import { AccountModal } from "../../features/auth/AccountModal";
+import { useAuth } from "../../features/auth/AuthContext";
 import { GlobalSearch } from "../../features/dashboard/GlobalSearch";
 import { NotificationBell } from "../../features/notifications/NotificationBell";
 import { useConnectionStore } from "../../stores/connectionStore";
+
+// Account entry point - top-right of the persistent topbar, next to search and
+// notifications, rather than a text button buried at the bottom of the sidebar
+// (where the eye has to travel past the whole nav to find it every time).
+function AccountButton() {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className="bl-account-btn" aria-label="Your account" onClick={() => setOpen(true)}>
+        <Avatar name={user?.name ?? "?"} avatarUrl={user?.avatar_url} size={32} />
+      </button>
+      {open && <AccountModal onClose={() => setOpen(false)} />}
+    </>
+  );
+}
 
 // The dashboard chrome (sidebar + everything under it: project grid, members, billing,
 // settings, usage, mcp) - deliberately NOT used for an open project's own routes
@@ -28,7 +48,7 @@ export function WorkspaceLayout() {
   const connStatus = useConnectionStore((s) => s.status);
 
   if (result.status === "loading") {
-    return <p className="text-text-muted p-6 text-sm">Loading workspace...</p>;
+    return <LoadingScreen />;
   }
   if (result.status === "not-found") {
     return <Navigate to="/" replace />;
@@ -37,7 +57,7 @@ export function WorkspaceLayout() {
     return <p className="text-recovery-orphaned p-6 text-sm">{result.message}</p>;
   }
   if (result.status === "switching") {
-    return <p className="text-text-muted p-6 text-sm">Opening {result.workspace.name}...</p>;
+    return <LoadingScreen label={`Opening ${result.workspace.name}`} />;
   }
 
   const { workspace } = result;
@@ -46,7 +66,7 @@ export function WorkspaceLayout() {
     <div className="bl-app">
       <DashboardSidebar workspace={workspace} />
       <div className="bl-main">
-        <header className="bl-topbar"><GlobalSearch workspaceId={workspace.id} workspaceSlug={workspace.slug} /><NotificationBell /></header>
+        <header className="bl-topbar"><GlobalSearch workspaceId={workspace.id} workspaceSlug={workspace.slug} /><NotificationBell /><AccountButton /></header>
         {connStatus !== "connected" && (
           <div
             className={`bl-conn-banner ${connStatus === "reconnecting" ? "reconnecting" : "offline"}`}

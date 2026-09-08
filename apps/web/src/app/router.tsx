@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, Outlet, RouterProvider } from "react-router-dom";
 
+import { LoadingScreen } from "../components/LoadingScreen";
 import { AuthCallbackPage } from "../features/auth/AuthCallbackPage";
 import { useAuth } from "../features/auth/AuthContext";
 import { LoginPage } from "../features/auth/LoginPage";
@@ -40,7 +41,7 @@ function RequireAuth() {
   const { status } = useAuth();
 
   if (status === "loading") {
-    return <p className="text-text-muted p-6 text-sm">Loading...</p>;
+    return <LoadingScreen />;
   }
   if (status === "unauthenticated") {
     return <Navigate to="/login" replace />;
