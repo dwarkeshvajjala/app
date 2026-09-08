@@ -47,6 +47,7 @@ async def disconnect_integration(
         get_db(),
         integration_id=integration_id,
         workspace_id=require_workspace_context(session),
+        actor_id=session.user_id,
     )
 
 

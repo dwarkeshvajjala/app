@@ -1537,6 +1537,16 @@
               "type": "string",
               "title": "Workspace Id"
             }
+          },
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Archived"
+            }
           }
         ],
         "responses": {
@@ -1721,6 +1731,107 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/clients/{client_id}/restore": {
+      "post": {
+        "tags": [
+          "clients"
+        ],
+        "summary": "Restore Client",
+        "operationId": "restore_client_api_v1_workspaces__workspace_id__clients__client_id__restore_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          },
+          {
+            "name": "client_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Client Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspaces/{workspace_id}/clients/export": {
+      "get": {
+        "tags": [
+          "clients"
+        ],
+        "summary": "Export Clients",
+        "operationId": "export_clients_api_v1_workspaces__workspace_id__clients_export_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workspace Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -5098,6 +5209,16 @@
               }
             ],
             "title": "Archived At"
+          },
+          "stats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientStatsOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -5112,6 +5233,49 @@
           "archived_at"
         ],
         "title": "ClientOut"
+      },
+      "ClientStatsOut": {
+        "properties": {
+          "active_projects_count": {
+            "type": "integer",
+            "title": "Active Projects Count",
+            "default": 0
+          },
+          "open_tickets_count": {
+            "type": "integer",
+            "title": "Open Tickets Count",
+            "default": 0
+          },
+          "resolved_tickets_count": {
+            "type": "integer",
+            "title": "Resolved Tickets Count",
+            "default": 0
+          },
+          "total_tickets_count": {
+            "type": "integer",
+            "title": "Total Tickets Count",
+            "default": 0
+          },
+          "reviewers_count": {
+            "type": "integer",
+            "title": "Reviewers Count",
+            "default": 0
+          },
+          "last_activity_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Activity At"
+          }
+        },
+        "type": "object",
+        "title": "ClientStatsOut"
       },
       "ClientUpdate": {
         "properties": {

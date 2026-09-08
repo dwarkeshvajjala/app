@@ -501,6 +501,40 @@ export interface paths {
         patch: operations["update_client_api_v1_workspaces__workspace_id__clients__client_id__patch"];
         trace?: never;
     };
+    "/api/v1/workspaces/{workspace_id}/clients/{client_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore Client */
+        post: operations["restore_client_api_v1_workspaces__workspace_id__clients__client_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/clients/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Clients */
+        get: operations["export_clients_api_v1_workspaces__workspace_id__clients_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspace_id}/search": {
         parameters: {
             query?: never;
@@ -1419,6 +1453,37 @@ export interface components {
             updated_at: string;
             /** Archived At */
             archived_at: string | null;
+            stats?: components["schemas"]["ClientStatsOut"] | null;
+        };
+        /** ClientStatsOut */
+        ClientStatsOut: {
+            /**
+             * Active Projects Count
+             * @default 0
+             */
+            active_projects_count: number;
+            /**
+             * Open Tickets Count
+             * @default 0
+             */
+            open_tickets_count: number;
+            /**
+             * Resolved Tickets Count
+             * @default 0
+             */
+            resolved_tickets_count: number;
+            /**
+             * Total Tickets Count
+             * @default 0
+             */
+            total_tickets_count: number;
+            /**
+             * Reviewers Count
+             * @default 0
+             */
+            reviewers_count: number;
+            /** Last Activity At */
+            last_activity_at?: string | null;
         };
         /** ClientUpdate */
         ClientUpdate: {
@@ -3809,7 +3874,9 @@ export interface operations {
     };
     list_clients_api_v1_workspaces__workspace_id__clients_get: {
         parameters: {
-            query?: never;
+            query?: {
+                include_archived?: boolean;
+            };
             header?: never;
             path: {
                 workspace_id: string;
@@ -3926,6 +3993,69 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ClientOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_client_api_v1_workspaces__workspace_id__clients__client_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_clients_api_v1_workspaces__workspace_id__clients_export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

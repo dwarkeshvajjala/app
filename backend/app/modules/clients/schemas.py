@@ -15,6 +15,15 @@ class ClientUpdate(BaseModel):
     email: EmailStr | None = None
 
 
+class ClientStatsOut(BaseModel):
+    active_projects_count: int = 0
+    open_tickets_count: int = 0
+    resolved_tickets_count: int = 0
+    total_tickets_count: int = 0
+    reviewers_count: int = 0
+    last_activity_at: datetime | None = None
+
+
 class ClientOut(BaseModel):
     id: str
     workspace_id: str
@@ -24,3 +33,4 @@ class ClientOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     archived_at: datetime | None
+    stats: ClientStatsOut | None = None

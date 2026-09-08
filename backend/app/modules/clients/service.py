@@ -1,3 +1,5 @@
+import csv
+import io
 from datetime import UTC, datetime
 from typing import Any
 
@@ -14,9 +16,12 @@ def client_out(doc: dict[str, Any]) -> ClientOut:
 
 
 async def list_clients(
-    db: AsyncIOMotorDatabase[dict[str, Any]], workspace_id: str
+    db: AsyncIOMotorDatabase[dict[str, Any]], workspace_id: str, include_archived: bool = False
 ) -> list[ClientOut]:
-    return [client_out(doc) for doc in await ClientRepository(db).list(workspace_id)]
+    return [
+        client_out(doc)
+        for doc in await ClientRepository(db).list(workspace_id, include_archived=include_archived)
+    ]
 
 
 async def create_client(
@@ -66,3 +71,68 @@ async def update_client(
         payload={"client_id": client_id, "name": doc["name"]},
     )
     return client_out({**doc, **fields, "updated_at": datetime.now(UTC)})
+
+
+async def restore_client(
+    db: AsyncIOMotorDatabase[dict[str, Any]],
+    workspace_id: str,
+    client_id: str,
+    actor_id: str,
+) -> ClientOut:
+    repo = ClientRepository(db)
+    doc = await repo.find_archived(workspace_id, client_id)
+    if doc is None:
+        raise NotFoundError("Archived client not found.")
+    now = datetime.now(UTC)
+    await repo.restore(workspace_id, client_id)
+    await append_event(
+        db,
+        workspace_id=workspace_id,
+        type="client.restored",
+        actor_type="member",
+        actor_id=actor_id,
+        payload={"client_id": client_id, "name": doc["name"]},
+    )
+    doc["archived_at"] = None
+    doc["updated_at"] = now
+    return client_out(doc)
+
+
+async def export_clients(
+    db: AsyncIOMotorDatabase[dict[str, Any]],
+    workspace_id: str,
+) -> str:
+    clients = await list_clients(db, workspace_id)
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(
+        [
+            "Name",
+            "Contact Name",
+            "Email",
+            "Active Projects",
+            "Open Tickets",
+            "Resolved Tickets",
+            "Reviewers",
+            "Last Activity",
+            "Added",
+        ]
+    )
+    for c in clients:
+        row = [
+            c.name,
+            c.contact_name,
+            c.email or "",
+            str(c.stats.active_projects_count) if c.stats else "0",
+            str(c.stats.open_tickets_count) if c.stats else "0",
+            str(c.stats.resolved_tickets_count) if c.stats else "0",
+            str(c.stats.reviewers_count) if c.stats else "0",
+            c.stats.last_activity_at.isoformat() if c.stats and c.stats.last_activity_at else "",
+            c.created_at.isoformat(),
+        ]
+        escaped_row = [
+            f"'{cell}" if isinstance(cell, str) and cell.startswith(("=", "+", "-", "@")) else cell
+            for cell in row
+        ]
+        writer.writerow(escaped_row)
+    return output.getvalue()

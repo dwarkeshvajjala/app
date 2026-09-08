@@ -166,11 +166,14 @@ async def summary(
 async def activity(
     db: AsyncIOMotorDatabase[dict[str, Any]],
     workspace_id: str,
+    user_id: str,
     offset: int,
     limit: int,
     event_type: str,
 ) -> ActivityListOut:
-    docs, total = await DashboardRepository(db).activity(workspace_id, offset, limit, event_type)
+    docs, total = await DashboardRepository(db).activity(
+        workspace_id, user_id, offset, limit, event_type
+    )
     return ActivityListOut(
         total=total,
         items=[

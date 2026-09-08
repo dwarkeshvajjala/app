@@ -26,7 +26,7 @@ function eventMeta(type: string) {
   return EVENT_META[type.split(".")[0]] ?? { icon: BoltIcon, color: "#62665F" };
 }
 
-const FILTERS = ["comment.", "project.", "client.", "share_link.", "member."];
+const FILTERS = ["mine", "clients", "deploys"];
 
 export function ActivityPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
@@ -39,9 +39,16 @@ export function ActivityPage() {
 
   const groups = useMemo(() => {
     const result = new Map<string, Schemas["ActivityListOut"]["items"]>();
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const yesterday = today - 86400000;
+
     for (const event of query.data?.items ?? []) {
-      const date = new Date(event.created_at).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
-      result.set(date, [...(result.get(date) ?? []), event]);
+      const ts = new Date(event.created_at).getTime();
+      let label = "Earlier";
+      if (ts >= today) label = "Today";
+      else if (ts >= yesterday) label = "Yesterday";
+      result.set(label, [...(result.get(label) ?? []), event]);
     }
     return [...result.entries()];
   }, [query.data?.items]);
@@ -59,7 +66,7 @@ export function ActivityPage() {
       <button aria-pressed={filter === ""} onClick={() => setParams({ type: "", offset: "0" })}>Everything</button>
       {FILTERS.map((t) =>
         <button key={t} aria-pressed={filter === t} onClick={() => setParams({ type: t, offset: "0" })}>
-          {t.replace('.', '').charAt(0).toUpperCase() + t.replace('.', '').slice(1)}
+          {t.charAt(0).toUpperCase() + t.slice(1)}
         </button>
       )}
     </div>

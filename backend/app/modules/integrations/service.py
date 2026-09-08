@@ -5,6 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.core.arq_pool import get_arq_pool
 from app.core.encryption import encrypt_secret
 from app.core.errors import NotFoundError, ValidationError
+from app.core.events import append_event
 from app.modules.comments.service import get_comment_out
 from app.modules.integrations import clickup as clickup_module
 from app.modules.integrations.factory import get_integration
@@ -93,13 +94,25 @@ async def list_integrations(
 
 
 async def disconnect_integration(
-    db: AsyncIOMotorDatabase[dict[str, Any]], *, integration_id: str, workspace_id: str
+    db: AsyncIOMotorDatabase[dict[str, Any]],
+    *,
+    integration_id: str,
+    workspace_id: str,
+    actor_id: str,
 ) -> None:
     repo = IntegrationRepository(db)
     doc = await repo.find_by_id(integration_id)
     if doc is None or doc["workspace_id"] != workspace_id:
         raise NotFoundError("Integration not found.")
     await repo.delete(integration_id)
+    await append_event(
+        db,
+        workspace_id=workspace_id,
+        type="integration.disconnected",
+        actor_type="member",
+        actor_id=actor_id,
+        payload={"integration_type": doc["type"]},
+    )
 
 
 async def dispatch_comment_event(

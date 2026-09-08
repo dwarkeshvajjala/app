@@ -6,6 +6,7 @@ import { LoadingScreen } from "../../components/LoadingScreen";
 import { useToast } from "../../components/Toast";
 import { PlusIcon, SearchIcon } from "../../components/icons";
 import { qk } from "../../lib/query-keys";
+import { timeAgo } from "../../lib/time";
 import { useDocumentTitle } from "../../lib/use-document-title";
 import { listProjects } from "../projects/api";
 import type { WorkspaceOut } from "../workspaces/api";
@@ -20,10 +21,37 @@ export function ClientsPage() {
   const search = params.get("search") ?? "";
   const [edit, setEdit] = useState<api.Client | "new" | null>(null);
   const [archive, setArchive] = useState<api.Client | null>(null);
-  const clients = useQuery({ queryKey: qk.clients(workspace.id), queryFn: () => api.listClients(workspace.id) });
+  const [restore, setRestore] = useState<api.Client | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const clients = useQuery({
+    queryKey: [...qk.clients(workspace.id), showArchived],
+    queryFn: () => api.listClients(workspace.id, showArchived),
+  });
   const projects = useQuery({ queryKey: qk.projects(workspace.id), queryFn: () => listProjects(workspace.id, true) });
-  const remove = useMutation({ mutationFn: (id: string) => api.archiveClient(workspace.id, id), onSuccess: async () => { await cache.invalidateQueries({ queryKey: qk.clients(workspace.id) }); setArchive(null); } });
-  const visible = (clients.data ?? []).filter((c) => `${c.name} ${c.contact_name} ${c.email ?? ""}`.toLowerCase().includes(search.toLowerCase()));
+  const invalidateClients = () => cache.invalidateQueries({ queryKey: qk.clients(workspace.id) });
+  const remove = useMutation({ mutationFn: (id: string) => api.archiveClient(workspace.id, id), onSuccess: async () => { await invalidateClients(); setArchive(null); toast("Client archived. Restore it any time from Show archived."); } });
+  const restoreClient = useMutation({
+    mutationFn: (id: string) => api.restoreClient(workspace.id, id),
+    onSuccess: async () => { await invalidateClients(); setRestore(null); toast("Client restored."); },
+  });
+  const exportClients = useMutation({
+    mutationFn: () => api.exportClients(workspace.id),
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${workspace.slug}-clients.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      toast("Client export downloaded.");
+    },
+    onError: () => toast("Could not export clients.", "error"),
+  });
+  const matchesSearch = (c: api.Client) => `${c.name} ${c.contact_name} ${c.email ?? ""}`.toLowerCase().includes(search.toLowerCase());
+  const visible = (clients.data ?? []).filter((c) => !c.archived_at && matchesSearch(c));
+  const archivedVisible = (clients.data ?? []).filter((c) => c.archived_at && matchesSearch(c));
 
   return <main className="bl-wrap">
     <header className="bl-head">
@@ -49,6 +77,9 @@ export function ClientsPage() {
           onKeyDown={(e) => { if (e.key === "Escape" && search) { e.stopPropagation(); setParams({}); } }}
         />
       </label>
+      <button type="button" className="bl-quiet" aria-pressed={showArchived} onClick={() => setShowArchived((v) => !v)}>
+        {showArchived ? "Hide archived" : "Show archived"}
+      </button>
     </div>
 
     {clients.isLoading && <LoadingScreen />}
@@ -59,10 +90,11 @@ export function ClientsPage() {
       visible.length > 0 ? (
         <div className="bl-table-wrap">
           <table className="bl-table">
-            <thead><tr><th>Client &amp; contact</th><th>Active</th><th>Projects</th><th>Added</th><th /></tr></thead>
+            <thead><tr><th>Client &amp; contact</th><th>Summary</th><th>Projects</th><th>Last activity</th><th>Added</th><th /></tr></thead>
             <tbody>
               {visible.map((client) => {
                 const clientProjects = (projects.data ?? []).filter((p) => p.client_id === client.id && !p.archived_at);
+                const stats = client.stats;
                 return (
                   <tr key={client.id}>
                     <td>
@@ -74,7 +106,10 @@ export function ClientsPage() {
                         </span>
                       </button>
                     </td>
-                    <td className="bl-mono">{clientProjects.length}</td>
+                    <td className="bl-mono">
+                      <div>{stats?.active_projects_count ?? clientProjects.length} active</div>
+                      <small>{stats?.open_tickets_count ?? 0} open · {stats?.reviewers_count ?? 0} reviewer{(stats?.reviewers_count ?? 0) === 1 ? "" : "s"}</small>
+                    </td>
                     <td>
                       <div className="bl-chip-row">
                         {clientProjects.length === 0 && <span className="bl-chip">No projects yet</span>}
@@ -82,6 +117,7 @@ export function ClientsPage() {
                         {clientProjects.length > 3 && <span className="bl-chip">+{clientProjects.length - 3} more</span>}
                       </div>
                     </td>
+                    <td>{stats?.last_activity_at ? timeAgo(stats.last_activity_at) : "No activity yet"}</td>
                     <td>{new Date(client.created_at).toLocaleDateString(undefined, { month: "short", year: "numeric" })}</td>
                     <td>
                       <select
@@ -92,14 +128,14 @@ export function ClientsPage() {
                           const v = e.target.value;
                           if (v === 'edit') setEdit(client);
                           else if (v === 'archive') setArchive(client);
-                          else if (v === 'export') toast('Client export is not available yet.', 'warning');
+                          else if (v === 'export') exportClients.mutate();
                           else if (v === 'new') toast('Start a new project from Projects → New project — this workflow entry point is not wired up yet.', 'warning');
                         }}
                       >
                         <option value="" disabled>Options…</option>
                         <option value="edit">Rename / edit</option>
                         <option value="new">New project</option>
-                        <option value="export">Export</option>
+                        <option value="export" disabled={exportClients.isPending}>{exportClients.isPending ? "Exporting…" : "Export"}</option>
                         <option value="archive">Archive</option>
                       </select>
                     </td>
@@ -117,6 +153,34 @@ export function ClientsPage() {
       )
     )}
 
+    {showArchived && !clients.isLoading && !clients.error && archivedVisible.length > 0 && (
+      <section>
+        <h2 className="bl-group-title">Archived</h2>
+        <div className="bl-table-wrap">
+          <table className="bl-table">
+            <thead><tr><th>Client &amp; contact</th><th>Archived</th><th /></tr></thead>
+            <tbody>
+              {archivedVisible.map((client) => (
+                <tr key={client.id}>
+                  <td>
+                    <span className="bl-avatar">{client.name.slice(0, 2).toUpperCase()}</span>
+                    <span>
+                      <strong>{client.name}</strong>
+                      <small>{client.contact_name || "No contact"}{client.email ? ` · ${client.email}` : ""}</small>
+                    </span>
+                  </td>
+                  <td>{client.archived_at ? timeAgo(client.archived_at) : ""}</td>
+                  <td>
+                    <button type="button" className="bl-quiet" onClick={() => setRestore(client)}>Restore</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    )}
+
     {edit && <ClientForm key={edit === "new" ? "new" : edit.id} workspaceId={workspace.id} client={edit === "new" ? undefined : edit} onClose={() => setEdit(null)} />}
 
     {archive &&
@@ -129,6 +193,21 @@ export function ClientsPage() {
           <button type="button" className="bl-quiet" onClick={() => setArchive(null)}>Cancel</button>
           <button type="button" className="bl-button danger" disabled={remove.isPending} onClick={() => remove.mutate(archive.id)}>
             {remove.isPending ? "Archiving…" : "Archive client"}
+          </button>
+        </footer>
+      </Dialog>
+    }
+
+    {restore &&
+      <Dialog title={`Restore ${restore.name}?`} onClose={() => setRestore(null)}>
+        <div className="bl-dialog-intro">
+          <p>The client returns to the active client list, alongside their existing projects and review links.</p>
+        </div>
+        {restoreClient.error && <p role="alert" className="bl-error">{restoreClient.error.message}</p>}
+        <footer className="bl-dialog-actions bl-dialog-actions-bordered">
+          <button type="button" className="bl-quiet" onClick={() => setRestore(null)}>Cancel</button>
+          <button type="button" className="bl-button mint" disabled={restoreClient.isPending} onClick={() => restoreClient.mutate(restore.id)}>
+            {restoreClient.isPending ? "Restoring…" : "Restore client"}
           </button>
         </footer>
       </Dialog>

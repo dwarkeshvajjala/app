@@ -57,7 +57,9 @@ async def activity(
     session: Session = Depends(require_permission("comment:view_team")),
 ) -> ActivityListOut:
     require_workspace_match(session, workspace_id)
-    return await service.activity(get_db(), workspace_id, offset, limit, event_type)
+    return await service.activity(
+        get_db(), workspace_id, session.user_id, offset, limit, event_type
+    )
 
 
 @router.post("/projects/{project_id}/tickets", response_model=TicketOut, status_code=201)

@@ -249,10 +249,16 @@ class DashboardRepository:
         return {**result[0], "active_projects": active, "archived_projects": archived}
 
     async def activity(
-        self, workspace_id: str, offset: int, limit: int, event_type: str
+        self, workspace_id: str, user_id: str, offset: int, limit: int, event_type: str
     ) -> tuple[list[dict[str, Any]], int]:
         query: dict[str, Any] = {"workspace_id": workspace_id}
-        if event_type:
+        if event_type == "mine":
+            query["actor_id"] = user_id
+        elif event_type == "clients":
+            query["type"] = {"$regex": "^client\\."}
+        elif event_type == "deploys":
+            query["type"] = {"$regex": "^(deploy|revision)\\."}
+        elif event_type:
             query["type"] = {"$regex": "^" + re.escape(event_type)}
         cursor = (
             self.db.events.find(query)
