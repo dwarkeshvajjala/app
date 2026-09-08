@@ -37,7 +37,7 @@ export function AssetReview({
   const [tag, setTag] = useState<(typeof TAGS)[number]>("Design");
   const [layer, setLayer] = useState<"client" | "team">("client");
   const start = useRef<{ x: number; y: number } | null>(null);
-  const assets = useQuery({ queryKey: [...qk.assets(projectId), guest ?? 'member'], queryFn: () => api.listAssets(projectId, guest), refetchInterval: 30000 });
+  const assets = useQuery({ queryKey: qk.assetsList(projectId, guest ?? 'member'), queryFn: () => api.listAssets(projectId, guest), refetchInterval: 30000 });
   const asset = assets.data?.find((a) => a.id === assetId) ?? assets.data?.[0];
   const commentKey = [...qk.assetComments(asset?.page_id), guest ?? 'member'];
   const comments = useQuery({ queryKey: commentKey, queryFn: () => api.listAssetComments(asset!.page_id, guest), enabled: Boolean(asset), refetchInterval: 10000 });
@@ -198,6 +198,25 @@ export function AssetReview({
                 const startPoint = getPoint(e.clientX, e.clientY, container);
                 setDraggingComment({ id: comment.id, type: 'move', startRegion: region, startPoint });
                 setTempRegion({ id: comment.id, region });
+              }}
+              onKeyDown={(e) => {
+                if (!commentMode || guest) return;
+                const step = 0.05;
+                let dx = 0, dy = 0;
+                if (e.key === 'ArrowUp') dy = -step;
+                if (e.key === 'ArrowDown') dy = step;
+                if (e.key === 'ArrowLeft') dx = -step;
+                if (e.key === 'ArrowRight') dx = step;
+                if (dx || dy) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const newRegion = {
+                    ...region,
+                    x: Math.max(0, Math.min(1 - (region.width || 0), region.x + dx)),
+                    y: Math.max(0, Math.min(1 - (region.height || 0), region.y + dy)),
+                  };
+                  reanchorMutation.mutate({ commentId: comment.id, region: newRegion });
+                }
               }}
             >
               <span style={{ background: STATUS_COLORS[comment.status] }}>{i+1}</span>

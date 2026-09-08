@@ -44,7 +44,37 @@ export function Badge({ tone, children }: BadgeProps) {
 
 export function StatusBadge({ status }: { status: string }) {
   const tone = `status-${status.replace(/_/g, "-")}` as BadgeTone;
-  return <Badge tone={tone}>{STATUS_LABELS[status as keyof typeof STATUS_LABELS] ?? status}</Badge>;
+  const label = STATUS_LABELS[status as keyof typeof STATUS_LABELS] ?? status;
+  return (
+    <Badge tone={tone}>
+      {status === "todo" && (
+        <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor">
+          <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
+        </svg>
+      )}
+      {status === "in_progress" && (
+        <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor">
+          <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 2v5l3.5 2L12 9l-3-1.7V3H8z" />
+        </svg>
+      )}
+      {status === "in_review" && (
+        <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor">
+          <path d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2zm.5 3v4.5H5v-1h2.5V5h1z" />
+        </svg>
+      )}
+      {status === "resolved" && (
+        <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor">
+          <path d="M13.8 4.2L6 12 2.2 8.2l1.4-1.4 2.4 2.4 6.4-6.4 1.4 1.4z" />
+        </svg>
+      )}
+      {status === "wont_fix" && (
+        <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor">
+          <path d="M12.7 4.7L11.3 3.3 8 6.6 4.7 3.3 3.3 4.7 6.6 8l-3.3 3.3 1.4 1.4L8 9.4l3.3 3.3 1.4-1.4L9.4 8l3.3-3.3z" />
+        </svg>
+      )}
+      {label}
+    </Badge>
+  );
 }
 
 // Layer distinction is a hard requirement, not a style preference: color alone fails
@@ -67,7 +97,22 @@ export function LayerBadge({ layer }: { layer: "client" | "team" }) {
       </Badge>
     );
   }
-  return <Badge tone="layer-client">Client visible</Badge>;
+  return (
+    <Badge tone="layer-client">
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 16 16"
+        width="10"
+        height="10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      >
+        <path d="M8 3.5c-3 0-5.5 2-7 4.5 1.5 2.5 4 4.5 7 4.5s5.5-2 7-4.5c-1.5-2.5-4-4.5-7-4.5zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
+      </svg>
+      Client visible
+    </Badge>
+  );
 }
 
 export function RecoveryBadge({ status }: { status: string }) {

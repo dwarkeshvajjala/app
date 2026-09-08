@@ -58,42 +58,38 @@ export function WorkspaceHomePage() {
   }
 
   return (
-    <main className="px-6 py-8">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <svg viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden="true" className="text-text-muted shrink-0">
-            <circle cx="7.5" cy="7.5" r="6" stroke="currentColor" strokeWidth="1.3" />
-            <path d="m12 12 2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-          </svg>
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search projects..."
-            aria-label="Search projects"
-            className="text-text-primary min-w-0 border-none bg-transparent text-sm outline-none placeholder:text-text-muted"
-          />
-          <div className="ml-2 flex shrink-0 items-center gap-1 text-sm">
+    <main className="bl-wrap">
+      <div className="bl-head">
+        <h1>Projects</h1>
+        <div className="bl-tool-right">
+          <label className="bl-search">
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden="true" className="bl-search-icon">
+              <circle cx="7.5" cy="7.5" r="6" stroke="currentColor" strokeWidth="1.3" />
+              <path d="m12 12 2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search projects..."
+              aria-label="Search projects"
+            />
+          </label>
+          <div className="bl-segment">
             <button
               onClick={() => setSortOrder("updated")}
               aria-pressed={sortOrder === "updated"}
-              className={`rounded-md px-2.5 py-1 font-medium ${
-                sortOrder === "updated" ? "bg-accent-primary/10 text-accent-primary" : "text-text-muted"
-              }`}
             >
               Last updated
             </button>
             <button
               onClick={() => setSortOrder("added")}
               aria-pressed={sortOrder === "added"}
-              className={`rounded-md px-2.5 py-1 font-medium ${
-                sortOrder === "added" ? "bg-accent-primary/10 text-accent-primary" : "text-text-muted"
-              }`}
             >
               Last added
             </button>
           </div>
+          <NewProjectMenu onCreateWebsite={() => setShowNewProject(true)} />
         </div>
-        <NewProjectMenu onCreateWebsite={() => setShowNewProject(true)} />
       </div>
 
       {isLoading && <p className="text-text-muted mt-6 text-sm">Loading projects...</p>}

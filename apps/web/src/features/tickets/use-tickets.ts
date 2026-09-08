@@ -34,7 +34,7 @@ export function useTickets(workspaceId: string, params: URLSearchParams, setPara
 
   const queryKeyStr = request.toString();
   const query = useQuery({ 
-    queryKey: [...qk.tickets(workspaceId), queryKeyStr], 
+    queryKey: qk.ticketsList(workspaceId, queryKeyStr), 
     queryFn: () => api.listTickets(workspaceId, request) 
   });
   const projects = useQuery({ 
@@ -54,8 +54,8 @@ export function useTickets(workspaceId: string, params: URLSearchParams, setPara
     mutationFn: ({ id, patch }: { id: string; patch: Schemas["CommentUpdate"] }) => updateComment(id, patch),
     onMutate: async ({ id, patch }) => {
       await cache.cancelQueries({ queryKey: qk.tickets(workspaceId) });
-      const previous = cache.getQueryData<Schemas["TicketListOut"]>([...qk.tickets(workspaceId), queryKeyStr]);
-      cache.setQueryData<Schemas["TicketListOut"]>([...qk.tickets(workspaceId), queryKeyStr], (old) => {
+      const previous = cache.getQueryData<Schemas["TicketListOut"]>(qk.ticketsList(workspaceId, queryKeyStr));
+      cache.setQueryData<Schemas["TicketListOut"]>(qk.ticketsList(workspaceId, queryKeyStr), (old) => {
         if (!old) return old;
         return {
           ...old,
@@ -66,7 +66,7 @@ export function useTickets(workspaceId: string, params: URLSearchParams, setPara
     },
     onError: (_err, _newTodo, context) => {
       if (context?.previous) {
-        cache.setQueryData([...qk.tickets(workspaceId), queryKeyStr], context.previous);
+        cache.setQueryData(qk.ticketsList(workspaceId, queryKeyStr), context.previous);
       }
     },
     onSettled: () => {

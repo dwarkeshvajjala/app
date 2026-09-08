@@ -46,7 +46,11 @@ export function WorkspaceLayout() {
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const workspaceId = "workspace" in result ? result.workspace.id : undefined;
   const refresh = useCallback(() => {
-    if (workspaceId) void cache.invalidateQueries({ queryKey: qk.workspace(workspaceId) });
+    if (workspaceId) {
+      void cache.invalidateQueries({ queryKey: qk.tickets(workspaceId) });
+      void cache.invalidateQueries({ queryKey: qk.dashboard(workspaceId) });
+      void cache.invalidateQueries({ queryKey: qk.activity(workspaceId) });
+    }
   }, [cache, workspaceId]);
   useWSEvent("comment.created", refresh);
   useWSEvent("comment.updated", refresh);

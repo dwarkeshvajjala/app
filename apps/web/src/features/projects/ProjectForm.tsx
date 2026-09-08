@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { Dialog } from "../../components/Dialog";
-import { qk } from "../../lib/query-keys";
+import { invalidateProjectMutation, qk } from "../../lib/query-keys";
 import { uploadAsset } from "../assets/api";
 import { createClient, listClients } from "../clients/api";
 import { listShareLinks } from "../share-links/api";
@@ -152,10 +152,7 @@ export function ProjectForm({ workspace, project, initialType, onClose }: {
     onError: () => setPhase("retry"),
     onSettled: () => { submitting.current = false; },
     onSuccess: async () => {
-      await Promise.all([
-        cache.invalidateQueries({ queryKey: qk.workspace(workspace.id) }),
-        cache.invalidateQueries({ queryKey: qk.projects(workspace.id) }),
-      ]);
+      await invalidateProjectMutation(cache, workspace.id);
       if (project) { await cache.invalidateQueries({ queryKey: qk.project(project.id) }); onClose(); }
       else setPhase("complete");
     },

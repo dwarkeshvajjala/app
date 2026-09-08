@@ -1292,3 +1292,4 @@ button{letter-spacing:inherit}
 .bl-review-comments .cp-post:disabled{opacity:.5;cursor:not-allowed}
 .bl-review-comments .cp-cancel{padding:8px 12px;font-size:12.5px;color:var(--ink-3);border-radius:var(--r)}
 .bl-review-comments .cp-cancel:hover{background:var(--paper);color:var(--ink)}
+@media (prefers-color-scheme: dark) { :root { --ink: #F1F2F0; --ink-2: #DDDEDA; --ink-3: #9A9D99; --ink-4: #6B6E6B; --paper: #0B0B0B; --surface: #151515; --line: #3A3D3A; --line-soft: #232523; --mint: #0A6B4B; --mint-deep: #69DEB2; --mint-tint: #123B2B; --amber: #E8B833; --amber-tint: #4A3C08; --amber-ink: #FBF1D6; --bl-ink: #F1F2F0; --bl-muted: #9A9D99; --bl-paper: #0B0B0B; --bl-surface: #151515; --bl-line: #3A3D3A; --bl-mint: #0A6B4B; --bl-error: #FF8866; } }

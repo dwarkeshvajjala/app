@@ -9,10 +9,15 @@ export const qk = {
   members: (workspaceId: string | undefined) => ["workspace", workspaceId, "members"] as const,
   projects: (id: string) => ["workspace", id, "projects"] as const,
   clients: (id: string) => ["workspace", id, "clients"] as const,
+  clientsList: (id: string, showArchived: boolean) => ["workspace", id, "clients", showArchived] as const,
   dashboard: (id: string) => ["workspace", id, "dashboard"] as const,
   search: (id: string, query: string) => ["workspace", id, "search", query] as const,
   tickets: (id: string) => ["workspace", id, "tickets"] as const,
+  ticketsAttention: (id: string) => ["workspace", id, "tickets", "attention"] as const,
+  ticketDetail: (id: string, ticketId: string) => ["workspace", id, "tickets", "detail", ticketId] as const,
+  ticketsList: (id: string, queryKeyStr: string) => ["workspace", id, "tickets", queryKeyStr] as const,
   activity: (id: string) => ["workspace", id, "activity"] as const,
+  activityList: (id: string, offset: number, filter: string) => ["workspace", id, "activity", offset, filter] as const,
   integrations: (workspaceId: string) => ["workspace", workspaceId, "integrations"] as const,
   project: (projectId: string) => ["project", projectId] as const,
   projectPages: (projectId: string) => ["project", projectId, "pages"] as const,
@@ -25,6 +30,7 @@ export const qk = {
   // behavior preserved as-is when centralizing ad-hoc keys; not a new invalidation.
   workspaceAll: () => ["workspace"] as const,
   assets: (projectId: string) => ["assets", projectId] as const,
+  assetsList: (projectId: string, role: string) => ["assets", projectId, role] as const,
   assetComments: (pageId: string | undefined) => ["asset-comments", pageId] as const,
   review: (shareToken: string) => ["review", shareToken] as const,
   guestBoard: (projectId: string, guestToken: string) => ["guest-board", projectId, guestToken] as const,
@@ -41,5 +47,19 @@ export function invalidateTicketsAndDashboard(cache: QueryClient, workspaceId: s
   return Promise.all([
     cache.invalidateQueries({ queryKey: qk.tickets(workspaceId) }),
     cache.invalidateQueries({ queryKey: qk.dashboard(workspaceId) }),
+  ]);
+}
+
+// Project create/rename/duplicate/archive/restore/delete all shift a client's
+// stats (active_projects_count/open_tickets_count in clients/repository.py) in
+// addition to the project list/dashboard/activity feeds - narrower than
+// qk.workspace(id) (which also touched members/search/integrations), but must
+// keep qk.clients or the Clients page shows stale counts for its staleTime window.
+export function invalidateProjectMutation(cache: QueryClient, workspaceId: string) {
+  return Promise.all([
+    cache.invalidateQueries({ queryKey: qk.projects(workspaceId) }),
+    cache.invalidateQueries({ queryKey: qk.dashboard(workspaceId) }),
+    cache.invalidateQueries({ queryKey: qk.activity(workspaceId) }),
+    cache.invalidateQueries({ queryKey: qk.clients(workspaceId) }),
   ]);
 }

@@ -24,7 +24,7 @@ export function ClientsPage() {
   const [restore, setRestore] = useState<api.Client | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const clients = useQuery({
-    queryKey: [...qk.clients(workspace.id), showArchived],
+    queryKey: qk.clientsList(workspace.id, showArchived),
     queryFn: () => api.listClients(workspace.id, showArchived),
   });
   const projects = useQuery({ queryKey: qk.projects(workspace.id), queryFn: () => listProjects(workspace.id, true) });

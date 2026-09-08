@@ -45,7 +45,7 @@ export function GlobalSearch({ workspaceId, workspaceSlug }: { workspaceId: stri
   const activeQuery = debouncedQuery;
   const { data, isFetching, isError, refetch } = useQuery({
     queryKey: qk.search(workspaceId, activeQuery),
-    queryFn: () => searchWorkspace(workspaceId, activeQuery),
+    queryFn: ({ signal }) => searchWorkspace(workspaceId, activeQuery, signal),
     enabled: activeQuery.length > 0,
   });
 

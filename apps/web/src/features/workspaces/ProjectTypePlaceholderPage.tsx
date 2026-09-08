@@ -16,18 +16,20 @@ export function ProjectTypePlaceholderPage({ label, tagline, icon: TypeIcon }: P
   const [showComingSoon, setShowComingSoon] = useState(false);
 
   return (
-    <main className="px-6 py-8">
-      <h1 className="text-xl font-semibold">{label} Projects</h1>
+    <main className="bl-wrap">
+      <div className="bl-head">
+        <h1>{label} Projects</h1>
+      </div>
 
-      <div className="mt-16 flex flex-col items-center gap-4 text-center">
-        <span className="bg-accent-primary/10 text-accent-primary flex h-20 w-20 items-center justify-center rounded-full">
-          <TypeIcon width={36} height={36} />
+      <div className="bl-new-card">
+        <span className="bl-mark">
+          <TypeIcon width={24} height={24} />
         </span>
-        <h2 className="text-lg font-semibold">Create your first {label.toLowerCase()} project</h2>
-        <p className="text-text-muted max-w-sm text-sm">{tagline}</p>
+        <strong>Create your first {label.toLowerCase()} project</strong>
+        <small>{tagline}</small>
         <button
           onClick={() => setShowComingSoon(true)}
-          className="from-accent-primary mt-2 rounded-full bg-gradient-to-r to-fuchsia-500 px-5 py-2.5 text-sm font-semibold text-white"
+          className="bl-button mint"
         >
           + New {label} Project
         </button>

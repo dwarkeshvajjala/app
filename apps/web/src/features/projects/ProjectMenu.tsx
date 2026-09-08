@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Dialog } from "../../components/Dialog";
 import { useToast } from "../../components/Toast";
-import { qk } from "../../lib/query-keys";
+import { invalidateProjectMutation, qk } from "../../lib/query-keys";
 import { useOnClickOutside } from "../../lib/use-click-outside";
 import { useAuth } from "../auth/AuthContext";
 import { listShareLinks } from "../share-links/api";
@@ -58,10 +58,7 @@ export function ProjectMenu({ project, workspaceSlug, onManagePages, onShare, on
   useOnClickOutside(menuRef, () => setOpen(false));
 
   function refreshWorkspace() {
-    return Promise.all([
-      cache.invalidateQueries({ queryKey: qk.workspace(project.workspace_id) }),
-      cache.invalidateQueries({ queryKey: qk.projects(project.workspace_id) }),
-    ]);
+    return invalidateProjectMutation(cache, project.workspace_id);
   }
 
   const rename = useMutation({ mutationFn: () => api.updateProject(project.id, { name: renameValue.trim() }), onSuccess: async () => { await refreshWorkspace(); setRenaming(false); toast("Project renamed."); } });

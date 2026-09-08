@@ -12,7 +12,7 @@ import { DatePicker } from "./DatePicker";
 import { PeoplePicker } from "./PeoplePicker";
 
 export function TicketDetail({ id, workspace, members, onClose }: { id: string; workspace: WorkspaceOut; members: MemberOut[]; onClose: () => void }) {
-  const ticket = useQuery({ queryKey: [...qk.tickets(workspace.id), "detail", id], queryFn: () => api.listTickets(workspace.id, new URLSearchParams({ comment_id: id, limit: "1" })) });
+  const ticket = useQuery({ queryKey: qk.ticketDetail(workspace.id, id), queryFn: () => api.listTickets(workspace.id, new URLSearchParams({ comment_id: id, limit: "1" })) });
   const value = ticket.data?.items[0];
   return <Dialog title="Ticket details" onClose={onClose}>{ticket.isLoading && <p className="bl-form" role="status">Loading ticket…</p>}{ticket.error && <p className="bl-error" role="alert">{ticket.error.message}</p>}{value ? <TicketDetailForm key={value.id} ticket={value} workspace={workspace} members={members} /> : ticket.data && <p className="bl-form">Ticket not found in active projects.</p>}</Dialog>;
 }

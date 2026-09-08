@@ -33,7 +33,7 @@ export function ActivityPage() {
   useDocumentTitle('Activity');
   const [params, setParams] = useSearchParams();
   const offset = Math.max(0, Number(params.get("offset")) || 0), filter = params.get("type") ?? "";
-  const query = useQuery({ queryKey: [...qk.activity(workspace.id), offset, filter], queryFn: () => listActivity(workspace.id, offset, filter) });
+  const query = useQuery({ queryKey: qk.activityList(workspace.id, offset, filter), queryFn: () => listActivity(workspace.id, offset, filter) });
   const members = useQuery({ queryKey: qk.members(workspace.id), queryFn: () => listMembers(workspace.id) });
   function page(value: number) { setParams({ type: filter, offset: String(value) }); }
 
