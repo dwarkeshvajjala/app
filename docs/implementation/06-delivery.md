@@ -1,5 +1,50 @@
 # Delivery and verification ledger
 
+## 2026-09-08: Post-login UI migration — workspace tickets slice
+
+- Migrated `TicketsPage` and its component tree to the Final Draft's workflow surface,
+  reusing the priority/status/due-date visual language the comments-panel slice already
+  built (`PRIORITY_META`, `STATUS_META`, `dueMeta` in
+  `features/projects/panel/comments/types.ts`) instead of a second copy, plus the
+  shared `Dialog`, `Avatar`, `bl-comment-popover`/`bl-review-menu-row` popover pattern,
+  and existing icon set.
+- Added `TicketToolbar` (Sort / Group / "Show work for" popovers, replacing three plain
+  `<select>`s) matching the root HTML's `tsortPop`/`tgrpPop`/`whoPop`; a new dense
+  `TicketRow` list view (priority bar, single-line title/subtitle, status and priority
+  quick-edit, tag filter chips, stacked assignee avatars, due badge) alongside the
+  existing `StatusSelect`/priority-select/date-input inline editing so list mode kept
+  every control table mode already had; and a `TicketTable` with sortable column
+  headers (Project/Status/Priority/Due, driving the same `sort` URL param the toolbar
+  does) and a click-to-filter project-name cell. Board and calendar cards gained a
+  priority-colored edge, due badges, and stacked assignee avatars (board now takes a
+  `members` prop); existing drag-to-change-status and drag-to-set-due-date persistence
+  (already backed by the real `updateComment` mutation) were not touched.
+- Added the header tab counts (Everyone/Assigned to me/Needs your reply/Waiting on
+  client/Overdue) from the existing workspace dashboard summary query, a unified
+  "Filtering by" active-filter chip row (status/project/priority/tag/assignee, each
+  independently clearable), and empty-state "Show all tickets"/"New ticket" actions.
+- `NewTicket` gained the due-date and tags fields `TicketCreate` already supports but
+  the form omitted, using the same `DatePicker`/chip-toggle pattern as `TicketDetail`.
+  A screenshot/attachment control is shown disabled with a "Coming soon" badge:
+  `TicketCreate` has no attachment field, so this mirrors the root HTML's control
+  without simulating an upload that would silently drop the file.
+- Honesty decision, not a new product/interaction contract beyond TDR-0018/TDR-0019:
+  the dashboard ticket-list API's `assignee` filter takes one value
+  (`TicketFilters.assignee: str | None`), unlike the reference's in-memory multi-person
+  filter, so "Show work for" is a single pick (selecting someone else replaces the
+  previous selection) rather than a multi-select the backend cannot honor. No bulk
+  ticket-selection UI was added — no bulk endpoint exists to back it.
+- Existing React Router structure, all React Query keys/invalidation
+  (`invalidateTicketsAndDashboard`), the `updateComment`/`createTicket`/`createReply`
+  API calls, URL-encoded filters (search/status/project_id/priority/tag/view/sort/
+  group/display/assignee/offset/ticket), and workspace authorization were preserved.
+  No backend, database, generated API declaration, or widget file was changed.
+- Not run at the user's request: lint, typecheck, build, automated tests, local
+  preview, browser interaction QA, keyboard journey QA, and responsive screenshot
+  comparison. The final diff was inspected for scope only; release verification,
+  including confirming the new sortable-header/filter-cell/toolbar-popover markup
+  compiles and renders correctly, remains required before this is considered done.
+
 ## 2026-09-08: Post-login UI migration — project side panel and comments slice
 
 - Migrated `ProjectSidePanel` and its Comments/Details/Integrations/MCP/AI tabs off
