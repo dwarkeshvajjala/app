@@ -124,7 +124,23 @@ body{font-family:'Schibsted Grotesk',Helvetica,Arial,sans-serif;background:var(-
   100% { background-position: -200% 0; }
 }
 
-
+/* ── Settings Section (UX-AUD-002) ─────────────────────────────────────── */
+.bl-settings-section {
+  display: flex;
+  gap: 40px;
+}
+.bl-settings-section > header {
+  flex: 0 0 200px;
+}
+@media (max-width: 900px) {
+  .bl-settings-section {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .bl-settings-section > header {
+    flex: none;
+  }
+}
 
 /* ================= LOGIN ================= */
 .lg{position:fixed;inset:0;z-index:200;background:var(--paper);
@@ -1224,3 +1240,46 @@ button{letter-spacing:inherit}
    a working upload that silently drops files */
 .bl-attach-disabled{display:flex;align-items:center;gap:9px;padding:12px;border:1px dashed var(--line);border-radius:3px;color:var(--ink-4);font-size:11.5px;background:var(--paper)}
 .bl-attach-disabled svg{flex:none;color:var(--ink-4)}
+
+/* ── Guest review entry gate (Slice 08) ─────────────────────────────────
+   Ported from the reference HTML's .scrim/.modal/.gate/.field pattern, renamed
+   to the app's bl- convention so it can't collide with a future differently-
+   styled reuse of those bare names elsewhere. */
+.bl-gate-scrim{position:fixed;inset:0;background:rgba(11,11,11,.34);z-index:80;display:grid;place-items:center;padding:20px}
+.bl-gate-modal{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);width:100%;max-width:400px;box-shadow:0 24px 60px rgba(11,11,11,.22)}
+.bl-gate-head{padding:18px 18px 0}
+.bl-gate-head h3{margin:0;font-size:17px;font-weight:700;letter-spacing:-.02em}
+.bl-gate-head p{margin:5px 0 0;font-size:13px;color:var(--ink-3)}
+.bl-gate-body{padding:18px}
+.bl-gate-foot{display:flex;gap:8px;justify-content:flex-end;padding:0 18px 18px}
+.bl-gate-field{margin-bottom:14px}
+.bl-gate-field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:6px}
+.bl-gate-field input{width:100%;border:1px solid var(--line);border-radius:var(--r);padding:9px 11px;font-family:var(--sans);font-size:14px;outline:none;background:var(--paper)}
+.bl-gate-field input:focus{border-color:var(--ink);background:var(--surface);outline:2px solid #0A6B4B;outline-offset:1px}
+.bl-gate-hint{font-family:var(--mono);font-size:10.5px;color:var(--ink-4);margin-top:7px}
+@media(max-height:720px){.bl-gate-scrim{padding:12px}}
+
+/* ── Guest identity/leave bar (Slice 08) ────────────────────────────────
+   Reference HTML's .gbar - shown on guest-facing AssetReview/GuestBoard so a
+   guest always knows who they're reviewing as and can end that identity. */
+.bl-guest-bar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--ink);color:#fff;font-size:12.5px}
+.bl-guest-bar b{font-weight:700}
+.bl-guest-bar-out{margin-left:auto;border:1px solid rgba(255,255,255,.3);border-radius:var(--r);padding:4px 10px;font-size:12px;color:#fff;flex:none}
+.bl-guest-bar-out:hover{background:rgba(255,255,255,.12)}
+
+/* ── Asset/guest comment composer tag picker (Slice 08) ─────────────────
+   Scoped under .bl-review-comments so these short reference-HTML class names
+   (cp-*) stay local to this composer instead of leaking as bare globals. */
+.bl-review-comments .cp-sec{margin-top:12px}
+.bl-review-comments .cp-sec>.cp-lbl{display:block;margin-bottom:7px}
+.bl-review-comments .cp-lbl{font-family:var(--mono);font-size:9px;letter-spacing:.07em;color:var(--ink-4);text-transform:uppercase}
+.bl-review-comments .cp-tags{display:flex;flex-wrap:wrap;gap:6px}
+.bl-review-comments .cp-tag{display:inline-flex;align-items:center;height:28px;padding:0 11px;border:1px solid var(--line);border-radius:20px;background:var(--surface);font-size:12px;color:var(--ink-2);font-weight:500}
+.bl-review-comments .cp-tag:hover{border-color:var(--ink-4)}
+.bl-review-comments .cp-tag[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.bl-review-comments .cp-foot{display:flex;align-items:center;gap:8px;margin-top:13px;padding-top:12px;border-top:1px solid var(--line-soft)}
+.bl-review-comments .cp-post{margin-left:auto;display:inline-flex;align-items:center;gap:7px;background:var(--ink);color:#fff;border-radius:var(--r);padding:8px 14px;font-size:12.5px;font-weight:600}
+.bl-review-comments .cp-post:hover:not(:disabled){background:#232523}
+.bl-review-comments .cp-post:disabled{opacity:.5;cursor:not-allowed}
+.bl-review-comments .cp-cancel{padding:8px 12px;font-size:12.5px;color:var(--ink-3);border-radius:var(--r)}
+.bl-review-comments .cp-cancel:hover{background:var(--paper);color:var(--ink)}

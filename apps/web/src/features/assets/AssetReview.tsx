@@ -4,12 +4,28 @@ import { Link } from "react-router-dom";
 import * as pdfjs from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { qk } from "../../lib/query-keys";
+import { useOnlineStatus } from "../../lib/use-online-status";
 import { STATUS_COLORS, STATUS_LABELS, TAGS } from "../../lib/workflow";
 import * as api from "./api";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
-export function AssetReview({ projectId, title, guest, workspaceSlug }: { projectId: string; title: string; guest?: string; workspaceSlug?: string }) {
+export function AssetReview({
+  projectId,
+  title,
+  guest,
+  guestName,
+  onLeave,
+  workspaceSlug,
+}: {
+  projectId: string;
+  title: string;
+  guest?: string;
+  guestName?: string;
+  onLeave?: () => void;
+  workspaceSlug?: string;
+}) {
+  const online = useOnlineStatus();
   const cache = useQueryClient();
   const [assetId, setAssetId] = useState("");
   const [page, setPage] = useState(1);
@@ -91,7 +107,17 @@ export function AssetReview({ projectId, title, guest, workspaceSlug }: { projec
   }
   return <main className="bl-review">
     <header className="bl-review-head">{workspaceSlug && <Link className="bl-quiet" to={`/w/${workspaceSlug}`}>← Projects</Link>}<h1>{title}</h1>{workspaceSlug && <Link className="bl-quiet" to={`/w/${workspaceSlug}/p/${projectId}/share-links`}>Share</Link>}<span className="bl-chip">{guest ? 'Guest review' : 'Team workspace'}</span></header>
-    {guest && <div style={{ background: '#fff3cd', color: '#856404', padding: '0.5rem 1rem', fontSize: '0.875rem', borderBottom: '1px solid #ffeeba', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}><strong>Restricted Mode:</strong> You are viewing this project as a guest. Some features may be limited by the workspace owner.</div>}
+    {guest && (
+      <div className="bl-guest-bar">
+        <span>{guestName ? <>Reviewing <b>{title}</b> as {guestName}</> : <>Reviewing <b>{title}</b> as a guest</>} · comments and status changes stay visible to the team</span>
+        {onLeave && <button type="button" className="bl-guest-bar-out" onClick={onLeave}>Leave review</button>}
+      </div>
+    )}
+    {guest && !online && (
+      <div className="bl-conn-banner offline" role="status" aria-live="polite">
+        You are offline. New comments will not be saved until you reconnect.
+      </div>
+    )}
     <div className="bl-review-tools"><select className="bl-select" aria-label="Review file" value={asset?.id ?? ''} onChange={(e) => { setAssetId(e.target.value); setPage(1); setDraft(null); setSelected(''); setZoomScale(1); setRotation(0); }}>{assets.data?.map((a) => <option key={a.id} value={a.id}>{a.filename}</option>)}</select>{asset && asset.page_count > 1 && <><button className="bl-quiet" disabled={page === 1} onClick={() => { setPage(page - 1); setDraft(null); setSelected(''); }}>Previous page</button><span className="bl-mono">{page} / {asset.page_count}</span><button className="bl-quiet" disabled={page === asset.page_count} onClick={() => { setPage(page + 1); setDraft(null); setSelected(''); }}>Next page</button></>}
       {asset && (
         <div className="bl-segment" style={{ marginLeft: "auto", marginRight: "1rem" }}>
@@ -128,7 +154,7 @@ export function AssetReview({ projectId, title, guest, workspaceSlug }: { projec
               aria-label={`Comment ${i+1}: ${comment.body}`} 
               onClick={() => { setSelected(comment.id); setDraft(null); }}
               onPointerDown={(e) => {
-                if (!commentMode) return;
+                if (!commentMode || guest) return;
                 e.preventDefault();
                 e.stopPropagation();
                 const container = e.currentTarget.closest('.bl-asset-sheet') as HTMLDivElement;
@@ -144,7 +170,7 @@ export function AssetReview({ projectId, title, guest, workspaceSlug }: { projec
             >
               <span style={{ background: STATUS_COLORS[comment.status] }}>{i+1}</span>
             </button>
-            {commentMode && region.width && region.height && (
+            {commentMode && region.width && region.height && !guest && (
               <div
                 className="bl-asset-pin-resize-handle"
                 style={{
@@ -189,8 +215,87 @@ export function AssetReview({ projectId, title, guest, workspaceSlug }: { projec
       })}
       {draft && <div className="bl-draft-region" style={{ left: `${draft.x*100}%`, top: `${draft.y*100}%`, width: draft.width ? `${draft.width*100}%` : 20, height: draft.height ? `${draft.height*100}%` : 20 }} />}
     </div><button className="bl-quiet" onClick={() => { setDraft({ x: .5, y: .5, width: 0, height: 0, page_number: page }); setSelected(''); }}>Add a comment at the center</button></> : <div className="bl-empty"><h2>{assets.isLoading ? 'Loading files…' : 'No files yet'}</h2><p>{guest ? 'The team has not uploaded a file yet.' : 'Add images or a PDF to begin the review.'}</p></div>}</section>
-    <aside className="bl-review-comments"><header><h2>Comments <span className="bl-count">{roots.length}</span></h2></header>{draft && <form className="bl-form" onSubmit={(e) => { e.preventDefault(); post.mutate(); }}><label>New comment<textarea className="bl-input" autoFocus required rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder="What needs to change here?" /></label><select className="bl-select" aria-label="Comment tag" value={tag} onChange={(e) => setTag(e.target.value as typeof tag)}>{TAGS.map((t) => <option key={t}>{t}</option>)}</select>{!guest && <select className="bl-select" aria-label="Comment visibility" value={layer} onChange={(e) => setLayer(e.target.value as typeof layer)}><option value="client">Client visible</option><option value="team">Team only</option></select>}{post.error && <p className="bl-error" role="alert">{post.error.message}</p>}<div className="bl-form-actions"><button className="bl-quiet" type="button" onClick={() => setDraft(null)}>Cancel</button><button className="bl-button" disabled={post.isPending || !body.trim()}>Post comment</button></div></form>}
-    {selectedComment ? <div className="bl-form"><button className="bl-quiet" onClick={() => setSelected('')}>← All comments</button><p className="bl-mono">{selectedComment.author_name} · {STATUS_LABELS[selectedComment.status]}</p><p>{selectedComment.body}</p>{workspaceSlug && <Link className="bl-chip" to={`/w/${workspaceSlug}/tickets?ticket=${selectedComment.id}`}>Edit status, assignees and due date →</Link>}{comments.data?.filter((c) => c.parent_id === selected).map((c) => <article className="bl-message" key={c.id}><small>{c.author_name} · {c.layer === 'team' ? 'Team only' : 'Client visible'}</small><p>{c.body}</p></article>)}<form className="bl-form bl-flush" onSubmit={(e) => { e.preventDefault(); replyMutation.mutate(); }}><label>Reply<textarea className="bl-input" required value={reply} onChange={(e) => setReply(e.target.value)} /></label>{replyMutation.error && <p className="bl-error" role="alert">{replyMutation.error.message}</p>}<button className="bl-button" disabled={replyMutation.isPending || !reply.trim()}>Post reply</button></form></div> : roots.map((c, i) => <button className="bl-review-comment" key={c.id} onClick={() => { setSelected(c.id); setDraft(null); }}><small>#{i+1} · {c.author_name} · {STATUS_LABELS[c.status]}</small><p>{c.body}</p><span className="bl-chip">{c.layer === 'team' ? 'Team only' : 'Client visible'}</span></button>)}
+    <aside className="bl-review-comments">
+      <header><h2>Comments <span className="bl-count">{roots.length}</span></h2></header>
+      
+      {draft && (
+        <form className="cp-body" style={{ padding: "16px", borderBottom: "1px solid var(--bl-line)" }} onSubmit={(e) => { e.preventDefault(); post.mutate(); }}>
+          <label className="cp-lbl" style={{ display: "block", marginBottom: "8px", fontWeight: 600 }}>New comment</label>
+          <textarea className="bl-input" autoFocus required rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder="What needs to change here?" />
+          
+          <div className="cp-sec">
+            <span className="cp-lbl">Tag</span>
+            <div className="cp-tags">
+              {TAGS.map((t) => (
+                <button type="button" key={t} className="cp-tag" aria-pressed={tag === t} onClick={() => setTag(t)}>{t}</button>
+              ))}
+            </div>
+          </div>
+          
+          {!guest && (
+            <div className="cp-sec">
+              <span className="cp-lbl">Visibility</span>
+              <select className="bl-select" aria-label="Comment visibility" value={layer} onChange={(e) => setLayer(e.target.value as typeof layer)}>
+                <option value="client">Client visible</option>
+                <option value="team">Team only</option>
+              </select>
+            </div>
+          )}
+          
+          {post.error && <p className="bl-error" role="alert">{post.error.message}</p>}
+          
+          <div className="cp-foot">
+            <button className="cp-cancel" type="button" onClick={() => setDraft(null)}>Cancel</button>
+            <button className="cp-post" disabled={post.isPending || !body.trim()}>Post comment</button>
+          </div>
+        </form>
+      )}
+
+      {selectedComment ? (
+        <div className="bl-form" style={{ padding: "16px" }}>
+          <button className="bl-quiet" onClick={() => setSelected('')}>← All comments</button>
+          
+          <div className="bl-message" style={{ border: "none", padding: 0, marginTop: "16px" }}>
+            <small>{selectedComment.author_name} · {STATUS_LABELS[selectedComment.status]}</small>
+            <p style={{ margin: "8px 0", fontSize: "14px", lineHeight: 1.5 }}>{selectedComment.body}</p>
+            {workspaceSlug && !guest && (
+              <Link className="bl-chip" style={{ marginTop: "8px" }} to={`/w/${workspaceSlug}/tickets?ticket=${selectedComment.id}`}>Edit status, assignees and due date →</Link>
+            )}
+          </div>
+
+          {comments.data?.filter((c) => c.parent_id === selected).map((c) => (
+            <article className="bl-message" key={c.id}>
+              <small>{c.author_name} · {c.layer === 'team' ? 'Team only' : 'Client visible'}</small>
+              <p>{c.body}</p>
+            </article>
+          ))}
+
+          <form className="bl-form bl-flush" style={{ marginTop: "16px" }} onSubmit={(e) => { e.preventDefault(); replyMutation.mutate(); }}>
+            <label>Reply
+              <textarea className="bl-input" required value={reply} onChange={(e) => setReply(e.target.value)} />
+            </label>
+            {replyMutation.error && <p className="bl-error" role="alert">{replyMutation.error.message}</p>}
+            <button className="bl-button" disabled={replyMutation.isPending || !reply.trim()}>Post reply</button>
+          </form>
+        </div>
+      ) : (
+        roots.length > 0 ? (
+          roots.map((c, i) => (
+            <button className="bl-review-comment" key={c.id} onClick={() => { setSelected(c.id); setDraft(null); }}>
+              <small>#{i+1} · {c.author_name} · {STATUS_LABELS[c.status]}</small>
+              <p>{c.body}</p>
+              <div className="bl-chip-row" style={{ marginTop: "8px" }}>
+                <span className="bl-chip">{c.layer === 'team' ? 'Team only' : 'Client visible'}</span>
+              </div>
+            </button>
+          ))
+        ) : (
+          <div className="bl-empty" style={{ marginTop: "32px" }}>
+            <h2>No comments</h2>
+            <p>Click on the asset to start a conversation.</p>
+          </div>
+        )
+      )}
     </aside></div>
   </main>;
 }

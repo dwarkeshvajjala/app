@@ -130,6 +130,9 @@ actions must look intentionally unavailable, not broken.
 
 ## Slice 08 — guest review entry and asset review
 
+Status: implemented and verified in the 2026-09-08 guest review entry slice (see
+06-delivery.md); use this prompt only for follow-up fixes.
+
 ```text
 Migrate ReviewEntryPage, GuestBoard, and AssetReview to the client-facing experience
 in the root HTML. Cover name/passcode gate, expired/revoked/archived states, guest
