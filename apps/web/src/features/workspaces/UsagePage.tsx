@@ -14,8 +14,8 @@ export function UsagePage() {
         </div>
       </header>
 
-      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
-        <header style={{ flex: "0 0 200px" }}>
+      <section className="bl-attention bl-settings-section">
+        <header>
           <h2>{MONTH_LABEL}</h2>
         </header>
         <div style={{ flex: 1, padding: "20px", display: "flex", gap: "40px" }}>
@@ -37,8 +37,8 @@ export function UsagePage() {
         </div>
       </section>
 
-      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
-        <header style={{ flex: "0 0 200px" }}>
+      <section className="bl-attention bl-settings-section">
+        <header>
           <h2>Daily usage</h2>
         </header>
         <div style={{ flex: 1, padding: "20px" }}>
@@ -59,8 +59,8 @@ export function UsagePage() {
         </div>
       </section>
 
-      <section className="bl-attention" style={{ display: "flex", gap: "40px" }}>
-        <header style={{ flex: "0 0 200px" }}>
+      <section className="bl-attention bl-settings-section">
+        <header>
           <h2>Features</h2>
         </header>
         <div style={{ flex: 1, padding: "20px" }}>

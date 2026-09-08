@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useWSEvent } from "../../app/WSProvider";
 import { BellIcon } from "../../components/icons";
+import { useOnClickOutside } from "../../lib/use-click-outside";
 import { qk } from "../../lib/query-keys";
 import { useAuth } from "../auth/AuthContext";
 import * as notificationsApi from "./api";
@@ -42,6 +43,7 @@ export function NotificationBell() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
+  useOnClickOutside(containerRef, () => setOpen(false));
 
   const { data: unread } = useQuery({
     queryKey: UNREAD_COUNT_KEY,
@@ -88,84 +90,61 @@ export function NotificationBell() {
     }
   }
 
-  // Close on outside click
   function handleToggle() {
     setOpen((v) => !v);
   }
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="bl-dropdown" ref={containerRef} onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}>
       <button
+        type="button"
         onClick={handleToggle}
-        className="relative rounded-md p-1.5 text-sm hover:bg-black/5 dark:hover:bg-white/10"
+        className="bl-dropdown-trigger"
+        style={{ position: "relative" }}
         aria-label={`Notifications${unread && unread > 0 ? `, ${unread} unread` : ""}`}
+        aria-haspopup="menu"
         aria-expanded={open}
       >
         <BellIcon />
         {!!unread && unread > 0 && (
-          <span className="bg-recovery-orphaned absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white">
-            {unread > 9 ? "9+" : unread}
-          </span>
+          <span className="bl-notif-badge" aria-hidden="true">{unread > 9 ? "9+" : unread}</span>
         )}
       </button>
 
       {open && (
-        <>
-          {/* Backdrop for outside-click close */}
-          <div
-            style={{ position: "fixed", inset: 0, zIndex: 9 }}
-            aria-hidden="true"
-            onClick={() => setOpen(false)}
-          />
-          <div
-            className="bg-bg-surface absolute right-0 z-10 mt-2 w-80 rounded-md border border-black/10 shadow-lg dark:border-white/10"
-            style={{ zIndex: 10 }}
-            role="dialog"
-            aria-label="Notifications"
-          >
-            <div className="flex items-center justify-between border-b border-black/10 px-3 py-2 dark:border-white/10">
-              <span className="text-sm font-medium">Notifications</span>
-              <button
-                onClick={handleMarkAllRead}
-                className="text-text-muted text-xs underline"
-              >
-                Mark all read
-              </button>
-            </div>
-            <ul className="max-h-80 overflow-y-auto" role="list">
-              {(notifications ?? []).length === 0 && (
-                <li className="text-text-muted p-3 text-sm">No notifications yet.</li>
-              )}
-              {(notifications ?? []).map((notification) => {
-                const route = (notification as NotificationOut & { target_route?: string }).target_route;
-                return (
-                  <li
-                    key={notification.id}
-                    className={[
-                      "bl-notif-item border-b border-black/5 px-3 py-2.5 text-sm last:border-0 dark:border-white/5",
-                      !notification.read_at ? "unread" : "text-text-muted",
-                    ].join(" ")}
-                    onClick={() => handleClickNotification(notification)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        void handleClickNotification(notification);
-                      }
-                    }}
-                    aria-label={`${describe(notification)}${route ? " — click to view" : ""}`}
-                  >
-                    <div>{describe(notification)}</div>
-                    {route && (
-                      <span className="bl-notif-route">{route}</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+        <div className="bl-dropdown-pop bl-notif-panel" role="menu" aria-label="Notifications">
+          <div className="bl-notif-head">
+            <span>Notifications</span>
+            <button type="button" onClick={handleMarkAllRead}>Mark all read</button>
           </div>
-        </>
+          <ul role="list">
+            {(notifications ?? []).length === 0 && (
+              <li className="bl-notif-empty">No notifications yet.</li>
+            )}
+            {(notifications ?? []).map((notification) => {
+              const route = (notification as NotificationOut & { target_route?: string }).target_route;
+              return (
+                <li
+                  key={notification.id}
+                  className={`bl-notif-item${!notification.read_at ? " unread" : ""}`}
+                  onClick={() => handleClickNotification(notification)}
+                  role="menuitem"
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      void handleClickNotification(notification);
+                    }
+                  }}
+                  aria-label={`${describe(notification)}${route ? " — click to view" : ""}`}
+                >
+                  <div>{describe(notification)}</div>
+                  {route && <span className="bl-notif-route">{route}</span>}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
     </div>
   );

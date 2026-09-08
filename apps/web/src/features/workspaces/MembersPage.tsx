@@ -16,8 +16,9 @@ import type { WorkspaceOut } from "./api";
 function canManageMembers(role: string | null): boolean {
   return role === "owner" || role === "admin";
 }
-
 import { Dialog } from "../../components/Dialog";
+import { LoadingScreen } from "../../components/LoadingScreen";
+import { SearchIcon } from "../../components/icons";
 
 interface AddMemberModalProps {
   onInvite: (email: string, role: "admin" | "member") => Promise<void>;
@@ -137,6 +138,7 @@ export function MembersPage() {
     <main className="bl-wrap">
       <header className="bl-head">
         <div>
+          <p className="bl-eyebrow">Workspace</p>
           <h1>Team Members</h1>
           <p>Manage who has access to this workspace.</p>
         </div>
@@ -149,7 +151,7 @@ export function MembersPage() {
 
       <div className="bl-toolbar wrap">
         <div className="bl-search" style={{ maxWidth: "340px" }}>
-          <span style={{ fontSize: "16px" }}>🔍</span>
+          <span className="bl-search-icon" aria-hidden="true"><SearchIcon /></span>
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -159,7 +161,7 @@ export function MembersPage() {
         </div>
       </div>
 
-      {isLoading && <p className="bl-mono">Loading...</p>}
+      {isLoading && <LoadingScreen />}
       {membersError && (
         <p role="alert" className="bl-error">
           {membersError instanceof Error ? membersError.message : "Could not load members."}
@@ -226,7 +228,7 @@ export function MembersPage() {
                       {member.role !== "owner" && (
                         <button
                           className="bl-quiet"
-                          style={{ color: "#A33317", borderColor: "transparent" }}
+                          style={{ color: "var(--bl-error)", borderColor: "transparent" }}
                           onClick={() => removeMutation.mutate(member.id)}
                         >
                           Remove

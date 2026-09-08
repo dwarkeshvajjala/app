@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import { Dialog } from "../../components/Dialog";
+import { LoadingScreen } from "../../components/LoadingScreen";
 import { useToast } from "../../components/Toast";
 import { PlusIcon, SearchIcon } from "../../components/icons";
 import { qk } from "../../lib/query-keys";
@@ -50,7 +51,7 @@ export function ClientsPage() {
       </label>
     </div>
 
-    {clients.isLoading && <p role="status">Loading clients…</p>}
+    {clients.isLoading && <LoadingScreen />}
     {clients.error && <p role="alert" className="bl-error">{clients.error.message}</p>}
     {projects.error && <p role="alert" className="bl-error">Project associations could not load: {projects.error.message}</p>}
 
