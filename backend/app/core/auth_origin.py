@@ -1,4 +1,5 @@
 """Cookie-bearing account endpoints are restricted to configured dashboard origins."""
+
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 

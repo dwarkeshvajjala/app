@@ -79,3 +79,13 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
   return response.json() as Promise<T>;
 }
+
+export async function apiFetchBlob(path: string, init?: RequestInit): Promise<Blob> {
+  let response = await rawRequest(path, init);
+  if (response.status === 401 && path !== REFRESH_PATH) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) response = await rawRequest(path, init);
+  }
+  if (!response.ok) throw await toApiError(response);
+  return response.blob();
+}

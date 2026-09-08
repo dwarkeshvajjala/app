@@ -7,6 +7,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.core.errors import ConflictError, NotFoundError, ValidationError
 from app.core.events import append_event
 from app.modules.clients.repository import ClientRepository
+from app.modules.pages.repository import PageRepository
 from app.modules.projects import events as project_events
 from app.modules.projects.repository import ProjectRepository
 from app.modules.projects.schemas import (
@@ -40,6 +41,7 @@ def _project_out(doc: dict[str, Any]) -> ProjectOut:
         project_type=doc.get("project_type", "website"),
         environment=doc.get("environment", "live"),
         client_id=doc.get("client_id"),
+        duplicated_from_project_id=doc.get("duplicated_from_project_id"),
         target_origin=doc["target_origin"],
         # .get(), not [] - projects created before this field existed have none, and
         # backfilling every prior row isn't worth it at this scale (no migration tooling
@@ -258,7 +260,7 @@ async def duplicate_project(
 ) -> ProjectOut:
     # 1. Fetch original project
     original = await get_project(db, project_id=project_id, workspace_id=workspace_id)
-    
+
     # 2. Create the duplicated project
     new_project = await create_project(
         db,
@@ -270,7 +272,7 @@ async def duplicate_project(
         environment=original.environment,
         client_id=original.client_id,
     )
-    
+
     # 3. Copy project settings (excluding proxy_mode and snippet_installed maybe, or copy all)
     settings_patch = ProjectSettingsUpdate(
         capture_device_details=original.settings.capture_device_details,
@@ -280,23 +282,53 @@ async def duplicate_project(
         client_digest_enabled=original.settings.client_digest_enabled,
     )
     await update_project_settings(
-        db, 
-        project_id=new_project.id, 
-        workspace_id=workspace_id, 
-        actor_user_id=actor_user_id, 
-        settings=settings_patch
+        db,
+        project_id=new_project.id,
+        workspace_id=workspace_id,
+        actor_user_id=actor_user_id,
+        settings=settings_patch,
     )
-    
-    # 4. The accepted duplicate scope is metadata/settings only for now. Pages,
-    # comments, and history are deliberately not copied.
-    
+
+    # 4. Copy website page metadata only. Revisions, recovery history, comments,
+    # share-link tokens and private asset objects remain attached to the source.
+    # Image/PDF projects therefore start with an empty file list because their
+    # pages are asset-backed and are not meaningful without the intentionally
+    # excluded object.
+    source_pages = await PageRepository(db).list_for_project(workspace_id, project_id)
+    copied_page_ids: list[str] = []
+    if original.project_type == "website":
+        for page in source_pages:
+            copied = await PageRepository(db).create(
+                project_id=new_project.id,
+                workspace_id=workspace_id,
+                url_normalized=page["url_normalized"],
+                title=page.get("title"),
+                sort_order=page.get("sort_order", 0),
+            )
+            copied_page_ids.append(str(copied["_id"]))
+
+    await ProjectRepository(db).update_metadata(
+        workspace_id,
+        new_project.id,
+        {"duplicated_from_project_id": project_id},
+    )
+
     await append_event(
         db,
         workspace_id=workspace_id,
         type="project.duplicated",
         actor_type="member",
         actor_id=actor_user_id,
-        payload={"source_project_id": project_id, "new_project_id": new_project.id},
+        payload={
+            "project_id": new_project.id,
+            "source_project_id": project_id,
+            "new_project_id": new_project.id,
+            "copied_page_ids": copied_page_ids,
+            "copied_pages": len(copied_page_ids),
+            "copied_comments": 0,
+            "copied_revisions": 0,
+            "copied_assets": 0,
+        },
     )
     return await get_project(db, project_id=new_project.id, workspace_id=workspace_id)
 
@@ -345,8 +377,15 @@ async def export_project_comments(
     writer = csv.writer(output)
     writer.writerow(
         [
-            "id", "layer", "status", "priority", "author_name", "body",
-            "assignees", "due_at", "created_at",
+            "id",
+            "layer",
+            "status",
+            "priority",
+            "author_name",
+            "body",
+            "assignees",
+            "due_at",
+            "created_at",
         ]
     )
     for comment in comments:

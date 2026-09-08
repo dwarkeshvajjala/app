@@ -41,6 +41,7 @@ async def send_email(*, to: str, subject: str, html: str) -> None:
 
     # Priority 2: Resend (Production standard)
     if settings.resend_api_key:
+
         def _send() -> None:
             try:
                 resend.api_key = settings.resend_api_key
@@ -67,5 +68,3 @@ async def send_email(*, to: str, subject: str, html: str) -> None:
         subject,
         html,
     )
-
-

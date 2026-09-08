@@ -36,8 +36,7 @@ class GuestTokenClaims(BaseModel):
 
 
 def create_access_token(
-    user_id: str, workspace_id: str | None = None, role: str | None = None,
-    sid: str | None = None
+    user_id: str, workspace_id: str | None = None, role: str | None = None, sid: str | None = None
 ) -> str:
     """Access JWT (13-Authentication.md §13.3). workspace_id/role are None until
     the member has selected a workspace via POST /auth/switch-workspace."""

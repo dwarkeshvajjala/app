@@ -21,7 +21,15 @@ async def test_create_and_list_projects(
     assert created.status_code == 201
     project = created.json()
     assert project["name"] == "Marketing Site"
-    assert project["settings"] == {"proxy_mode": False, "snippet_installed": False}
+    assert project["settings"] == {
+        "proxy_mode": False,
+        "snippet_installed": False,
+        "capture_device_details": False,
+        "reanchor_on_deploy": False,
+        "reviewer_can_resolve": False,
+        "show_board_to_client": False,
+        "client_digest_enabled": False,
+    }
     assert project["archived_at"] is None
     # Card attribution on the workspace dashboard needs to know who created it.
     assert project["created_by"] == decode_access_token(owner_token).sub

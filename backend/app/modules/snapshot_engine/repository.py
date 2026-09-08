@@ -13,9 +13,7 @@ class RevisionRepository:
     def __init__(self, db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
         self.db = db
 
-    async def find_current(
-        self, workspace_id: str, page_id: str
-    ) -> dict[str, Any] | None:
+    async def find_current(self, workspace_id: str, page_id: str) -> dict[str, Any] | None:
         return await self.db.revisions.find_one(
             {"workspace_id": workspace_id, "page_id": page_id, "is_current": True}
         )
@@ -42,6 +40,18 @@ class RevisionRepository:
             result: dict[str, Any] = doc
             return result
         return None
+
+    async def list_for_pages(
+        self, workspace_id: str, page_ids: list[str], *, limit: int = 200
+    ) -> list[dict[str, Any]]:
+        if not page_ids:
+            return []
+        cursor = (
+            self.db.revisions.find({"workspace_id": workspace_id, "page_id": {"$in": page_ids}})
+            .sort([("captured_at", -1), ("_id", -1)])
+            .limit(limit)
+        )
+        return [doc async for doc in cursor]
 
     async def create(
         self, *, page_id: str, workspace_id: str, full_page_hash: str

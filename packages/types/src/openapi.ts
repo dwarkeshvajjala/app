@@ -700,11 +700,29 @@ export interface paths {
         /** List Pages */
         get: operations["list_pages_api_v1_projects__project_id__pages_get"];
         put?: never;
-        post?: never;
+        /** Create Page */
+        post: operations["create_page_api_v1_projects__project_id__pages_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/pages/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Reorder Pages */
+        patch: operations["reorder_pages_api_v1_projects__project_id__pages_reorder_patch"];
         trace?: never;
     };
     "/api/v1/pages": {
@@ -740,6 +758,23 @@ export interface paths {
         head?: never;
         /** Update Page */
         patch: operations["update_page_api_v1_pages__page_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Project Revisions */
+        get: operations["list_project_revisions_api_v1_projects__project_id__revisions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/pages/{page_id}/snapshots": {
@@ -1791,6 +1826,13 @@ export interface components {
             /** Code */
             code: string;
         };
+        /** PageCreate */
+        PageCreate: {
+            /** Url */
+            url: string;
+            /** Title */
+            title?: string | null;
+        };
         /** PageOut */
         PageOut: {
             /** Id */
@@ -1807,6 +1849,11 @@ export interface components {
              */
             sort_order: number;
             /**
+             * Comment Count
+             * @default 0
+             */
+            comment_count: number;
+            /**
              * First Seen At
              * Format: date-time
              */
@@ -1822,6 +1869,11 @@ export interface components {
             url: string;
             /** Title */
             title?: string | null;
+        };
+        /** PageReorder */
+        PageReorder: {
+            /** Page Ids */
+            page_ids: string[];
         };
         /** PageUpdate */
         PageUpdate: {
@@ -2067,6 +2119,8 @@ export interface components {
             environment: "live" | "staging";
             /** Client Id */
             client_id?: string | null;
+            /** Duplicated From Project Id */
+            duplicated_from_project_id?: string | null;
         };
         /** ProjectSettingsOut */
         ProjectSettingsOut: {
@@ -2214,6 +2268,51 @@ export interface components {
              */
             show_board_to_client: boolean;
         };
+        /** RevisionChangeSummary */
+        RevisionChangeSummary: {
+            /**
+             * Moved
+             * @default 0
+             */
+            moved: number;
+            /**
+             * Modified
+             * @default 0
+             */
+            modified: number;
+            /**
+             * Removed
+             * @default 0
+             */
+            removed: number;
+            /**
+             * Added
+             * @default 0
+             */
+            added: number;
+        };
+        /** RevisionHistoryOut */
+        RevisionHistoryOut: {
+            /** Id */
+            id: string;
+            /** Page Id */
+            page_id: string;
+            /** Page Title */
+            page_title: string | null;
+            /** Page Url */
+            page_url: string;
+            /** Full Page Hash */
+            full_page_hash: string;
+            /**
+             * Captured At
+             * Format: date-time
+             */
+            captured_at: string;
+            /** Is Current */
+            is_current: boolean;
+            changes: components["schemas"]["RevisionChangeSummary"];
+            recovery: components["schemas"]["RevisionRecoverySummary"];
+        };
         /** RevisionOut */
         RevisionOut: {
             /** Id */
@@ -2231,6 +2330,29 @@ export interface components {
             is_current: boolean;
             /** Created New */
             created_new: boolean;
+        };
+        /** RevisionRecoverySummary */
+        RevisionRecoverySummary: {
+            /**
+             * Ok
+             * @default 0
+             */
+            ok: number;
+            /**
+             * Low Confidence
+             * @default 0
+             */
+            low_confidence: number;
+            /**
+             * Orphaned
+             * @default 0
+             */
+            orphaned: number;
+            /**
+             * Permanently Orphaned
+             * @default 0
+             */
+            permanently_orphaned: number;
         };
         /** SearchOut */
         SearchOut: {
@@ -4313,6 +4435,76 @@ export interface operations {
             };
         };
     };
+    create_page_api_v1_projects__project_id__pages_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PageCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reorder_pages_api_v1_projects__project_id__pages_reorder_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PageReorder"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     register_page_api_v1_pages_post: {
         parameters: {
             query?: never;
@@ -4399,6 +4591,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PageOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_project_revisions_api_v1_projects__project_id__revisions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevisionHistoryOut"][];
                 };
             };
             /** @description Validation Error */

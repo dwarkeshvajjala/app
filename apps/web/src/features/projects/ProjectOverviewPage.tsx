@@ -180,7 +180,8 @@ export function ProjectOverviewPage() {
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        next.set("page", pageId);
+        if (pageId) next.set("page", pageId);
+        else next.delete("page");
         return next;
       },
       { replace: true },
@@ -251,7 +252,11 @@ export function ProjectOverviewPage() {
           >
             Share
           </button>
-          <ProjectMenu project={project} workspaceSlug={workspace.slug} />
+          <ProjectMenu
+            project={project}
+            workspaceSlug={workspace.slug}
+            onManagePages={() => setShowPages(true)}
+          />
         </div>
       </div>
 
@@ -359,6 +364,8 @@ export function ProjectOverviewPage() {
         workspaceSlug={workspace.slug}
         workspaceName={workspace.name}
         totalComments={totalComments}
+        currentPageId={activePage?.id ?? null}
+        onSelectPage={goToPage}
         mode={mode}
         onModeChange={setMode}
         viewport={viewport}
@@ -383,6 +390,8 @@ export function ProjectOverviewPage() {
       {showPages && (
         <ProjectPagesModal
           project={project}
+          activePageId={activePage?.id ?? null}
+          onOpenPage={goToPage}
           onClose={() => setShowPages(false)}
         />
       )}

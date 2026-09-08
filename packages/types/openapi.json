@@ -2707,6 +2707,122 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "pages"
+        ],
+        "summary": "Create Page",
+        "operationId": "create_page_api_v1_projects__project_id__pages_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/pages/reorder": {
+      "patch": {
+        "tags": [
+          "pages"
+        ],
+        "summary": "Reorder Pages",
+        "operationId": "reorder_pages_api_v1_projects__project_id__pages_reorder_patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageReorder"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PageOut"
+                  },
+                  "title": "Response Reorder Pages Api V1 Projects  Project Id  Pages Reorder Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/pages": {
@@ -2854,6 +2970,57 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/revisions": {
+      "get": {
+        "tags": [
+          "snapshots"
+        ],
+        "summary": "List Project Revisions",
+        "operationId": "list_project_revisions_api_v1_projects__project_id__revisions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RevisionHistoryOut"
+                  },
+                  "title": "Response List Project Revisions Api V1 Projects  Project Id  Revisions Get"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -6040,6 +6207,33 @@
         ],
         "title": "OtpVerifyRequest"
       },
+      "PageCreate": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Url"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "PageCreate"
+      },
       "PageOut": {
         "properties": {
           "id": {
@@ -6068,6 +6262,11 @@
           "sort_order": {
             "type": "integer",
             "title": "Sort Order",
+            "default": 0
+          },
+          "comment_count": {
+            "type": "integer",
+            "title": "Comment Count",
             "default": 0
           },
           "first_seen_at": {
@@ -6130,6 +6329,24 @@
         ],
         "title": "PageRegister"
       },
+      "PageReorder": {
+        "properties": {
+          "page_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Page Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "page_ids"
+        ],
+        "title": "PageReorder"
+      },
       "PageUpdate": {
         "properties": {
           "title": {
@@ -6147,7 +6364,9 @@
           "sort_order": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "integer",
+                "maximum": 10000.0,
+                "minimum": 0.0
               },
               {
                 "type": "null"
@@ -6573,6 +6792,17 @@
               }
             ],
             "title": "Client Id"
+          },
+          "duplicated_from_project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplicated From Project Id"
           }
         },
         "type": "object",
@@ -6953,6 +7183,91 @@
         ],
         "title": "ReviewResolveOut"
       },
+      "RevisionChangeSummary": {
+        "properties": {
+          "moved": {
+            "type": "integer",
+            "title": "Moved",
+            "default": 0
+          },
+          "modified": {
+            "type": "integer",
+            "title": "Modified",
+            "default": 0
+          },
+          "removed": {
+            "type": "integer",
+            "title": "Removed",
+            "default": 0
+          },
+          "added": {
+            "type": "integer",
+            "title": "Added",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "RevisionChangeSummary"
+      },
+      "RevisionHistoryOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "page_id": {
+            "type": "string",
+            "title": "Page Id"
+          },
+          "page_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Title"
+          },
+          "page_url": {
+            "type": "string",
+            "title": "Page Url"
+          },
+          "full_page_hash": {
+            "type": "string",
+            "title": "Full Page Hash"
+          },
+          "captured_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Captured At"
+          },
+          "is_current": {
+            "type": "boolean",
+            "title": "Is Current"
+          },
+          "changes": {
+            "$ref": "#/components/schemas/RevisionChangeSummary"
+          },
+          "recovery": {
+            "$ref": "#/components/schemas/RevisionRecoverySummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "page_id",
+          "page_title",
+          "page_url",
+          "full_page_hash",
+          "captured_at",
+          "is_current",
+          "changes",
+          "recovery"
+        ],
+        "title": "RevisionHistoryOut"
+      },
       "RevisionOut": {
         "properties": {
           "id": {
@@ -6991,6 +7306,32 @@
           "created_new"
         ],
         "title": "RevisionOut"
+      },
+      "RevisionRecoverySummary": {
+        "properties": {
+          "ok": {
+            "type": "integer",
+            "title": "Ok",
+            "default": 0
+          },
+          "low_confidence": {
+            "type": "integer",
+            "title": "Low Confidence",
+            "default": 0
+          },
+          "orphaned": {
+            "type": "integer",
+            "title": "Orphaned",
+            "default": 0
+          },
+          "permanently_orphaned": {
+            "type": "integer",
+            "title": "Permanently Orphaned",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "RevisionRecoverySummary"
       },
       "SearchOut": {
         "properties": {

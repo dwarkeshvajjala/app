@@ -44,7 +44,7 @@ def inspect_asset(data: bytes, project_type: str) -> tuple[str, int, int | None,
             return "application/pdf", count, None, None
         except (PdfReadError, ValueError, RecursionError) as exc:
             raise ValidationError("This PDF could not be read.") from exc
-    
+
     # Simple SVG detection
     header = data[:1024].lower()
     if b"<svg" in header:

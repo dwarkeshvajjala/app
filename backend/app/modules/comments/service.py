@@ -778,11 +778,7 @@ async def update_comment(
     member_list_fields = {"assignee_ids", "waiting_on_ids"}
     if changes is not None:
         member_list_fields &= set(changes.model_dump(exclude_unset=True))
-    recipients = set(
-        value
-        for field in member_list_fields
-        for value in patch.get(field, [])
-    )
+    recipients = set(value for field in member_list_fields for value in patch.get(field, []))
     for user_id in recipients:
         if not await MembershipRepository(db).find(workspace_id=workspace_id, user_id=user_id):
             raise ValidationError("Assignees and waiting-on people must belong to this workspace.")

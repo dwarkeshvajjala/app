@@ -41,10 +41,35 @@ class RecoveryLogRepository:
         self, *, workspace_id: str, comment_id: str, limit: int = 100
     ) -> list[dict[str, Any]]:
         cursor = (
-            self.db.recovery_logs.find(
-                {"workspace_id": workspace_id, "comment_id": comment_id}
-            )
+            self.db.recovery_logs.find({"workspace_id": workspace_id, "comment_id": comment_id})
             .sort("created_at", -1)
             .limit(limit)
         )
         return [doc async for doc in cursor]
+
+    async def summaries_for_revisions(
+        self, workspace_id: str, revision_ids: list[str]
+    ) -> dict[str, dict[str, int]]:
+        if not revision_ids:
+            return {}
+        rows = await self.db.recovery_logs.aggregate(
+            [
+                {
+                    "$match": {
+                        "workspace_id": workspace_id,
+                        "to_revision_id": {"$in": revision_ids},
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": {"revision_id": "$to_revision_id", "outcome": "$outcome"},
+                        "count": {"$sum": 1},
+                    }
+                },
+            ]
+        ).to_list(length=None)
+        summaries: dict[str, dict[str, int]] = {}
+        for row in rows:
+            revision_id = str(row["_id"]["revision_id"])
+            summaries.setdefault(revision_id, {})[str(row["_id"]["outcome"])] = int(row["count"])
+        return summaries

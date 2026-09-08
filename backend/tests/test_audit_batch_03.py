@@ -155,7 +155,8 @@ async def test_guest_board_visible_when_enabled(
 
     # Client-layer comment should show up on the guest board.
     created = await client.post(
-        f"/api/v1/pages/{page_id}/comments", json=_comment_payload(layer="client"),
+        f"/api/v1/pages/{page_id}/comments",
+        json=_comment_payload(layer="client"),
         headers=ctx["guest_headers"],
     )
     assert created.status_code == 201
@@ -185,7 +186,8 @@ async def test_guest_board_excludes_team_only_comments(
 
     # A member-authored team-only comment must never appear on the client board.
     await client.post(
-        f"/api/v1/pages/{page_id}/comments", json=_comment_payload(layer="team"),
+        f"/api/v1/pages/{page_id}/comments",
+        json=_comment_payload(layer="team"),
         headers=ctx["owner_headers"],
     )
 
@@ -257,7 +259,8 @@ async def test_guest_cannot_resolve_someone_elses_comment(
     # Member-authored comment - a guest must never resolve someone else's comment,
     # even with reviewer_can_resolve on.
     created = await client.post(
-        f"/api/v1/pages/{page_id}/comments", json=_comment_payload(layer="team"),
+        f"/api/v1/pages/{page_id}/comments",
+        json=_comment_payload(layer="team"),
         headers=ctx["owner_headers"],
     )
     comment_id = created.json()["id"]
@@ -344,7 +347,8 @@ async def test_reply_to_member_comment_does_not_error(
     )
     page_id = await _register_page(client, ctx)
     parent = await client.post(
-        f"/api/v1/pages/{page_id}/comments", json=_comment_payload(layer="client"),
+        f"/api/v1/pages/{page_id}/comments",
+        json=_comment_payload(layer="client"),
         headers=ctx["owner_headers"],
     )
     parent_id = parent.json()["id"]
@@ -367,7 +371,8 @@ async def test_mention_with_unknown_member_id_is_silently_ignored(
     )
     page_id = await _register_page(client, ctx)
     parent = await client.post(
-        f"/api/v1/pages/{page_id}/comments", json=_comment_payload(layer="team"),
+        f"/api/v1/pages/{page_id}/comments",
+        json=_comment_payload(layer="team"),
         headers=ctx["owner_headers"],
     )
     parent_id = parent.json()["id"]

@@ -1,4 +1,5 @@
 """Profile and login-session operations; users are global, never guest accounts."""
+
 from datetime import datetime
 from typing import Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -60,8 +61,11 @@ class SessionOut(BaseModel):
 
 def profile_out(doc: dict[str, Any]) -> ProfileOut:
     return ProfileOut(
-        id=str(doc["_id"]), email=doc["email"], name=doc["name"],
-        avatar_url=doc.get("avatar_url"), professional_role=doc.get("professional_role", ""),
+        id=str(doc["_id"]),
+        email=doc["email"],
+        name=doc["name"],
+        avatar_url=doc.get("avatar_url"),
+        professional_role=doc.get("professional_role", ""),
         preferences=Preferences(**doc.get("preferences", {})),
     )
 
@@ -86,10 +90,15 @@ async def update_profile(
 @router.get("/sessions", response_model=list[SessionOut])
 async def sessions(session: Session = Depends(get_current_session)) -> list[SessionOut]:
     rows = await RefreshTokenRepository(get_db()).list_active(session.user_id)
-    return [SessionOut(
-        id=row["family_id"], current=row["family_id"] == session.sid,
-        last_active_at=row["issued_at"], expires_at=row["expires_at"],
-    ) for row in rows]
+    return [
+        SessionOut(
+            id=row["family_id"],
+            current=row["family_id"] == session.sid,
+            last_active_at=row["issued_at"],
+            expires_at=row["expires_at"],
+        )
+        for row in rows
+    ]
 
 
 @router.delete("/sessions/others", status_code=204)
@@ -100,9 +109,7 @@ async def revoke_other_sessions(session: Session = Depends(get_current_session))
 
 
 @router.delete("/sessions/{family_id}", status_code=204)
-async def revoke_session(
-    family_id: str, session: Session = Depends(get_current_session)
-) -> None:
+async def revoke_session(family_id: str, session: Session = Depends(get_current_session)) -> None:
     repo = RefreshTokenRepository(get_db())
     if not await repo.family_is_active(session.user_id, family_id):
         raise NotFoundError("Session not found.")

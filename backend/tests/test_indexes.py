@@ -15,10 +15,7 @@ async def test_index_migration_is_idempotent_and_preserves_ttl(
     }
     await ensure_additive_indexes(db, AUDIT_BATCH_02_INDEXES)
     await ensure_additive_indexes(db, AUDIT_BATCH_02_INDEXES)
-    after = {
-        collection: await db[collection].index_information()
-        for collection in before
-    }
+    after = {collection: await db[collection].index_information() for collection in before}
     for spec in AUDIT_BATCH_02_INDEXES:
         assert spec.name in after[spec.collection]
         assert after[spec.collection][spec.name]["key"] == list(spec.keys)
@@ -26,9 +23,7 @@ async def test_index_migration_is_idempotent_and_preserves_ttl(
         assert set(indexes).issubset(after[collection])
 
     guest_indexes = await db.guest_sessions.index_information()
-    ttl = next(
-        row for row in guest_indexes.values() if row["key"] == [("last_seen_at", 1)]
-    )
+    ttl = next(row for row in guest_indexes.values() if row["key"] == [("last_seen_at", 1)])
     assert ttl["expireAfterSeconds"] == 180 * 24 * 60 * 60
 
 

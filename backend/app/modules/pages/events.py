@@ -1,2 +1,5 @@
 PAGE_REGISTERED = "page.registered"
+PAGE_CREATED = "page.created"
+PAGE_UPDATED = "page.updated"
+PAGES_REORDERED = "pages.reordered"
 PAGE_DELETED = "page.deleted"

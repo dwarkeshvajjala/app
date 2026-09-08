@@ -91,9 +91,7 @@ class ObjectGcRepository:
             },
         )
 
-    async def mark_failed(
-        self, workspace_id: str, tombstone_id: Any, error: str
-    ) -> None:
+    async def mark_failed(self, workspace_id: str, tombstone_id: Any, error: str) -> None:
         await self.db.object_gc_tombstones.update_one(
             {"_id": tombstone_id, "workspace_id": workspace_id},
             {

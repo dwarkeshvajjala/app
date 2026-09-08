@@ -1,4 +1,5 @@
 """Export API contracts without connecting to a database or starting the application."""
+
 import json
 from pathlib import Path
 

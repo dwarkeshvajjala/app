@@ -180,5 +180,7 @@ async def export_project(
     return PlainTextResponse(
         content=csv_content,
         media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="project_{project_id}_comments.csv"'}
+        headers={
+            "Content-Disposition": f'attachment; filename="project_{project_id}_comments.csv"'
+        },
     )

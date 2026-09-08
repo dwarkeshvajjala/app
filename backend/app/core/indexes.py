@@ -140,9 +140,7 @@ async def ensure_additive_indexes(
     db: AsyncIOMotorDatabase[dict[str, Any]], indexes: tuple[AdditiveIndex, ...]
 ) -> None:
     for spec in indexes:
-        await db[spec.collection].create_index(
-            list(spec.keys), name=spec.name, **spec.options
-        )
+        await db[spec.collection].create_index(list(spec.keys), name=spec.name, **spec.options)
 
 
 async def ensure_indexes(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:

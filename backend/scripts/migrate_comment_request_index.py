@@ -25,9 +25,9 @@ async def inspect(*, apply: bool) -> dict[str, Any]:
         "existing_indexes_preserved": True,
         "legacy_sparse_index_present": "comments_workspace_client_request_id" in indexes,
         "present": present,
-        "would_create": [] if present else [
-            {"name": spec.name, "keys": list(spec.keys), "options": spec.options}
-        ],
+        "would_create": []
+        if present
+        else [{"name": spec.name, "keys": list(spec.keys), "options": spec.options}],
         "created": [spec.name] if apply and not present else [],
     }
 

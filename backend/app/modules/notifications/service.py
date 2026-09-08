@@ -213,7 +213,6 @@ async def notify_integration_disconnected(
     )
 
 
-
 async def list_notifications(
     db: AsyncIOMotorDatabase[dict[str, Any]],
     *,

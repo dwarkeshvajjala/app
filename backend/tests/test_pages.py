@@ -201,9 +201,7 @@ async def test_page_delete_blocks_when_review_history_exists(
         }
     )
 
-    response = await client.delete(
-        f"/api/v1/pages/{page_id}", headers=ctx["owner_headers"]
-    )
+    response = await client.delete(f"/api/v1/pages/{page_id}", headers=ctx["owner_headers"])
     assert response.status_code == 409
     assert response.json()["error"]["details"]["references"]["revisions"] == 1
     assert await db.pages.count_documents({"_id": ObjectId(page_id)}) == 1
@@ -224,9 +222,7 @@ async def test_empty_page_delete_is_scoped_and_audited(
     )
     page_id = page.json()["id"]
 
-    response = await client.delete(
-        f"/api/v1/pages/{page_id}", headers=ctx["owner_headers"]
-    )
+    response = await client.delete(f"/api/v1/pages/{page_id}", headers=ctx["owner_headers"])
     assert response.status_code == 204
     assert await db.pages.count_documents({"_id": ObjectId(page_id)}) == 0
     event = await db.events.find_one(

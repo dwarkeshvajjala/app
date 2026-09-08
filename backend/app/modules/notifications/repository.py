@@ -36,7 +36,6 @@ class NotificationRepository:
         doc["_id"] = result.inserted_id
         return doc
 
-
     async def list_for_user(
         self, *, workspace_id: str, user_id: str, limit: int, before: datetime | None
     ) -> list[dict[str, Any]]:

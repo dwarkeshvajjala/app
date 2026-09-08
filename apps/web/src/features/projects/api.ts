@@ -1,8 +1,10 @@
 import type { Schemas } from "@backline/types";
 
-import { apiFetch } from "../../lib/api-client";
+import { apiFetch, apiFetchBlob } from "../../lib/api-client";
 
 export type ProjectOut = Schemas["ProjectOut"];
+export type PageOut = Schemas["PageOut"];
+export type RevisionHistoryOut = Schemas["RevisionHistoryOut"];
 
 export function listProjects(workspaceId: string, includeArchived = false): Promise<ProjectOut[]> {
   return apiFetch<ProjectOut[]>(`/api/v1/workspaces/${workspaceId}/projects?include_archived=${includeArchived}`);
@@ -56,6 +58,43 @@ export function confirmHardDeleteProject(
     method: "POST",
     body: JSON.stringify({ ...body, acknowledge_permanent_deletion: true }),
   });
+}
+
+export function listPages(projectId: string, signal?: AbortSignal) {
+  return apiFetch<PageOut[]>(`/api/v1/projects/${projectId}/pages`, { signal });
+}
+
+export function createPage(projectId: string, body: Schemas["PageCreate"]) {
+  return apiFetch<PageOut>(`/api/v1/projects/${projectId}/pages`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updatePage(pageId: string, body: Schemas["PageUpdate"]) {
+  return apiFetch<PageOut>(`/api/v1/pages/${pageId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export function reorderPages(projectId: string, pageIds: string[]) {
+  return apiFetch<PageOut[]>(`/api/v1/projects/${projectId}/pages/reorder`, {
+    method: "PATCH",
+    body: JSON.stringify({ page_ids: pageIds }),
+  });
+}
+
+export function removePage(pageId: string) {
+  return apiFetch<void>(`/api/v1/pages/${pageId}`, { method: "DELETE" });
+}
+
+export function listRevisions(projectId: string, signal?: AbortSignal) {
+  return apiFetch<RevisionHistoryOut[]>(`/api/v1/projects/${projectId}/revisions`, { signal });
+}
+
+export function exportProject(projectId: string) {
+  return apiFetchBlob(`/api/v1/projects/${projectId}/export`);
 }
 
 export interface ProjectSettingsUpdate {

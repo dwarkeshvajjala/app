@@ -139,5 +139,3 @@ async def update_me(
     return await auth_service.update_user(
         get_db(), session.user_id, body.model_dump(exclude_unset=True)
     )
-
-

@@ -63,6 +63,7 @@ class SessionOut(BaseModel):
     ISO-8601 string with timezone on the wire) rather than hand-formatted str fields -
     API contracts stay generated/typed end-to-end per 06-Backend-Architecture.md §2.3,
     and the frontend gets a real Date-parseable value instead of an ad hoc string."""
+
     id: str  # maps to the family_id
     current: bool  # true if this is the session making the request
     browser: str | None
@@ -70,4 +71,3 @@ class SessionOut(BaseModel):
     ip_address: str | None
     created_at: datetime
     last_active_at: datetime
-

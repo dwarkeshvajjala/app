@@ -106,7 +106,9 @@ class CommentRepository:
         recorded decision). This must never be reused for a client-facing digest
         without adding a layer filter first."""
         query: dict[str, Any] = {
-            "workspace_id": workspace_id, "deleted_at": None, "created_at": {"$gt": since}
+            "workspace_id": workspace_id,
+            "deleted_at": None,
+            "created_at": {"$gt": since},
         }
         return [doc async for doc in self.db.comments.find(query)]
 

@@ -7,7 +7,7 @@ from app.core.rate_limit import actor_rate_limit_key, check_rate_limit
 from app.core.redis_client import get_redis
 from app.core.session import Actor, Session, get_current_actor, require_workspace_context
 from app.modules.pages import service as page_service
-from app.modules.pages.schemas import PageOut, PageRegister, PageUpdate
+from app.modules.pages.schemas import PageCreate, PageOut, PageRegister, PageReorder, PageUpdate
 
 router = APIRouter(tags=["pages"])
 
@@ -19,6 +19,37 @@ async def list_pages(
 ) -> list[PageOut]:
     return await page_service.list_pages(
         get_db(), project_id=project_id, workspace_id=require_workspace_context(session)
+    )
+
+
+@router.post("/projects/{project_id}/pages", response_model=PageOut, status_code=201)
+async def create_page(
+    project_id: str,
+    body: PageCreate,
+    session: Session = Depends(require_permission("project:manage")),
+) -> PageOut:
+    return await page_service.create_page(
+        get_db(),
+        workspace_id=require_workspace_context(session),
+        project_id=project_id,
+        actor_user_id=session.user_id,
+        url=body.url,
+        title=body.title,
+    )
+
+
+@router.patch("/projects/{project_id}/pages/reorder", response_model=list[PageOut])
+async def reorder_pages(
+    project_id: str,
+    body: PageReorder,
+    session: Session = Depends(require_permission("project:manage")),
+) -> list[PageOut]:
+    return await page_service.reorder_pages(
+        get_db(),
+        workspace_id=require_workspace_context(session),
+        project_id=project_id,
+        actor_user_id=session.user_id,
+        body=body,
     )
 
 
@@ -54,6 +85,7 @@ async def update_page(
         workspace_id=require_workspace_context(session),
         page_id=page_id,
         changes=body,
+        actor_user_id=session.user_id,
     )
 
 

@@ -50,9 +50,7 @@ def _allowed_object_prefixes(workspace_id: str, project_id: str) -> list[str]:
     ]
 
 
-def _split_referenced_keys(
-    keys: list[str], prefixes: list[str]
-) -> tuple[list[str], list[str]]:
+def _split_referenced_keys(keys: list[str], prefixes: list[str]) -> tuple[list[str], list[str]]:
     safe = sorted({key for key in keys if any(key.startswith(prefix) for prefix in prefixes)})
     unsafe = sorted(set(keys) - set(safe))
     return safe, unsafe
@@ -113,9 +111,7 @@ async def preview_hard_delete(
     )
 
 
-async def _enqueue_gc_retry(
-    workspace_id: str, project_id: str, correlation_id: str
-) -> None:
+async def _enqueue_gc_retry(workspace_id: str, project_id: str, correlation_id: str) -> None:
     try:
         pool = await get_arq_pool()
         await pool.enqueue_job(
@@ -140,9 +136,7 @@ async def resume_confirmed_hard_delete(
     correlation_id: str,
 ) -> ProjectHardDeleteResult:
     repo = ProjectDeletionRepository(db)
-    plan = await repo.find_plan_by_correlation(
-        workspace_id, project_id, correlation_id
-    )
+    plan = await repo.find_plan_by_correlation(workspace_id, project_id, correlation_id)
     if plan is None:
         raise NotFoundError("Deletion plan not found.")
     counts = ProjectDeletionCounts(**plan["counts"])
@@ -158,18 +152,14 @@ async def resume_confirmed_hard_delete(
         correlation_id=correlation_id,
     )
     if sum(gc_counts.get(status, 0) for status in ("pending", "deleting", "failed")):
-        await repo.set_plan_status(
-            workspace_id, project_id, correlation_id, "storage_failed"
-        )
+        await repo.set_plan_status(workspace_id, project_id, correlation_id, "storage_failed")
         raise ExternalServiceError(
             "Private object cleanup is incomplete. MongoDB records were retained and "
             "the tombstones remain retryable.",
             details={"correlation_id": correlation_id, "object_gc": gc_counts},
         )
 
-    await repo.set_plan_status(
-        workspace_id, project_id, correlation_id, "mongo_deleting"
-    )
+    await repo.set_plan_status(workspace_id, project_id, correlation_id, "mongo_deleting")
     await repo.delete_graph(plan["workspace_id"], plan["project_id"])
     await append_event_once(
         db,
@@ -185,9 +175,7 @@ async def resume_confirmed_hard_delete(
         },
     )
     await repo.set_plan_status(workspace_id, project_id, correlation_id, "complete")
-    return ProjectHardDeleteResult(
-        correlation_id=correlation_id, status="deleted", counts=counts
-    )
+    return ProjectHardDeleteResult(correlation_id=correlation_id, status="deleted", counts=counts)
 
 
 async def confirm_hard_delete(
@@ -259,9 +247,7 @@ async def confirm_hard_delete(
         # A delayed, uniquely keyed job is a crash-recovery backstop. The request also
         # executes synchronously so callers receive the final auditable result; if both
         # overlap, tombstone claiming and the correlation event make that safe.
-        await _enqueue_gc_retry(
-            workspace_id, project_id, confirmation.correlation_id
-        )
+        await _enqueue_gc_retry(workspace_id, project_id, confirmation.correlation_id)
 
     try:
         return await resume_confirmed_hard_delete(
@@ -271,7 +257,5 @@ async def confirm_hard_delete(
             correlation_id=confirmation.correlation_id,
         )
     except ExternalServiceError:
-        await _enqueue_gc_retry(
-            workspace_id, project_id, confirmation.correlation_id
-        )
+        await _enqueue_gc_retry(workspace_id, project_id, confirmation.correlation_id)
         raise

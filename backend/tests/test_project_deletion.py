@@ -190,19 +190,23 @@ async def test_hard_delete_requires_dry_run_and_leaves_zero_orphans(
     assert preview.status_code == 200
     plan = preview.json()
     assert plan["archived"] is False
-    assert plan["counts"] | {
-        "pages": 1,
-        "project_assets": 1,
-        "comments": 2,
-        "revisions": 2,
-        "revision_diffs": 1,
-        "recovery_logs": 1,
-        "share_links": 1,
-        "guest_sessions": 1,
-        "notifications": 1,
-        "project_integrations": 1,
-        "object_keys": 7,
-    } == plan["counts"]
+    assert (
+        plan["counts"]
+        | {
+            "pages": 1,
+            "project_assets": 1,
+            "comments": 2,
+            "revisions": 2,
+            "revision_diffs": 1,
+            "recovery_logs": 1,
+            "share_links": 1,
+            "guest_sessions": 1,
+            "notifications": 1,
+            "project_integrations": 1,
+            "object_keys": 7,
+        }
+        == plan["counts"]
+    )
     assert await db.projects.count_documents({"_id": ObjectId(project_id)}) == 1
 
     active_confirm = await client.post(
@@ -247,18 +251,21 @@ async def test_hard_delete_requires_dry_run_and_leaves_zero_orphans(
         "notifications",
         "integrations",
     ):
-        assert await db[collection].count_documents(
-            {
-                "$or": [
-                    {"workspace_id": workspace_id, "project_id": project_id},
-                    {"workspace_id": workspace_id, "page_id": ctx["page_id"]},
-                    {"workspace_id": workspace_id, "comment_id": ctx["comment_id"]},
-                    {"workspace_id": workspace_id, "payload_json.project_id": project_id},
-                    {"workspace_id": workspace_id, "project_scope": project_id},
-                    {"_id": ObjectId(project_id)},
-                ]
-            }
-        ) == 0, collection
+        assert (
+            await db[collection].count_documents(
+                {
+                    "$or": [
+                        {"workspace_id": workspace_id, "project_id": project_id},
+                        {"workspace_id": workspace_id, "page_id": ctx["page_id"]},
+                        {"workspace_id": workspace_id, "comment_id": ctx["comment_id"]},
+                        {"workspace_id": workspace_id, "payload_json.project_id": project_id},
+                        {"workspace_id": workspace_id, "project_scope": project_id},
+                        {"_id": ObjectId(project_id)},
+                    ]
+                }
+            )
+            == 0
+        ), collection
     assert await db.guest_sessions.count_documents({"workspace_id": workspace_id}) == 0
 
     summary_events = await db.events.find(
@@ -308,9 +315,7 @@ async def test_hard_delete_has_no_direct_bypass_and_requires_admin_role(
         headers=owner_headers,
     )
     assert invite.status_code == 201
-    login = await login_via_otp(
-        client, monkeypatch, "delete-member@example.com", "810003"
-    )
+    login = await login_via_otp(client, monkeypatch, "delete-member@example.com", "810003")
     member_token = await switch_workspace(client, login["access_token"], workspace_id)
 
     preview = await client.post(
@@ -318,9 +323,7 @@ async def test_hard_delete_has_no_direct_bypass_and_requires_admin_role(
         headers={"Authorization": f"Bearer {member_token}"},
     )
     assert preview.status_code == 403
-    direct = await client.delete(
-        f"/api/v1/projects/{project_id}/hard", headers=owner_headers
-    )
+    direct = await client.delete(f"/api/v1/projects/{project_id}/hard", headers=owner_headers)
     assert direct.status_code in (404, 405)
 
 
@@ -335,9 +338,7 @@ async def test_storage_failure_keeps_mongo_and_tombstone_is_retryable(
     key = f"uploads/{ctx['workspace_id']}/{project_id}/retry.png"
     monkeypatch.setattr(deletion_service, "list_object_keys", lambda prefixes: _async([key]))
 
-    async def no_enqueue(
-        workspace_id: str, project_id: str, correlation_id: str
-    ) -> None:
+    async def no_enqueue(workspace_id: str, project_id: str, correlation_id: str) -> None:
         del workspace_id, project_id, correlation_id
 
     monkeypatch.setattr(deletion_service, "_enqueue_gc_retry", no_enqueue)
@@ -365,9 +366,7 @@ async def test_storage_failure_keeps_mongo_and_tombstone_is_retryable(
     assert await db.projects.count_documents({"_id": ObjectId(project_id)}) == 1
     tombstone = await db.object_gc_tombstones.find_one({"key": key})
     assert tombstone is not None and tombstone["status"] == "failed"
-    failed_plan = await db.deletion_plans.find_one(
-        {"correlation_id": plan["correlation_id"]}
-    )
+    failed_plan = await db.deletion_plans.find_one({"correlation_id": plan["correlation_id"]})
     assert failed_plan is not None
     assert failed_plan["status"] == "storage_failed"
     assert "purge_after" not in failed_plan
@@ -386,9 +385,7 @@ async def test_storage_failure_keeps_mongo_and_tombstone_is_retryable(
     assert retried.status_code == 200
     assert key in retried_keys
     assert await db.projects.count_documents({"_id": ObjectId(project_id)}) == 0
-    completed_plan = await db.deletion_plans.find_one(
-        {"correlation_id": plan["correlation_id"]}
-    )
+    completed_plan = await db.deletion_plans.find_one({"correlation_id": plan["correlation_id"]})
     assert completed_plan is not None
     assert completed_plan["status"] == "complete"
     assert completed_plan["purge_after"] > datetime.now(UTC)

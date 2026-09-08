@@ -16,6 +16,8 @@ interface ProjectFooterProps {
   workspaceSlug: string;
   workspaceName: string;
   totalComments: number;
+  currentPageId: string | null;
+  onSelectPage: (pageId: string) => void;
   mode: CanvasMode;
   onModeChange: (mode: CanvasMode) => void;
   viewport: ViewportOption | null;
@@ -38,6 +40,8 @@ export function ProjectFooter({
   workspaceSlug,
   workspaceName,
   totalComments,
+  currentPageId,
+  onSelectPage,
   mode,
   onModeChange,
   viewport,
@@ -57,7 +61,7 @@ export function ProjectFooter({
   return (
     <div className="flex shrink-0 items-center justify-between gap-2 border-t border-black/10 px-3 py-2 dark:border-white/10">
       <div className="flex items-center gap-1.5">
-        <VersionMenu totalComments={totalComments} createdAt={project.created_at} />
+        <VersionMenu projectId={project.id} currentPageId={currentPageId} onSelectPage={onSelectPage} />
         <ViewportMenu
           viewport={viewport}
           onChange={onViewportChange}

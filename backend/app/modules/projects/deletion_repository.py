@@ -17,10 +17,7 @@ class ProjectGraph:
 
     @property
     def counts(self) -> dict[str, int]:
-        return {
-            collection: len(ids)
-            for collection, ids in self.ids.items()
-        }
+        return {collection: len(ids) for collection, ids in self.ids.items()}
 
 
 class ProjectDeletionRepository:
@@ -49,9 +46,9 @@ class ProjectDeletionRepository:
 
         page_query = {"workspace_id": workspace_id, "page_id": {"$in": page_ids}}
         revisions = (
-            await self.db.revisions.find(
-                page_query, {"_id": 1, "snapshot_key": 1}
-            ).to_list(length=None)
+            await self.db.revisions.find(page_query, {"_id": 1, "snapshot_key": 1}).to_list(
+                length=None
+            )
             if page_ids
             else []
         )
@@ -101,11 +98,7 @@ class ProjectDeletionRepository:
             {"workspace_id": workspace_id, "project_scope": project_id}, {"_id": 1}
         ).to_list(length=None)
 
-        referenced_keys = {
-            str(doc["snapshot_key"])
-            for doc in revisions
-            if doc.get("snapshot_key")
-        }
+        referenced_keys = {str(doc["snapshot_key"]) for doc in revisions if doc.get("snapshot_key")}
         referenced_keys.update(str(doc["key"]) for doc in assets if doc.get("key"))
         for comment in comments:
             if comment.get("screenshot_key"):
@@ -129,9 +122,7 @@ class ProjectDeletionRepository:
             "share_links": sorted(share_link_ids),
             "guest_sessions": sorted(str(doc["_id"]) for doc in guest_sessions),
             "notifications": sorted(str(doc["_id"]) for doc in notifications),
-            "project_integrations": sorted(
-                str(doc["_id"]) for doc in project_integrations
-            ),
+            "project_integrations": sorted(str(doc["_id"]) for doc in project_integrations),
         }
         return ProjectGraph(
             ids=ids,
@@ -268,9 +259,7 @@ class ProjectDeletionRepository:
         ):
             await delete_ids(collection)
         if ids["project_integrations"]:
-            integration_ids = [
-                to_object_id(value) for value in ids["project_integrations"]
-            ]
+            integration_ids = [to_object_id(value) for value in ids["project_integrations"]]
             await self.db.integrations.delete_many(
                 {
                     "workspace_id": workspace_id,

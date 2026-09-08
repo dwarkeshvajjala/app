@@ -33,7 +33,13 @@ class PageRepository:
         return await self.db.pages.find_one({"_id": oid})
 
     async def create(
-        self, *, project_id: str, workspace_id: str, url_normalized: str, title: str | None
+        self,
+        *,
+        project_id: str,
+        workspace_id: str,
+        url_normalized: str,
+        title: str | None,
+        sort_order: int = 0,
     ) -> dict[str, Any]:
         now = datetime.now(UTC)
         doc = {
@@ -41,6 +47,7 @@ class PageRepository:
             "workspace_id": workspace_id,
             "url_normalized": url_normalized,
             "title": title,
+            "sort_order": sort_order,
             "first_seen_at": now,
             "latest_revision_id": None,
         }
@@ -48,13 +55,22 @@ class PageRepository:
         doc["_id"] = result.inserted_id
         return doc
 
-    async def list_for_project(
-        self, workspace_id: str, project_id: str
-    ) -> list[dict[str, Any]]:
-        cursor = self.db.pages.find(
-            {"workspace_id": workspace_id, "project_id": project_id}
-        ).sort("first_seen_at", -1)
+    async def list_for_project(self, workspace_id: str, project_id: str) -> list[dict[str, Any]]:
+        cursor = self.db.pages.find({"workspace_id": workspace_id, "project_id": project_id}).sort(
+            "first_seen_at", -1
+        )
         return [doc async for doc in cursor]
+
+    async def comment_counts(self, workspace_id: str, page_ids: list[str]) -> dict[str, int]:
+        if not page_ids:
+            return {}
+        rows = await self.db.comments.aggregate(
+            [
+                {"$match": {"workspace_id": workspace_id, "page_id": {"$in": page_ids}}},
+                {"$group": {"_id": "$page_id", "count": {"$sum": 1}}},
+            ]
+        ).to_list(length=None)
+        return {str(row["_id"]): int(row["count"]) for row in rows}
 
     async def update_latest_revision(
         self, workspace_id: str, page_id: str, revision_id: str
@@ -64,15 +80,24 @@ class PageRepository:
             {"$set": {"latest_revision_id": revision_id}},
         )
 
-    async def update(
-        self, workspace_id: str, page_id: str, patch: dict[str, Any]
-    ) -> None:
+    async def update(self, workspace_id: str, page_id: str, patch: dict[str, Any]) -> None:
         if not patch:
             return
         await self.db.pages.update_one(
             {"_id": to_object_id(page_id), "workspace_id": workspace_id},
             {"$set": patch},
         )
+
+    async def reorder(self, workspace_id: str, project_id: str, page_ids: list[str]) -> None:
+        for sort_order, page_id in enumerate(page_ids):
+            await self.db.pages.update_one(
+                {
+                    "_id": to_object_id(page_id),
+                    "workspace_id": workspace_id,
+                    "project_id": project_id,
+                },
+                {"$set": {"sort_order": sort_order}},
+            )
 
     async def reference_counts(self, workspace_id: str, page_id: str) -> dict[str, int]:
         query = {"workspace_id": workspace_id, "page_id": page_id}
@@ -84,6 +109,4 @@ class PageRepository:
         }
 
     async def delete(self, workspace_id: str, page_id: str) -> None:
-        await self.db.pages.delete_one(
-            {"_id": to_object_id(page_id), "workspace_id": workspace_id}
-        )
+        await self.db.pages.delete_one({"_id": to_object_id(page_id), "workspace_id": workspace_id})

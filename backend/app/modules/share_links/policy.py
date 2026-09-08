@@ -49,9 +49,7 @@ def check_domain_restriction(link: dict[str, Any], origin: str | None, referer: 
 
     candidate = origin or referer
     if not candidate:
-        raise PermissionDeniedError(
-            "This review link can only be opened from an approved domain."
-        )
+        raise PermissionDeniedError("This review link can only be opened from an approved domain.")
 
     hostname = urlsplit(candidate).hostname or candidate.strip().lower()
     hostname = hostname.lower()

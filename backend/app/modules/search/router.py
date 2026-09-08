@@ -11,7 +11,8 @@ router = APIRouter(tags=["search"])
 
 @router.get("/workspaces/{workspace_id}/search", response_model=SearchOut)
 async def search(
-    workspace_id: str, q: str = Query(default="", max_length=120),
+    workspace_id: str,
+    q: str = Query(min_length=1, max_length=120),
     limit: int = Query(default=20, ge=1, le=50),
     session: Session = Depends(require_permission("comment:view_team")),
 ) -> SearchOut:

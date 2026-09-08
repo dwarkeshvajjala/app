@@ -10,10 +10,18 @@ from app.core.errors import NotFoundError
 from app.core.events import append_event
 from app.core.session import Actor, actor_identity
 from app.modules.pages.repository import PageRepository
+from app.modules.projects.repository import ProjectRepository
 from app.modules.realtime.pubsub import publish as publish_realtime_event
+from app.modules.recovery_engine.repository import RecoveryLogRepository
+from app.modules.revision_engine.repository import RevisionDiffRepository
 from app.modules.snapshot_engine import events as snapshot_events
 from app.modules.snapshot_engine.repository import RevisionRepository
-from app.modules.snapshot_engine.schemas import RevisionOut
+from app.modules.snapshot_engine.schemas import (
+    RevisionChangeSummary,
+    RevisionHistoryOut,
+    RevisionOut,
+    RevisionRecoverySummary,
+)
 from app.modules.storage.r2_client import upload_bytes
 
 
@@ -26,6 +34,42 @@ def _revision_out(doc: dict[str, Any], *, created_new: bool) -> RevisionOut:
         is_current=doc["is_current"],
         created_new=created_new,
     )
+
+
+async def list_project_revisions(
+    db: AsyncIOMotorDatabase[dict[str, Any]],
+    *,
+    workspace_id: str,
+    project_id: str,
+) -> list[RevisionHistoryOut]:
+    """Read-only version history backed by the canonical revision/recovery chain."""
+    project = await ProjectRepository(db).find_by_id(project_id)
+    if project is None or project["workspace_id"] != workspace_id:
+        raise NotFoundError("Project not found.")
+    pages = await PageRepository(db).list_for_project(workspace_id, project_id)
+    page_map = {str(page["_id"]): page for page in pages}
+    revisions = await RevisionRepository(db).list_for_pages(workspace_id, list(page_map), limit=200)
+    revision_ids = [str(revision["_id"]) for revision in revisions]
+    diff_summaries = await RevisionDiffRepository(db).summaries_for_revisions(
+        workspace_id, revision_ids
+    )
+    recovery_summaries = await RecoveryLogRepository(db).summaries_for_revisions(
+        workspace_id, revision_ids
+    )
+    return [
+        RevisionHistoryOut(
+            id=str(revision["_id"]),
+            page_id=revision["page_id"],
+            page_title=page_map[revision["page_id"]].get("title"),
+            page_url=page_map[revision["page_id"]]["url_normalized"],
+            full_page_hash=revision["full_page_hash"],
+            captured_at=revision["captured_at"],
+            is_current=revision["is_current"],
+            changes=RevisionChangeSummary(**diff_summaries.get(str(revision["_id"]), {})),
+            recovery=RevisionRecoverySummary(**recovery_summaries.get(str(revision["_id"]), {})),
+        )
+        for revision in revisions
+    ]
 
 
 async def submit_snapshot(

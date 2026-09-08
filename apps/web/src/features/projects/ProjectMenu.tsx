@@ -5,15 +5,17 @@ import { qk } from "../../lib/query-keys";
 import type { ProjectOut } from "./api";
 import * as api from "./api";
 import { Dialog } from "../../components/Dialog";
-import { API_BASE_URL } from "../../lib/api-client";
+import { useToast } from "../../components/Toast";
 import { useOnClickOutside } from "../../lib/use-click-outside";
 
-export function ProjectMenu({ project, workspaceSlug }: { project: ProjectOut; workspaceSlug: string }) {
+export function ProjectMenu({ project, workspaceSlug, onManagePages }: { project: ProjectOut; workspaceSlug: string; onManagePages: () => void }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const cache = useQueryClient();
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const [confirmDuplicate, setConfirmDuplicate] = useState(false);
+  const { toast } = useToast();
   const [showHardDelete, setShowHardDelete] = useState(false);
 
   useOnClickOutside(menuRef, () => setOpen(false));
@@ -23,6 +25,24 @@ export function ProjectMenu({ project, workspaceSlug }: { project: ProjectOut; w
     onSuccess: async (newProject) => {
       await cache.invalidateQueries({ queryKey: qk.workspace(project.workspace_id) });
       navigate(`/w/${workspaceSlug}/p/${newProject.id}`);
+      setOpen(false);
+      setConfirmDuplicate(false);
+      toast("Project duplicated without comments or history.");
+    },
+  });
+
+  const exportComments = useMutation({
+    mutationFn: () => api.exportProject(project.id),
+    onSuccess: (blob) => {
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${project.name.replace(/[^a-z0-9_-]+/gi, "-").toLowerCase()}-comments.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      toast("Comment export downloaded.");
       setOpen(false);
     },
   });
@@ -45,24 +65,27 @@ export function ProjectMenu({ project, workspaceSlug }: { project: ProjectOut; w
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-48 rounded-md bg-bg-surface py-1 shadow-lg border border-black/10 dark:border-white/10 z-50">
+        <div role="menu" className="absolute right-0 top-full mt-1 w-56 rounded-md bg-bg-surface py-1 shadow-lg border border-black/10 dark:border-white/10 z-50">
+          <button role="menuitem" onClick={() => { setOpen(false); onManagePages(); }} className="w-full text-left px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5">
+            Manage pages
+          </button>
           <button
-            onClick={() => { duplicate.mutate(); }}
+            role="menuitem"
+            onClick={() => { setConfirmDuplicate(true); setOpen(false); }}
             disabled={duplicate.isPending}
             className="w-full text-left px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
           >
             {duplicate.isPending ? "Duplicating..." : "Duplicate project"}
           </button>
           
-          {/* File export relies on standard browser navigation so we don't use apiFetch for it, as it handles download headers better */}
-          <a
-            href={`${API_BASE_URL}/api/v1/projects/${project.id}/export`}
-            className="block w-full text-left px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5"
-            download
-            onClick={() => setOpen(false)}
+          <button
+            role="menuitem"
+            className="block w-full text-left px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50"
+            disabled={exportComments.isPending}
+            onClick={() => exportComments.mutate()}
           >
-            Export comments (CSV)
-          </a>
+            {exportComments.isPending ? "Preparing export…" : "Export comments (CSV)"}
+          </button>
 
           <button
             onClick={() => { setConfirmArchive(true); setOpen(false); }}
@@ -79,6 +102,18 @@ export function ProjectMenu({ project, workspaceSlug }: { project: ProjectOut; w
           </button>
         </div>
       )}
+
+      {confirmDuplicate && (
+        <Dialog title="Duplicate project?" onClose={() => setConfirmDuplicate(false)}>
+          <div className="bl-form">
+            <p><strong>{project.name}</strong> will be copied with its metadata, review settings, and website page list. Comments, revision/recovery history, share-link tokens, uploaded assets, and integrations stay with the original.</p>
+            {duplicate.error && <p role="alert" className="bl-error">{duplicate.error.message}</p>}
+            <div className="bl-form-actions"><button type="button" className="bl-quiet" onClick={() => setConfirmDuplicate(false)}>Cancel</button><button type="button" className="bl-button" disabled={duplicate.isPending} onClick={() => duplicate.mutate()}>{duplicate.isPending ? "Duplicating…" : "Duplicate project"}</button></div>
+          </div>
+        </Dialog>
+      )}
+
+      {exportComments.error && <p role="alert" className="bl-error">{exportComments.error.message}</p>}
 
       {confirmArchive && (
         <Dialog title="Archive project" onClose={() => setConfirmArchive(false)}>

@@ -78,6 +78,7 @@ class ProjectSettingsOut(BaseModel):
 
 class ProjectSettingsUpdate(BaseModel):
     """Partial update for project review settings — omitted fields are unchanged."""
+
     capture_device_details: bool | None = None
     reanchor_on_deploy: bool | None = None
     reviewer_can_resolve: bool | None = None
@@ -98,6 +99,7 @@ class ProjectOut(BaseModel):
     project_type: ProjectType = "website"
     environment: Environment = "live"
     client_id: str | None = None
+    duplicated_from_project_id: str | None = None
 
 
 class ProjectDeletionCounts(BaseModel):

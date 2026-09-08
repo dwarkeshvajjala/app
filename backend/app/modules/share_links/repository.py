@@ -60,9 +60,7 @@ class ShareLinkRepository:
         # after (e.g. revoke_share_link in share_links/service.py).
         return await self.db.share_links.find_one({"_id": oid})
 
-    async def list_for_project(
-        self, workspace_id: str, project_id: str
-    ) -> list[dict[str, Any]]:
+    async def list_for_project(self, workspace_id: str, project_id: str) -> list[dict[str, Any]]:
         cursor = self.db.share_links.find(
             {"workspace_id": workspace_id, "project_id": project_id}
         ).sort("created_at", -1)
@@ -114,9 +112,7 @@ class GuestSessionRepository:
         # ever called (get_guest_session in core/session.py).
         return await self.db.guest_sessions.find_one({"_id": oid})
 
-    async def touch_last_seen(
-        self, *, workspace_id: str, guest_session_id: str
-    ) -> None:
+    async def touch_last_seen(self, *, workspace_id: str, guest_session_id: str) -> None:
         """Extend the 180-day inactivity TTL only after access is re-authorized."""
         await self.db.guest_sessions.update_one(
             {"_id": to_object_id(guest_session_id), "workspace_id": workspace_id},

@@ -47,7 +47,9 @@ async def search(
     projects = await repo.search_projects(workspace_id, matcher, each_limit)
     items.extend(
         SearchResultOut(
-            kind="project", id=str(project["_id"]), title=project["name"],
+            kind="project",
+            id=str(project["_id"]),
+            title=project["name"],
             subtitle=f"{project.get('project_type', 'website').title()} project",
             project_id=str(project["_id"]),
         )
@@ -72,9 +74,7 @@ async def search(
     )
     comments = await repo.search_comments(pipeline, each_limit)
     for comment in comments:
-        kind: Literal["ticket", "comment"] = (
-            "ticket" if comment.get("is_standalone") else "comment"
-        )
+        kind: Literal["ticket", "comment"] = "ticket" if comment.get("is_standalone") else "comment"
         title = comment["body"].strip().replace("\n", " ")[:140] or "Untitled comment"
         items.append(
             SearchResultOut(
