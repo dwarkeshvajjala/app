@@ -1,5 +1,51 @@
 # Delivery and verification ledger
 
+## 2026-09-08: Post-login UI migration — project dialogs slice
+
+- Migrated `ProjectForm` to the Final Draft's progressive create flow with the
+  website/image/PDF chooser, honest roadmap types, client selection and inline client
+  creation, domain-based environment detection with manual override, validated file
+  selection and retry-safe uploads, and a real review-link success handoff.
+- Rebuilt project settings around the five persisted review preferences. Device
+  capture, reviewer resolution, and client-board controls retain their enforced
+  behavior; deploy re-anchoring and client digest are explicitly marked `Saved only`
+  because their execution paths are not connected yet.
+- Migrated `ShareProjectModal` with real workspace members, owner/admin-only teammate
+  invitation, clear workspace-versus-project access language, active-link loading/
+  empty/error/copy states, enforced link-policy summaries, and genuine proxy-link
+  creation. Link mutation beyond the existing create/revoke contracts remains routed
+  to the share-link manager instead of being simulated in the modal.
+- Migrated `ProjectMenu`, `ProjectPagesModal`, and the project lifecycle confirmations:
+  icon-led keyboard-navigable actions; safe rename; archive/restore; duplicate; CSV
+  export confirmation; responsive add/rename/reorder/remove page controls; and the
+  owner/admin, archive-first, preview-and-name-confirmed permanent-delete contract.
+  Deploy history and asset file management remain visible but disabled as coming soon.
+- Existing React Query keys and invalidation, member/project/share/page/asset API calls,
+  authorization boundaries, routes, and generated types were preserved. No backend,
+  database, generated declaration, or widget files were changed.
+- Not run at the user's request: lint, typecheck, build, automated tests, local preview,
+  browser interaction QA, keyboard journey QA, and responsive screenshot comparison.
+  The final diff was inspected for scope and whitespace only; release verification is
+  still required.
+
+## 2026-09-08: Post-login UI migration — shell and dashboard slice
+
+- Adopted the Final Draft's shared brand contract in TDR-0018 and added reusable,
+  bounded prompts for continuing the migration route family by route family.
+- Reworked the authenticated workspace shell with a persistent Backline lockup,
+  global new-project entry point, platform-correct search shortcut, stable skip link,
+  corrected URL-filter-aware navigation states, and a real off-canvas mobile drawer.
+- Migrated the projects dashboard closer to the supplied HTML: prototype-style tabs,
+  hatched section divider, refined waiting-on-you panel, deterministic website/image/
+  PDF preview artwork, visible comment pins, card hover actions, URL/client hierarchy,
+  improved list/table densities, and project-type-aware create cards.
+- Existing React Query data, routes, mutations, authorization, and backend contracts
+  remain unchanged. Dashboard card previews no longer iframe arbitrary third-party
+  origins; real sites continue to render only in the dedicated project review flow.
+- Not run at the user's request: lint, typecheck, build, automated tests, local preview,
+  browser interaction QA, and responsive screenshot comparison. This slice therefore
+  records implementation scope, not release verification.
+
 ## 2026-09-07: Requested main update
 
 - Merged origin/main at 11fea12 while preserving local commit a5233a5; conflict decisions are recorded in TDR-0016. The pre-existing untracked gcm-diagnose.log is untouched.

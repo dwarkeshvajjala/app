@@ -22,6 +22,7 @@ import { ProjectSidePanel } from "./panel/ProjectSidePanel";
 import { AssetReview } from "../assets/AssetReview";
 import { ProjectMenu } from "./ProjectMenu";
 import { ProjectPagesModal } from "./ProjectPagesModal";
+import { ProjectForm } from "./ProjectForm";
 
 export function ProjectOverviewPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
@@ -29,6 +30,7 @@ export function ProjectOverviewPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showShare, setShowShare] = useState(false);
   const [showPages, setShowPages] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [mode, setMode] = useState<CanvasMode>("comment");
   const [viewport, setViewport] = useState<ViewportOption | null>(null);
   const canvasRef = useRef<HTMLIFrameElement>(null);
@@ -257,6 +259,8 @@ export function ProjectOverviewPage() {
             project={project}
             workspaceSlug={workspace.slug}
             onManagePages={() => setShowPages(true)}
+            onShare={() => setShowShare(true)}
+            onSettings={() => setShowSettings(true)}
           />
         </div>
       </div>
@@ -396,6 +400,7 @@ export function ProjectOverviewPage() {
           onClose={() => setShowPages(false)}
         />
       )}
+      {showSettings && <ProjectForm workspace={workspace} project={project} onClose={() => setShowSettings(false)} />}
     </div>
   );
 }

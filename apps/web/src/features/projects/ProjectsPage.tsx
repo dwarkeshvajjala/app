@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useOutletContext, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import { useDocumentTitle } from "../../lib/use-document-title";
 import { useAuth } from "../auth/AuthContext";
 import { qk } from "../../lib/query-keys";
@@ -16,6 +16,8 @@ import type { WorkspaceOut } from "../workspaces/api";
 import * as api from "./api";
 import { ProjectForm } from "./ProjectForm";
 import { ProjectMenu } from "./ProjectMenu";
+import { ProjectPagesModal } from "./ProjectPagesModal";
+import { PlusIcon, SearchIcon } from "../../components/icons";
 
 const TYPE_LABELS: Record<string, string> = { website: "Website", image: "Images", pdf: "PDF" };
 
@@ -73,14 +75,97 @@ const VIEW_ICONS: Record<string, React.ReactNode> = {
   table: <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1" /><path d="M3 10h18M3 15h18M10 4v16" /></svg>,
 };
 
+const PREVIEW_PALETTES = [
+  { accent: "#69DEB2", accentSoft: "#CFF4E5", ink: "#17342A", paper: "#F5FAF7" },
+  { accent: "#E8B833", accentSoft: "#F7E8B8", ink: "#302A18", paper: "#FCFAF2" },
+  { accent: "#7C6BE8", accentSoft: "#DED9FF", ink: "#25233A", paper: "#F8F7FF" },
+  { accent: "#5B7FA6", accentSoft: "#DCE8F1", ink: "#162B3D", paper: "#F5F9FC" },
+] as const;
+
+function paletteFor(seed: string) {
+  let hash = 0;
+  for (let index = 0; index < seed.length; index += 1) hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
+  return PREVIEW_PALETTES[hash % PREVIEW_PALETTES.length]!;
+}
+
+function ProjectArtwork({ project, open }: { project: api.ProjectOut; open: number }) {
+  const palette = paletteFor(project.id || project.name);
+  const type = project.project_type ?? "website";
+  const pins = Math.min(open, 3);
+
+  return (
+    <div className={`bl-project-art bl-project-art-${type}`} aria-hidden="true">
+      {type === "website" && (
+        <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice">
+          <rect width="320" height="180" fill={palette.paper} />
+          <rect width="320" height="22" fill="#fff" />
+          <rect x="15" y="8" width="42" height="6" rx="2" fill={palette.ink} />
+          <rect x="218" y="9" width="20" height="4" rx="2" fill="#CDD2CC" />
+          <rect x="246" y="9" width="20" height="4" rx="2" fill="#CDD2CC" />
+          <rect x="275" y="5" width="30" height="12" rx="2" fill={palette.accent} />
+          <rect x="24" y="43" width="144" height="12" rx="3" fill={palette.ink} />
+          <rect x="24" y="62" width="112" height="12" rx="3" fill={palette.ink} opacity=".82" />
+          <rect x="24" y="86" width="130" height="5" rx="2" fill="#C5CBC4" />
+          <rect x="24" y="98" width="96" height="5" rx="2" fill="#C5CBC4" />
+          <rect x="24" y="119" width="58" height="17" rx="2" fill={palette.accent} />
+          <rect x="190" y="38" width="106" height="102" rx="4" fill={palette.accentSoft} />
+          <circle cx="243" cy="74" r="19" fill={palette.accent} opacity=".8" />
+          <rect x="207" y="105" width="72" height="5" rx="2" fill={palette.ink} opacity=".3" />
+          <rect x="216" y="117" width="54" height="5" rx="2" fill={palette.ink} opacity=".2" />
+          <rect x="24" y="155" width="272" height="1" fill="#D9DDD8" />
+        </svg>
+      )}
+      {type === "image" && (
+        <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice">
+          <rect width="320" height="180" fill={palette.paper} />
+          <rect x="18" y="18" width="136" height="70" rx="3" fill={palette.accent} />
+          <path d="M18 72 53 44l31 23 24-18 46 34v5H18Z" fill={palette.ink} opacity=".22" />
+          <circle cx="125" cy="38" r="9" fill="#fff" opacity=".65" />
+          <rect x="166" y="18" width="136" height="70" rx="3" fill={palette.ink} />
+          <rect x="184" y="37" width="75" height="7" rx="3" fill="#fff" opacity=".38" />
+          <rect x="184" y="52" width="51" height="7" rx="3" fill="#fff" opacity=".24" />
+          <rect x="184" y="68" width="42" height="11" rx="2" fill={palette.accent} />
+          <rect x="18" y="100" width="86" height="62" rx="3" fill={palette.accentSoft} />
+          <rect x="116" y="100" width="86" height="62" rx="3" fill="#E1E5E8" />
+          <rect x="214" y="100" width="88" height="62" rx="3" fill="#fff" />
+          <circle cx="159" cy="131" r="16" fill={palette.ink} opacity=".2" />
+        </svg>
+      )}
+      {type === "pdf" && (
+        <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice">
+          <rect width="320" height="180" fill="#E9EDEA" />
+          <rect x="40" y="12" width="108" height="156" rx="2" fill="#fff" stroke="#D7DDD8" />
+          <rect x="54" y="29" width="58" height="8" rx="2" fill={palette.ink} />
+          <rect x="54" y="47" width="79" height="4" rx="2" fill="#C9CECA" />
+          <rect x="54" y="57" width="65" height="4" rx="2" fill="#C9CECA" />
+          <rect x="54" y="75" width="80" height="40" rx="2" fill={palette.accentSoft} />
+          <rect x="54" y="127" width="70" height="4" rx="2" fill="#C9CECA" />
+          <rect x="172" y="12" width="108" height="156" rx="2" fill="#fff" stroke="#D7DDD8" />
+          <rect x="186" y="29" width="66" height="7" rx="2" fill={palette.ink} />
+          <rect x="186" y="51" width="80" height="65" rx="2" fill={palette.paper} />
+          <rect x="197" y="86" width="12" height="21" fill={palette.accent} opacity=".55" />
+          <rect x="216" y="72" width="12" height="35" fill={palette.accent} opacity=".75" />
+          <rect x="235" y="59" width="12" height="48" fill={palette.accent} />
+          <rect x="186" y="130" width="67" height="4" rx="2" fill="#C9CECA" />
+        </svg>
+      )}
+      {Array.from({ length: pins }).map((_, index) => (
+        <span key={index} className={`bl-preview-pin pin-${index + 1}`}>{index + 1}</span>
+      ))}
+    </div>
+  );
+}
+
 export function ProjectsPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
   useDocumentTitle(`${workspace.name} — Projects`);
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const [create, setCreate] = useState(false);
+  const [createType, setCreateType] = useState<"website" | "image" | "pdf" | null>(null);
   const [share, setShare] = useState<api.ProjectOut | null>(null);
   const [edit, setEdit] = useState<api.ProjectOut | null>(null);
+  const [managePages, setManagePages] = useState<api.ProjectOut | null>(null);
   const [showNewTicket, setShowNewTicket] = useState(false);
   const archived = params.get("archived") === "true", search = params.get("search") ?? "", type = params.get("type") ?? "all", view = params.get("display") ?? "cards", sort = params.get("sort") ?? "activity";
   // Live clock (ticks every minute) so the greeting's time-of-day and the head's
@@ -114,22 +199,28 @@ export function ProjectsPage() {
     const s = stats.get(p.id);
     const total = s?.total ?? 0, open = s?.open ?? 0, resolved = s?.resolved ?? 0;
     const isWebsite = (p.project_type ?? "website") === "website";
-    // The live preview is the richest, most bandwidth-hungry part of a card, so it's
-    // limited to the cards view, real website projects, an actual http(s) URL, and
-    // never an already-archived project (already dimmed/grayscaled below anyway).
-    const showHero = isWebsite && view === "cards" && !p.archived_at && /^https?:\/\//.test(p.target_origin);
-    const preview = <>
-      <div className="bl-browser"><span>● ● ●</span><span>{isWebsite ? p.target_origin.replace(/^https?:\/\//, "") : p.project_type === "pdf" ? "PDF document" : "Image set"}</span></div>
-      {showHero && <div className="bl-project-frame"><iframe src={p.target_origin} title={`${p.name} preview`} loading="lazy" tabIndex={-1} aria-hidden="true" scrolling="no" sandbox="allow-scripts allow-same-origin" /></div>}
-      <div className="bl-project-letter" aria-hidden="true">{p.name.slice(0, 1).toUpperCase()}</div>
-      <span className="bl-preview-type">{p.project_type ?? "website"}</span>
-      {!p.archived_at && view === "cards" && <span className="bl-project-hero-cta" aria-hidden="true">Open project ↗</span>}
-    </>;
+    const destination = `/w/${workspace.slug}/p/${p.id}`;
+    const displayUrl = isWebsite ? p.target_origin.replace(/^https?:\/\//, "") : p.project_type === "pdf" ? "PDF document" : "Image set";
     return <article key={p.id} className={`bl-project ${p.archived_at ? "archived" : ""}`}>
-      {p.archived_at ? <div className="bl-project-preview">{preview}</div> : <Link className="bl-project-preview" to={`/w/${workspace.slug}/p/${p.id}`} aria-label={`Open ${p.name}`}>{preview}</Link>}
+      <div className="bl-project-preview">
+        <ProjectArtwork project={p} open={open} />
+        <div className="bl-browser"><span aria-hidden="true"><i /><i /><i /></span><span>{displayUrl}</span></div>
+        <span className="bl-preview-type">{p.project_type ?? "website"}</span>
+        {!p.archived_at && <Link className="bl-project-preview-link" to={destination} aria-label={`Open ${p.name}`} />}
+        {!p.archived_at && view === "cards" && (
+          <div className="bl-project-overlay">
+            <div className="bl-project-overlay-actions">
+              <button type="button" aria-label={`Share ${p.name}`} onClick={() => setShare(p)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="3.5"/><path d="M19 8v6M22 11h-6"/></svg></button>
+              <button type="button" aria-label={`Open ${p.name} settings`} onClick={() => setEdit(p)}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></svg></button>
+            </div>
+            <Link className="bl-project-overlay-open" to={destination}>Open project <span>↗</span></Link>
+            <span className="bl-project-overlay-url">{displayUrl}</span>
+          </div>
+        )}
+      </div>
       <div className="bl-project-body">
-        <div className="bl-project-title">{p.archived_at ? <h2>{p.name}</h2> : <Link to={`/w/${workspace.slug}/p/${p.id}`}><h2>{p.name}</h2></Link>}<span className={`bl-chip ${p.archived_at ? "" : (p.environment ?? "live")}`}>{!p.archived_at && (p.environment ?? "live") === "live" && <i className="bl-live-dot" aria-hidden="true" />}{p.archived_at ? "Archived" : p.environment ?? "live"}</span></div>
-        <p>{clients.data?.find((c) => c.id === p.client_id)?.name ?? "Internal project"}</p>
+        <div className="bl-project-title">{p.archived_at ? <h2>{p.name}</h2> : <Link to={destination}><h2>{p.name}</h2></Link>}<span className={`bl-chip ${p.archived_at ? "" : (p.environment ?? "live")}`}>{!p.archived_at && (p.environment ?? "live") === "live" && <i className="bl-live-dot" aria-hidden="true" />}{p.archived_at ? "Archived" : p.environment ?? "live"}</span></div>
+        <p className="bl-project-url">{displayUrl}</p>
         {total > 0 && (
           <div className="bl-project-bar" role="img" aria-label={`${resolved} of ${total} comments resolved`}>
             {BAR_STATUSES.map((k) => open > 0 && <i key={k} style={{ flex: Math.max(open * PLACEHOLDER_OPEN_SPLIT[k], 0.0001), background: STATUS_COLORS[k] }} />)}
@@ -139,8 +230,8 @@ export function ProjectsPage() {
         <div className="bl-project-stats"><Link to={`/w/${workspace.slug}/tickets?project_id=${p.id}`}><strong>{open}</strong> open</Link><span><strong>{resolved}</strong> resolved</span><small>{timeAgo(s?.last_activity_at ?? p.updated_at)}</small></div>
       </div>
       <footer className="bl-project-actions">
-        {!p.archived_at && <Link to={`/w/${workspace.slug}/p/${p.id}`}>Open project ↗</Link>}
-        <ProjectMenu project={p} workspaceSlug={workspace.slug} onShare={() => setShare(p)} onSettings={() => setEdit(p)} />
+        <span className="bl-project-client">{clients.data?.find((c) => c.id === p.client_id)?.name ?? "Internal project"}</span>
+        <ProjectMenu project={p} workspaceSlug={workspace.slug} onShare={() => setShare(p)} onSettings={() => setEdit(p)} onManagePages={isWebsite ? () => setManagePages(p) : undefined} />
       </footer>
     </article>;
   }
@@ -151,7 +242,6 @@ export function ProjectsPage() {
         <div><h1>{headline}</h1><p>{archived ? "Finished for now. Restore a project to review it again." : search ? `${visible.length} result${visible.length === 1 ? "" : "s"} for "${search}".` : type !== "all" ? `Every ${(TYPE_LABELS[type] ?? "project").toLowerCase()} review, all in one place.` : <>{needsReply > 0 ? <><b>{needsReply} comment{needsReply === 1 ? "" : "s"}</b> {needsReply === 1 ? "is" : "are"} waiting on a reply from you</> : <><b>Nothing</b> is waiting on a reply from you</>}{fullyResolved.length > 0 ? `, and ${fullyResolved.join(" and ")} ${fullyResolved.length === 1 ? "has" : "have"} been fully resolved.` : "."}</>}</p></div>
         <div className="bl-head-actions">
           <time className="bl-mono bl-head-clock">{now.toLocaleDateString(undefined, { weekday: "short", day: "2-digit", month: "short" }).toUpperCase()}<br />{now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}</time>
-          <button className="bl-button" onClick={() => setCreate(true)}>＋ New project</button>
         </div>
       </header>
 
@@ -170,11 +260,13 @@ export function ProjectsPage() {
           ) : (
             <div className="bl-attention-empty">
               <p>Tickets and comments waiting on your reply will show up here.</p>
-              <button type="button" className="bl-quiet" onClick={() => setShowNewTicket(true)}>＋ New ticket</button>
+              <button type="button" className="bl-quiet" onClick={() => setShowNewTicket(true)}><PlusIcon /> New ticket</button>
             </div>
           )}
         </section>
       )}
+
+      {!archived && <div className="bl-hatch" aria-hidden="true" />}
 
       <div className="bl-tabs" aria-label="Project types">{[['all', 'All projects'], ['website', 'Website'], ['image', 'Images'], ['pdf', 'PDF']].map(([key, label]) => <button key={key} aria-pressed={type === key} onClick={() => filter("type", key)}>{label}<span className="bl-count">{(projects.data ?? []).filter((p) => Boolean(p.archived_at) === archived && (key === "all" || (p.project_type ?? "website") === key)).length}</span></button>)}<Link to={`/w/${workspace.slug}/apps`}>Web App <small>Soon</small></Link><Link to={`/w/${workspace.slug}/mobile`}>Mobile <small>Soon</small></Link></div>
 
@@ -183,7 +275,7 @@ export function ProjectsPage() {
           different, more powerful "find anything in this workspace" one. */}
       <div className="bl-toolbar wrap">
         <span className="bl-mono">{visible.length} PROJECTS</span>
-        <label className="bl-search"><span aria-hidden="true">⌕</span><input aria-label="Filter projects" placeholder="Filter by name or URL…" value={search} onChange={(e) => filter("search", e.target.value)} /></label>
+        <label className="bl-search"><span className="bl-search-icon" aria-hidden="true"><SearchIcon /></span><input aria-label="Filter projects" placeholder="Filter by name or URL…" value={search} onChange={(e) => filter("search", e.target.value)} /></label>
         <select aria-label="Filter by client" className="bl-select" value={params.get("client") ?? ""} onChange={(e) => filter("client", e.target.value)}><option value="">All clients</option>{clients.data?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
         <div className="bl-tool-right">
           <Picker label="Sort by" icon={SORT_ICON} value={sort} onChange={(v) => filter("sort", v)} options={[
@@ -218,13 +310,14 @@ export function ProjectsPage() {
             flattens every animation/transition duration to ~0 globally, see backline.css). */}
         <div className={`bl-projects ${view}`} key={`${type}-${archived}-${sort}-${search}-${params.get("client") ?? ""}`}>
           {visible.map(projectCard)}
-          {!archived && !search && type === "all" && <button className="bl-new-card" onClick={() => setCreate(true)}><span>＋</span><strong>New project</strong><small>Bring your next review here</small></button>}
+          {!archived && !search && <button className="bl-new-card" onClick={() => setCreateType(type === "image" || type === "pdf" ? type : "website")}><span className="bl-new-card-plus"><PlusIcon /></span><strong>{type === "image" ? "Upload images to review" : type === "pdf" ? "Upload a PDF to review" : "Add a website to review"}</strong><small>{type === "image" ? "Pin feedback directly to campaign and product artwork." : type === "pdf" ? "Collect precise comments across every page of a document." : "Paste a URL and send your client a review link."}</small></button>}
         </div>
         {!projects.error && visible.length === 0 && <div className="bl-empty"><h2>{archived ? "No archived projects" : "No projects here yet"}</h2><p>{search || type !== "all" ? "Try a different search or project type." : "Create a project to get a shareable review link."}</p></div>}
       </>}
     </main>
-    {create && <ProjectForm workspace={workspace} onClose={() => setCreate(false)} />}{edit && <ProjectForm workspace={workspace} project={edit} onClose={() => setEdit(null)} />}
+    {createType && <ProjectForm workspace={workspace} initialType={createType} onClose={() => setCreateType(null)} />}{edit && <ProjectForm workspace={workspace} project={edit} onClose={() => setEdit(null)} />}
     {share && <ShareProjectModal project={share} workspaceId={workspace.id} workspaceSlug={workspace.slug} workspaceName={workspace.name} onClose={() => setShare(null)} />}
+    {managePages && <ProjectPagesModal project={managePages} activePageId={null} onOpenPage={(pageId) => navigate(`/w/${workspace.slug}/p/${managePages.id}${pageId ? `?page=${encodeURIComponent(pageId)}` : ""}`)} onClose={() => setManagePages(null)} />}
     {showNewTicket && <NewTicket workspace={workspace} members={members.data ?? []} onClose={() => setShowNewTicket(false)} />}
   </>;
 }

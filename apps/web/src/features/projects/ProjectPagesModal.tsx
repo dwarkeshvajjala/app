@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { Dialog } from "../../components/Dialog";
 import { useToast } from "../../components/Toast";
+import { qk } from "../../lib/query-keys";
 import type { ProjectOut } from "./api";
 import * as api from "./api";
 
@@ -13,6 +14,10 @@ interface ProjectPagesModalProps {
   onOpenPage: (pageId: string) => void;
 }
 
+function PageIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7Z" /><path d="M14 2v5h5" /></svg>;
+}
+
 export function ProjectPagesModal({ project, activePageId, onClose, onOpenPage }: ProjectPagesModalProps) {
   const cache = useQueryClient();
   const { toast } = useToast();
@@ -21,49 +26,28 @@ export function ProjectPagesModal({ project, activePageId, onClose, onOpenPage }
   const [newTitle, setNewTitle] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const [removeTarget, setRemoveTarget] = useState<api.PageOut | null>(null);
-  const queryKey = ["project", project.id, "pages"];
+  const queryKey = qk.projectPages(project.id);
 
-  const pagesQuery = useQuery({
-    queryKey,
-    queryFn: ({ signal }) => api.listPages(project.id, signal),
-  });
+  const pagesQuery = useQuery({ queryKey, queryFn: ({ signal }) => api.listPages(project.id, signal) });
   const createPage = useMutation({
     mutationFn: () => api.createPage(project.id, { url: newUrl.trim(), title: newTitle.trim() || null }),
-    onSuccess: async (page) => {
-      setNewTitle("");
-      setNewUrl("");
-      await cache.invalidateQueries({ queryKey });
-      toast("Page added.");
-      onOpenPage(page.id);
-    },
+    onSuccess: async (page) => { setNewTitle(""); setNewUrl(""); await cache.invalidateQueries({ queryKey }); toast("Page added."); onOpenPage(page.id); },
   });
   const updatePage = useMutation({
     mutationFn: ({ id, title }: { id: string; title: string }) => api.updatePage(id, { title: title.trim() || null }),
-    onSuccess: async () => {
-      setEditingId(null);
-      await cache.invalidateQueries({ queryKey });
-      toast("Page renamed.");
-    },
+    onSuccess: async () => { setEditingId(null); await cache.invalidateQueries({ queryKey }); toast("Page renamed."); },
   });
   const reorderPages = useMutation({
     mutationFn: (pageIds: string[]) => api.reorderPages(project.id, pageIds),
-    onSuccess: (pages) => {
-      cache.setQueryData(queryKey, pages);
-      toast("Page order updated.");
-    },
+    onSuccess: (pages) => { cache.setQueryData(queryKey, pages); toast("Page order updated."); },
   });
   const removePage = useMutation({
     mutationFn: (pageId: string) => api.removePage(pageId),
-    onSuccess: async (_, pageId) => {
-      setRemoveTarget(null);
-      await cache.invalidateQueries({ queryKey });
-      if (activePageId === pageId) onOpenPage("");
-      toast("Empty page removed.");
-    },
+    onSuccess: async (_, pageId) => { setRemoveTarget(null); await cache.invalidateQueries({ queryKey }); if (activePageId === pageId) onOpenPage(""); toast("Empty page removed."); },
   });
 
   const pages = pagesQuery.data ?? [];
-  const operationError = pagesQuery.error ?? createPage.error ?? updatePage.error ?? reorderPages.error ?? removePage.error;
+  const mutationError = createPage.error ?? updatePage.error ?? reorderPages.error;
 
   function movePage(index: number, direction: -1 | 1) {
     const destination = index + direction;
@@ -76,60 +60,60 @@ export function ProjectPagesModal({ project, activePageId, onClose, onOpenPage }
   return (
     <>
       <Dialog title="Manage pages" onClose={onClose}>
-        <div className="w-[680px] max-w-full p-4">
-          <p className="text-text-muted mb-4 text-sm">
-            Add website pages, choose the active preview, and manage their dashboard order.
-            Widget registration remains automatic for reviewer visits.
-          </p>
-          <form className="bl-form bl-flush mb-5" onSubmit={(event) => { event.preventDefault(); createPage.mutate(); }}>
-            <div className="bl-fields">
-              <label>Page title<input className="bl-input" value={newTitle} maxLength={500} onChange={(event) => setNewTitle(event.target.value)} placeholder="Pricing" /></label>
-              <label>Page URL<input className="bl-input" type="url" required value={newUrl} maxLength={2000} onChange={(event) => setNewUrl(event.target.value)} placeholder={`${project.target_origin}/pricing`} /></label>
-            </div>
-            <button className="bl-button" disabled={createPage.isPending || !newUrl.trim()}>{createPage.isPending ? "Adding…" : "Add page"}</button>
+        <div className="bl-dialog-intro"><p>{project.name}</p></div>
+        <div className="bl-pages-body">
+          <p className="bl-pages-lead">Pin website pages to this project, rename them for your team, and set their review order. Reviewer visits can still register linked pages automatically.</p>
+          <form className="bl-add-page" onSubmit={(event) => { event.preventDefault(); createPage.mutate(); }}>
+            <label><span>Page URL <em>Required</em></span><input className="bl-input" type="url" required value={newUrl} maxLength={2000} onChange={(event) => setNewUrl(event.target.value)} placeholder={`${project.target_origin.replace(/\/$/, "")}/pricing`} /></label>
+            <label><span>Display name <em>Optional</em></span><input className="bl-input" value={newTitle} maxLength={500} onChange={(event) => setNewTitle(event.target.value)} placeholder="Pricing" /></label>
+            <button className="bl-button mint" disabled={createPage.isPending || !newUrl.trim()}>{createPage.isPending ? "Adding…" : "Add page"}</button>
           </form>
-          {operationError && <p role="alert" className="bl-error mb-4">{operationError instanceof Error ? operationError.message : "The page change failed."}</p>}
-          {pagesQuery.isLoading ? <p role="status">Loading pages…</p> : pages.length === 0 ? (
-            <div className="bl-empty"><h2>No pages registered</h2><p>Add the first URL above. It will become a shareable preview selection.</p></div>
+
+          {mutationError && <p role="alert" className="bl-error">{mutationError.message}</p>}
+          {pagesQuery.isLoading ? (
+            <div className="bl-page-list" aria-label="Loading pages"><div className="bl-page-skeleton" /><div className="bl-page-skeleton" /><div className="bl-page-skeleton" /></div>
+          ) : pagesQuery.isError ? (
+            <div className="bl-state-panel" role="alert"><PageIcon /><h3>Pages could not load</h3><p>{pagesQuery.error.message}</p><button type="button" className="bl-quiet" onClick={() => pagesQuery.refetch()}>Try again</button></div>
+          ) : pages.length === 0 ? (
+            <div className="bl-state-panel"><PageIcon /><h3>No pages registered</h3><p>Add the first URL above. It will become the active preview selection.</p></div>
           ) : (
-            <ol className="divide-y divide-black/10 dark:divide-white/10">
+            <ol className="bl-page-list">
               {pages.map((page, index) => (
-                <li key={page.id} className="flex items-center gap-3 py-3">
-                  <span className="bl-mono w-6 text-center" aria-hidden="true">{index + 1}</span>
+                <li key={page.id} className={activePageId === page.id ? "is-active" : ""}>
+                  <span className="bl-page-index">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="bl-page-file"><PageIcon /></span>
                   {editingId === page.id ? (
-                    <form className="flex flex-1 items-center gap-2" onSubmit={(event) => { event.preventDefault(); updatePage.mutate({ id: page.id, title: editTitle }); }}>
-                      <label className="sr-only" htmlFor={`page-title-${page.id}`}>Page title</label>
-                      <input id={`page-title-${page.id}`} className="bl-input flex-1" value={editTitle} maxLength={500} onChange={(event) => setEditTitle(event.target.value)} placeholder={page.url_normalized} autoFocus />
-                      <button className="bl-button" disabled={updatePage.isPending}>Save</button>
-                      <button type="button" className="bl-quiet" onClick={() => setEditingId(null)}>Cancel</button>
+                    <form className="bl-page-rename" onSubmit={(event) => { event.preventDefault(); updatePage.mutate({ id: page.id, title: editTitle }); }}>
+                      <label className="sr-only" htmlFor={`page-title-${page.id}`}>Page display name</label>
+                      <input id={`page-title-${page.id}`} className="bl-input" value={editTitle} maxLength={500} onChange={(event) => setEditTitle(event.target.value)} placeholder={page.url_normalized} autoFocus />
+                      <button className="bl-button" disabled={updatePage.isPending}>Save</button><button type="button" className="bl-quiet" onClick={() => setEditingId(null)}>Cancel</button>
                     </form>
-                  ) : (
-                    <>
-                      <button className="min-w-0 flex-1 text-left" aria-current={activePageId === page.id ? "page" : undefined} onClick={() => onOpenPage(page.id)}>
-                        <span className="block truncate text-sm font-medium">{page.title || page.url_normalized}{activePageId === page.id && <span className="bl-chip ml-2">Open</span>}</span>
-                        <span className="text-text-muted block truncate text-xs">{page.url_normalized} · {page.comment_count} comments</span>
-                      </button>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <button className="bl-icon" aria-label={`Move ${page.title || page.url_normalized} up`} disabled={index === 0 || reorderPages.isPending} onClick={() => movePage(index, -1)}>↑</button>
-                        <button className="bl-icon" aria-label={`Move ${page.title || page.url_normalized} down`} disabled={index === pages.length - 1 || reorderPages.isPending} onClick={() => movePage(index, 1)}>↓</button>
-                        <button className="bl-quiet" onClick={() => { setEditTitle(page.title || ""); setEditingId(page.id); }}>Rename</button>
-                        <button className="bl-quiet text-red-600" onClick={() => setRemoveTarget(page)}>Remove</button>
-                      </div>
-                    </>
-                  )}
+                  ) : <>
+                    <button type="button" className="bl-page-main" aria-current={activePageId === page.id ? "page" : undefined} onClick={() => onOpenPage(page.id)}><strong>{page.title || page.url_normalized}</strong><small>{page.url_normalized}</small></button>
+                    <span className="bl-page-comments">{page.comment_count ? `${page.comment_count} comment${page.comment_count === 1 ? "" : "s"}` : "Clear"}</span>
+                    <div className="bl-page-actions">
+                      <button type="button" className="bl-icon-button" aria-label={`Move ${page.title || page.url_normalized} up`} disabled={index === 0 || reorderPages.isPending} onClick={() => movePage(index, -1)}>↑</button>
+                      <button type="button" className="bl-icon-button" aria-label={`Move ${page.title || page.url_normalized} down`} disabled={index === pages.length - 1 || reorderPages.isPending} onClick={() => movePage(index, 1)}>↓</button>
+                      <button type="button" className="bl-quiet" onClick={() => { setEditTitle(page.title || ""); setEditingId(page.id); }}>Rename</button>
+                      <button type="button" className="bl-icon-button danger" aria-label={`Remove ${page.title || page.url_normalized}`} onClick={() => setRemoveTarget(page)}>×</button>
+                    </div>
+                  </>}
                 </li>
               ))}
             </ol>
           )}
+          <p className="bl-pages-hint">Order changes save immediately. Removal is allowed only when the page has no comments, revisions, diffs, or asset references.</p>
         </div>
+        <footer className="bl-dialog-actions bl-dialog-actions-bordered"><button type="button" className="bl-quiet" onClick={onClose}>Done</button></footer>
       </Dialog>
       {removeTarget && (
         <Dialog title="Remove empty page?" onClose={() => setRemoveTarget(null)}>
-          <div className="bl-form">
-            <p>Backline will remove <strong>{removeTarget.title || removeTarget.url_normalized}</strong> only if it has no comments, revisions, diffs, or asset references. Review history is never cascaded from this action.</p>
-            {removePage.error && <p role="alert" className="bl-error">{removePage.error.message}</p>}
-            <div className="bl-form-actions"><button type="button" className="bl-quiet" onClick={() => setRemoveTarget(null)}>Cancel</button><button type="button" className="bl-button" disabled={removePage.isPending} onClick={() => removePage.mutate(removeTarget.id)}>{removePage.isPending ? "Checking…" : "Remove page"}</button></div>
+          <div className="bl-confirm-body">
+            <span className="bl-confirm-icon warning"><PageIcon /></span>
+            <div><p>Remove <strong>{removeTarget.title || removeTarget.url_normalized}</strong> from this project?</p><small>Backline checks that it has no comments, revisions, diffs, or asset references. Review history is never cascaded by this action.</small></div>
           </div>
+          {removePage.error && <p role="alert" className="bl-error bl-confirm-error">{removePage.error.message}</p>}
+          <footer className="bl-dialog-actions bl-dialog-actions-bordered"><button type="button" className="bl-quiet" onClick={() => setRemoveTarget(null)}>Cancel</button><button type="button" className="bl-button danger" disabled={removePage.isPending} onClick={() => removePage.mutate(removeTarget.id)}>{removePage.isPending ? "Checking…" : "Remove page"}</button></footer>
         </Dialog>
       )}
     </>
