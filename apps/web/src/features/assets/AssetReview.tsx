@@ -5,7 +5,8 @@ import * as pdfjs from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { qk } from "../../lib/query-keys";
 import { useOnlineStatus } from "../../lib/use-online-status";
-import { STATUS_COLORS, STATUS_LABELS, TAGS } from "../../lib/workflow";
+import { LayerBadge, StatusBadge } from "@backline/ui";
+import { STATUS_COLORS, TAGS } from "../../lib/workflow";
 import * as api from "./api";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -37,13 +38,20 @@ export function AssetReview({
   const [tag, setTag] = useState<(typeof TAGS)[number]>("Design");
   const [layer, setLayer] = useState<"client" | "team">("client");
   const start = useRef<{ x: number; y: number } | null>(null);
+  // Neither of these has a WS event backing it (no asset.* upload event, and this
+  // screen - unlike BoardPage/ProjectOverviewPage - has no comment.* WS listener of its
+  // own), and guests reviewing via a share-link token have no WS connection at all
+  // (WSProvider only connects once an authenticated session has a workspace_id). Polling
+  // is the only way either side sees the other's new files/comments without a manual
+  // refresh, so it stays despite 14-State-Management.md's "no polling for comments"
+  // default for the member-only, WS-covered surfaces.
   const assets = useQuery({ queryKey: qk.assetsList(projectId, guest ?? 'member'), queryFn: () => api.listAssets(projectId, guest), refetchInterval: 30000 });
   const asset = assets.data?.find((a) => a.id === assetId) ?? assets.data?.[0];
   const commentKey = [...qk.assetComments(asset?.page_id), guest ?? 'member'];
   const comments = useQuery({ queryKey: commentKey, queryFn: () => api.listAssetComments(asset!.page_id, guest), enabled: Boolean(asset), refetchInterval: 10000 });
   const roots = (comments.data ?? []).filter((c) => !c.parent_id && (c.anchor as { region?: api.Region }).region?.page_number === page);
   const selectedComment = roots.find((c) => c.id === selected);
-  async function refresh() { await cache.invalidateQueries({ queryKey: qk.assetComments(asset?.page_id) }); if (!guest) { await cache.invalidateQueries({ queryKey: qk.projectComments(projectId) }); await cache.invalidateQueries({ queryKey: qk.workspaceAll() }); } }
+  async function refresh() { await cache.invalidateQueries({ queryKey: qk.assetComments(asset?.page_id) }); if (!guest) { await cache.invalidateQueries({ queryKey: qk.projectComments(projectId) }); } }
   const post = useMutation({ mutationFn: () => api.createAssetComment(projectId, asset!.id, { body: body.trim(), region: draft!, tags: [tag], layer }, guest), onSuccess: async (comment) => { setBody(""); setDraft(null); setSelected(comment.id); await refresh(); } });
   const replyMutation = useMutation({ mutationFn: () => api.replyToComment(selected, reply.trim(), selectedComment?.layer ?? 'client', guest), onSuccess: async () => { setReply(""); await refresh(); } });
   const reanchorMutation = useMutation({ mutationFn: ({ commentId, region }: { commentId: string, region: api.Region }) => api.reanchorComment(commentId, { region }), onSuccess: refresh });
@@ -303,7 +311,7 @@ export function AssetReview({
           <button className="bl-quiet" onClick={() => setSelected('')}>← All comments</button>
           
           <div className="bl-message" style={{ border: "none", padding: 0, marginTop: "16px" }}>
-            <small>{selectedComment.author_name} · {STATUS_LABELS[selectedComment.status]}</small>
+            <small className="inline-flex items-center gap-2">{selectedComment.author_name} <StatusBadge status={selectedComment.status} /></small>
             <p style={{ margin: "8px 0", fontSize: "14px", lineHeight: 1.5 }}>{selectedComment.body}</p>
             {workspaceSlug && !guest && (
               <Link className="bl-chip" style={{ marginTop: "8px" }} to={`/w/${workspaceSlug}/tickets?ticket=${selectedComment.id}`}>Edit status, assignees and due date →</Link>
@@ -312,7 +320,7 @@ export function AssetReview({
 
           {comments.data?.filter((c) => c.parent_id === selected).map((c) => (
             <article className="bl-message" key={c.id}>
-              <small>{c.author_name} · {c.layer === 'team' ? 'Team only' : 'Client visible'}</small>
+              <small className="inline-flex items-center gap-2">{c.author_name} <LayerBadge layer={c.layer} /></small>
               <p>{c.body}</p>
             </article>
           ))}
@@ -329,10 +337,10 @@ export function AssetReview({
         roots.length > 0 ? (
           roots.map((c, i) => (
             <button className="bl-review-comment" key={c.id} onClick={() => { setSelected(c.id); setDraft(null); }}>
-              <small>#{i+1} · {c.author_name} · {STATUS_LABELS[c.status]}</small>
+              <small className="inline-flex items-center gap-2">#{i+1} · {c.author_name} <StatusBadge status={c.status} /></small>
               <p>{c.body}</p>
               <div className="bl-chip-row" style={{ marginTop: "8px" }}>
-                <span className="bl-chip">{c.layer === 'team' ? 'Team only' : 'Client visible'}</span>
+                <LayerBadge layer={c.layer} />
               </div>
             </button>
           ))

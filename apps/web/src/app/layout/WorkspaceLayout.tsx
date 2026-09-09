@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useWSEvent } from "../WSProvider";
 
-import { qk } from "../../lib/query-keys";
+import { invalidateTicketsAndDashboard, qk } from "../../lib/query-keys";
 import { LoadingScreen } from "../../components/LoadingScreen";
 import { useWorkspaceContext } from "./useWorkspaceContext";
 import { DashboardSidebar } from "./DashboardSidebar";
@@ -44,17 +44,22 @@ export function WorkspaceLayout() {
   const cache = useQueryClient();
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
+  // Every top-level comment is a "ticket" candidate regardless of which page created it
+  // (dashboard/repository.py's root_pipeline has no is_standalone filter - an asset or
+  // project review comment shows up in the Tickets list and dashboard counts the same
+  // as an explicitly-created ticket). There is no dedicated ticket.* WS event, so this
+  // has to listen on the same comment.* channel BoardPage/ProjectOverviewPage use for
+  // their own local cache merges - this invalidation is for a different, workspace-wide
+  // surface (Tickets/Dashboard/Activity), not a duplicate of that per-page merge logic.
   const workspaceId = "workspace" in result ? result.workspace.id : undefined;
-  const refresh = useCallback(() => {
-    if (workspaceId) {
-      void cache.invalidateQueries({ queryKey: qk.tickets(workspaceId) });
-      void cache.invalidateQueries({ queryKey: qk.dashboard(workspaceId) });
-      void cache.invalidateQueries({ queryKey: qk.activity(workspaceId) });
-    }
+  const refreshTicketSurfaces = useCallback(() => {
+    if (!workspaceId) return;
+    void invalidateTicketsAndDashboard(cache, workspaceId);
+    void cache.invalidateQueries({ queryKey: qk.activity(workspaceId) });
   }, [cache, workspaceId]);
-  useWSEvent("comment.created", refresh);
-  useWSEvent("comment.updated", refresh);
-  useWSEvent("comment.deleted", refresh);
+  useWSEvent("comment.created", refreshTicketSurfaces);
+  useWSEvent("comment.updated", refreshTicketSurfaces);
+  useWSEvent("comment.deleted", refreshTicketSurfaces);
 
   const connStatus = useConnectionStore((s) => s.status);
 

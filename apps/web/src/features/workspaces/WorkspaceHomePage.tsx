@@ -23,7 +23,7 @@ export function WorkspaceHomePage() {
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<SortOrder>("updated");
 
-  const projectsQueryKey = ["workspace", workspace.id, "projects"];
+  const projectsQueryKey = qk.projects(workspace.id);
   const { data: projects, isLoading } = useQuery({
     queryKey: projectsQueryKey,
     queryFn: () => projectsApi.listProjects(workspace.id),
