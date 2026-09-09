@@ -8,7 +8,7 @@
 
 **Share Links** (`.../share-links`) - table of links (mode, expiry, passcode on/off, revoked state), create/revoke actions, copy-link button with a QR code for in-person client review sessions.
 
-**Board - Kanban** (`.../board`) - columns: To do / In progress / Resolved / Won't fix. Cards show: screenshot thumbnail, truncated body, layer badge, assignee avatar, device icon, recovery-status indicator if not `ok`. Filters (page, assignee, status, layer, device) live in the Zustand board-UI store (`14-State-Management.md` §14.6) and are reflected in the URL for shareability.
+**Board - Kanban** (`.../board`) - columns: To do / In progress / Resolved / Won't fix. Cards show: screenshot thumbnail, truncated body, layer badge, assignee avatar, device icon, recovery-status indicator if not `ok`. Filters (page, assignee, status, layer, device) live directly in URL search parameters for shareability and browser-history correctness; see TDR-0005.
 
 **Board - List** - same data, dense table view; sortable by created date, status, assignee. Bulk select -> bulk status change (drives the "50 comments in 10 minutes" metric).
 

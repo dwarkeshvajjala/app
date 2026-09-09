@@ -21,7 +21,7 @@ import { TicketsPage } from "../features/tickets/TicketsPage";
 import { ClientsPage } from "../features/clients/ClientsPage";
 import { ActivityPage } from "../features/activity/ActivityPage";
 import { WorkspacePickerPage } from "../features/workspaces/WorkspacePickerPage";
-import { ImagePdfIcon, MobileIcon, WebAppIcon } from "./layout/sidebar-icons";
+import { MobileIcon, WebAppIcon } from "./layout/sidebar-icons";
 import { ProjectLayout } from "./layout/ProjectLayout";
 import { WorkspaceLayout } from "./layout/WorkspaceLayout";
 import { NotFoundPage } from "../features/pages/NotFoundPage";
@@ -94,13 +94,7 @@ const router = createBrowserRouter([
           },
           {
             path: "image-pdf",
-            element: (
-              <ProjectTypePlaceholderPage
-                label="Image & PDF"
-                tagline="Add comments to your PDF & image files."
-                icon={ImagePdfIcon}
-              />
-            ),
+            element: <Navigate to="..?type=image" relative="path" replace />,
           },
           { path: "usage", element: <UsagePage /> },
           { path: "mcp", element: <McpServerPage /> },

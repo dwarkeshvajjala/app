@@ -1,8 +1,4 @@
-import { useState } from "react";
-
 import { SparkleIcon } from "./icons";
-import { ProFeatureModal } from "./ProFeatureModal";
-import { UpgradeToProModal } from "./UpgradeToProModal";
 
 const CHECKS = [
   "Reads every comment on this page",
@@ -10,12 +6,9 @@ const CHECKS = [
   "Summarises page progress at a glance",
 ];
 
-// Static shell only - subscription/billing functionality is coming later, so
-// "Analyse Page" always leads to the paywall rather than doing anything real.
+// Static placeholder only. There is no AI provider, job, quota, or result-persistence
+// contract yet, so this surface must not imply that payment would activate it.
 export function AiTab() {
-  const [showPaywall, setShowPaywall] = useState(false);
-  const [showPricing, setShowPricing] = useState(false);
-
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8 text-center">
       <span
@@ -35,7 +28,7 @@ export function AiTab() {
       <div>
         <h3 className="text-lg font-semibold">Welcome to BugHunt AI</h3>
         <span className="bl-scope-badge" style={{ marginTop: 6, display: "inline-flex" }}>
-          Pro feature
+          Coming soon
         </span>
       </div>
       <ul className="flex flex-col gap-3 self-stretch text-left">
@@ -63,21 +56,12 @@ export function AiTab() {
           </li>
         ))}
       </ul>
-      <button type="button" onClick={() => setShowPaywall(true)} className="bl-button mint" style={{ width: "100%" }}>
-        Analyse page
+      <p className="bl-inline-note">
+        Analysis is not available yet. No comments are sent to an AI provider and no usage is recorded.
+      </p>
+      <button type="button" disabled className="bl-button mint" style={{ width: "100%" }}>
+        Analysis coming soon
       </button>
-
-      {showPaywall && (
-        <ProFeatureModal
-          description="Get AI-powered comment summaries, priority overviews, and actionable insights. Upgrade to Pro to analyse your pages and projects with BugHunt AI."
-          onClose={() => setShowPaywall(false)}
-          onUpgrade={() => {
-            setShowPaywall(false);
-            setShowPricing(true);
-          }}
-        />
-      )}
-      {showPricing && <UpgradeToProModal onClose={() => setShowPricing(false)} />}
     </div>
   );
 }

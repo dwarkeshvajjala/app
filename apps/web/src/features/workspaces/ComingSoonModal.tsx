@@ -15,7 +15,7 @@ export function ComingSoonModal({ feature, onClose }: ComingSoonModalProps) {
     <Dialog title="Coming soon" onClose={onClose}>
       <div className="bl-form" style={{ alignItems: "center", textAlign: "center" }}>
         <span className="bl-scope-badge">Coming soon</span>
-        <p><strong>{feature} isn't available yet.</strong> Website review is the only project type live today - {feature} is on the roadmap and we'll let you know when it ships.</p>
+        <p><strong>{feature} isn't available yet.</strong> It is on the roadmap, with no announced launch date or notification signup.</p>
         <button type="button" onClick={onClose} className="bl-button mint" style={{ width: "100%" }}>
           Got it
         </button>

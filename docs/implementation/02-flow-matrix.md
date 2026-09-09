@@ -4,7 +4,7 @@ Source line references point to the checked-in unmodified HTML. Every row is a r
 
 | ID | Source | User flow | Backend/data dependencies | Acceptance |
 |---|---|---|---|---|
-| FD-01 | L2097–2246 | Navigate workspace, search, status links | membership, project/ticket summary | Correct workspace; URL filters; real counts |
+| FD-01 | L2097–2246 | Navigate workspace, search, status links | membership, project/ticket summary | Correct workspace; URL filters; real counts; responsive dashboard below 1024px |
 | FD-02 | L2782–3020 | Project cards/compact/list/table, sort/filter | project metadata and aggregate root counts | Same projects/counts in every view; empty/error states |
 | FD-03 | L2871 | Waiting on you | assignees/waiting-on/dates | Only open, relevant tickets; links open actual thread |
 | FD-04 | L5395–5483 | New website project, client, environment | project/client create; existing link creation | Valid URL; persistent client/env; real link after success |
@@ -25,8 +25,8 @@ Source line references point to the checked-in unmodified HTML. Every row is a r
 | FD-19 | L5947–5968 | Guest name gate | current guest sessions | No member privileges; archived/revoked/expired links fail |
 | FD-20 | L5969–end placement handlers | Point/region create, drag/resize, tags | region geometry anchored to page/version | Persist geometry; no overlapping accidental comments; cancel creates nothing |
 | FD-21 | L5355, L5916 | Attachments and mentions | upload scopes, member resolution, notifications | Attachment authorization; mention recipients belong to workspace |
-| FD-22 | L5484–5683 | AI summary/task/duplicates/tags/changelog/reply | provider, job states, quotas | Actual provider result/error; no prototype heuristics represented as AI |
-| FD-23 | L5684–5716 | Plans and checkout | billing provider/webhooks/entitlements | Server verified payment; no arbitrary retroactive lockout |
+| FD-22 | L5484–5683 | AI summary/task/duplicates/tags/changelog/reply | none (intentional divergence) | Explicit non-functional placeholders; no fake results, credits, zero-usage telemetry or paywall |
+| FD-23 | L5684–5716 | Plans and checkout | none (intentional divergence) | Explicit non-functional placeholders; no simulated prices, entitlements, limits or checkout |
 | FD-24 | L5717–5819 | Profile and notifications | users/preferences/email jobs | Persistent settings reflected in delivery behavior |
 | FD-25 | L1590, L6430–end | Login/signup/reset/Google/2FA/sessions | actual authentication/security | Existing OTP/OAuth preserved; fake accounts and QR removed |
 | FD-26 | L3034–3052 | Undo/redo | inverse validated mutations | Does not overwrite others' changes; no local-only illusion of persistence |

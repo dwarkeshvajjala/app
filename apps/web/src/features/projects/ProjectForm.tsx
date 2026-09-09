@@ -37,22 +37,36 @@ function TypeIcon({ type }: { type: (typeof PROJECT_TYPES)[number]["id"] }) {
   );
 }
 
-function SettingRow({ checked, description, label, savedOnly = false, onChange }: {
+function SettingRow({ checked, description, label, onChange }: {
   checked: boolean;
   description: string;
   label: string;
-  savedOnly?: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
     <label className="bl-setting-row">
       <span className="bl-setting-copy">
-        <strong>{label}{savedOnly && <span className="bl-saved-only">Saved only</span>}</strong>
+        <strong>{label}</strong>
         <span>{description}</span>
       </span>
       <input className="bl-switch-input" type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
       <span className="bl-switch" aria-hidden="true"><i /></span>
     </label>
+  );
+}
+
+function SettingStatusRow({ description, label, status }: {
+  description: string;
+  label: string;
+  status: string;
+}) {
+  return (
+    <div className="bl-setting-row bl-setting-row-static">
+      <span className="bl-setting-copy">
+        <strong>{label}<span className="bl-saved-only">{status}</span></strong>
+        <span>{description}</span>
+      </span>
+    </div>
   );
 }
 
@@ -80,10 +94,8 @@ export function ProjectForm({ workspace, project, initialType, onClose }: {
   const [environment, setEnvironment] = useState<"live" | "staging">(project?.environment ?? "live");
   const [environmentEdited, setEnvironmentEdited] = useState(Boolean(project));
   const [captureDeviceDetails, setCaptureDeviceDetails] = useState(project?.settings.capture_device_details ?? false);
-  const [reanchorOnDeploy, setReanchorOnDeploy] = useState(project?.settings.reanchor_on_deploy ?? false);
   const [reviewerCanResolve, setReviewerCanResolve] = useState(project?.settings.reviewer_can_resolve ?? false);
   const [showBoardToClient, setShowBoardToClient] = useState(project?.settings.show_board_to_client ?? false);
-  const [clientDigestEnabled, setClientDigestEnabled] = useState(project?.settings.client_digest_enabled ?? false);
   const [newClientName, setNewClientName] = useState("");
   const [newClientContact, setNewClientContact] = useState("");
   const [newClientEmail, setNewClientEmail] = useState("");
@@ -131,10 +143,8 @@ export function ProjectForm({ workspace, project, initialType, onClose }: {
       if (project) {
         await api.updateProjectSettings(project.id, {
           capture_device_details: captureDeviceDetails,
-          reanchor_on_deploy: reanchorOnDeploy,
           reviewer_can_resolve: reviewerCanResolve,
           show_board_to_client: showBoardToClient,
-          client_digest_enabled: clientDigestEnabled,
         });
         return api.updateProject(project.id, { name: name.trim(), ...(type === "website" ? { target_origin: url.trim(), environment } : {}), client_id: clientId || null });
       }
@@ -241,7 +251,7 @@ export function ProjectForm({ workspace, project, initialType, onClose }: {
           {fileError && <p role="alert" className="bl-error">{fileError}</p>}{uploaded.length > 0 && <p className="bl-mono">{uploaded.length} of {files.length} uploaded</p>}
         </div> : null}
 
-        {project && <fieldset className="bl-review-settings"><legend>Review settings</legend><SettingRow checked={captureDeviceDetails} onChange={setCaptureDeviceDetails} label="Capture browser and device details" description="Attaches OS, viewport and the element selector to every new comment." /><SettingRow checked={reanchorOnDeploy} onChange={setReanchorOnDeploy} label="Re-anchor comments after a deploy" description="This preference is stored, but automatic deploy detection and re-anchoring are not connected yet." savedOnly /><SettingRow checked={reviewerCanResolve} onChange={setReviewerCanResolve} label="Let reviewers resolve their own comments" description="Off means only your team can move a guest comment to Resolved." /><SettingRow checked={showBoardToClient} onChange={setShowBoardToClient} label="Show the ticket board to this client" description="Off hides due dates, assignees and the board from guest reviewers." /><SettingRow checked={clientDigestEnabled} onChange={setClientDigestEnabled} label="Email digest to the client" description="This preference is stored, but scheduled client digest delivery is not connected yet." savedOnly /></fieldset>}
+        {project && <fieldset className="bl-review-settings"><legend>Review settings</legend><SettingRow checked={captureDeviceDetails} onChange={setCaptureDeviceDetails} label="Capture browser and device details" description="Attaches OS, viewport and the element selector to every new comment." /><SettingStatusRow label="Automatic anchor recovery" description="Recovery runs for every new revision. The legacy per-project toggle is retained for compatibility but is not an active control." status="Always on" /><SettingRow checked={reviewerCanResolve} onChange={setReviewerCanResolve} label="Let reviewers resolve their own comments" description="Off means only your team can move a guest comment to Resolved." /><SettingRow checked={showBoardToClient} onChange={setShowBoardToClient} label="Show the ticket board to this client" description="Off hides due dates, assignees and the board from guest reviewers." /><SettingStatusRow label="Client email digest" description="Client digest delivery has no approved recipient, privacy, or scheduling contract and cannot be enabled." status="Not available" /></fieldset>}
 
         </fieldset>
         {phase === "saving" && <p role="status">{files.length ? `${uploaded.length} of ${files.length} files uploaded. Processing remaining files…` : "Saving project…"}</p>}

@@ -13,11 +13,15 @@ Both converge on the same `Backline.init(config)` entrypoint.
 
 ```js
 Backline.init({
-  projectToken: "...",
+  shareToken: "...",
   mode: "snippet" | "proxy",
-  shareToken: "..."       // present only in proxy/link mode
+  apiBaseUrl: "..."       // optional; defaults to the Backline API origin
 });
 ```
+The snippet's historical `data-project-token` attribute contains a share-link token; it
+does not introduce a second project-token authentication model. Snippet and proxy modes
+both resolve the same share link and create the same scoped guest session. See TDR-0002.
+
 On init, the SDK:
 1. Resolves or creates a **guest session** (`POST /api/v1/guest-sessions`) - first visit prompts for a display name only (F1 acceptance criterion); the session ID is stored in `sessionStorage`, not `localStorage`, since a share link's identity shouldn't silently persist across unrelated future visits from the same device beyond the session.
 2. Registers the current page (`POST /api/v1/pages` - idempotent on normalized URL) if it hasn't been seen before.

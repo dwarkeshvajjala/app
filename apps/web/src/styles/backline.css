@@ -885,6 +885,7 @@ button{letter-spacing:inherit}
 .bl-review-settings{border-top:1px solid var(--line-soft);margin-top:2px}
 .bl-review-settings>legend{padding-top:15px;margin-bottom:2px;font:9.5px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-4)}
 .bl-setting-row{position:relative;display:flex!important;flex-direction:row!important;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-soft);cursor:pointer}
+.bl-setting-row-static{cursor:default}
 .bl-setting-row:last-child{border-bottom:0}
 .bl-setting-copy{flex:1;min-width:0}
 .bl-setting-copy strong,.bl-setting-copy>span{display:block}

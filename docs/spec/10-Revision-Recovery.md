@@ -25,7 +25,10 @@ Compares the new Snapshot's `nodes_index` against the previous Revision's:
 - **Removed nodes**: present in old Snapshot, absent in new - any anchors here proceed to Recovery Engine's fallback strategies (text fingerprint search across the whole new tree) before being marked `orphaned`.
 - **Added nodes**: present in new only - irrelevant to existing comments, but recorded for completeness (useful context for "what changed" views in v-next).
 
-The diff output is a structured `revision_diff` document (`11-Database.md`), not just a boolean - this is what the Recovery Engine consumes and what a future "what changed since you last reviewed" UI would read.
+The diff output is a structured `revision_diff` document (`11-Database.md`), not just a
+boolean. It is retained for audit and a future "what changed since you last reviewed"
+view; it is not an input to per-comment anchor matching. TDR-0007 supersedes the older
+orchestration wording.
 
 ## 10.4 Recovery Pipeline Orchestration
 
@@ -33,17 +36,15 @@ For each comment anchored to the *previous* Revision of an affected Page:
 
 ```
 1. Look up the comment's anchor.
-2. Ask the diff: was this exact node_id unchanged, moved, modified, or removed?
-3. Unchanged/moved/modified with high similarity -> re-anchor to the corresponding new node_id,
-   confidence per 08-Anchor-Engine.md §8.4, write recovery_logs entry, update comment.recovery_status.
-4. Removed -> run Tier 1/2 fallback search across the *entire* new Snapshot
-   (not just the old node's former neighborhood) for a text-fingerprint match.
-5. No match found -> mark orphaned; do not delete or move the comment's stored anchor,
-   only its resolution status.
-6. Emit `comment.recovery_updated` event -> realtime layer notifies any open dashboard sessions.
+2. Call match_anchor() against the complete new snapshot, independently of the stored diff.
+3. Persist the new resolution, confidence/status, and recovery log.
+4. Emit `comment.recovery_updated` through the same visibility boundary as the comment.
 ```
 
-This runs as a background job (`run_recovery_pipeline`, Arq), scoped per-Page, so a large site's deploy doesn't block on recovering every comment across every page synchronously.
+The structural diff and anchor matcher run from the same revision pair but remain
+separate artifacts. This avoids duplicating match logic inside the diff classifier.
+Recovery runs as a background job (`run_recovery_pipeline`, Arq), scoped per Page, so a
+large site's deploy does not block on recovering every comment synchronously.
 
 ## 10.5 Permanently Orphaned Determination
 

@@ -595,3 +595,44 @@ AI provider authorization/configuration; billing provider/prices/webhook credent
 ## Verification commands
 
 `pnpm turbo run lint typecheck build`; backend `ruff check`, `mypy app/`, `pytest`, `scripts/check_workspace_scoping.py`; regenerate `packages/types` from locally exported FastAPI OpenAPI without requiring a production server. Integration tests require isolated MongoDB, Redis and S3-compatible storage. Record unavailable infrastructure honestly; never substitute test counts from the historical README.
+
+## 2026-09-09: Slice 12 verification pass (M-21, M-22, FD-AUD-043/044/054)
+
+- **M-21 (CI, OpenAPI drift, migrations, docs/TDR reconciliation)**:
+  - Regenerated `packages/types/openapi.json` with the locked backend environment and
+    `packages/types/src/openapi.ts` with `openapi-typescript`; a second run produced the
+    same SHA-256 hashes. Added CI drift gates for both artifacts.
+  - Re-ran `backend/scripts/check_workspace_scoping.py` from the same `backend/`
+    working directory used by CI: passed across 17 repository files. The checked-in
+    CI/test paths were already correct, so no path-only edit was fabricated.
+  - Reconciled the actual stale specifications: Review SDK share-link auth
+    (`07-Review-SDK.md`), URL-owned board/filter state (`14-State-Management.md` and
+    `16-Dashboard.md`), and structural diff vs anchor matching
+    (`10-Revision-Recovery.md`). The R2 UUID layout was already current in
+    `18-Storage-Deployment.md`.
+
+- **M-22 (Product decisions and low-risk parity polish)**:
+  - TDR-0020 records the real desktop decision: keep the signed-in dashboard responsive
+    below 1024px; do not conflate this with the unbuilt Web App/Mobile App project types.
+  - `ProjectForm` no longer lets users change the inert `reanchor_on_deploy` and
+    `client_digest_enabled` fields. It reports automatic recovery as always on and the
+    client digest as unavailable while retaining legacy API readability.
+  - Corrected generic coming-soon copy so it does not claim that image/PDF review is
+    unavailable or promise a notification signup that does not exist; the legacy
+    `/image-pdf` route now redirects to the real image/PDF-capable project list.
+
+- **FD-AUD-043 (AI actions)** and **FD-AUD-044 (Plans and checkout)**:
+  - Removed the simulated AI paywall/pricing route and fabricated zero-run/token metrics.
+  - Removed simulated prices, seat totals, plan benefits and upgrade action. The UI now
+    states that no provider, usage ledger, entitlements, checkout or charges exist.
+
+- **FD-AUD-054 (Documentation reconciliation)**:
+  - Updated the flow matrix, this delivery ledger, affected specs, TDR-0020 and the
+    Batch 12 report with evidence/status that distinguishes delivered behavior from
+    compatibility fields and placeholders.
+
+Verification on the final working tree: `pnpm turbo run lint typecheck build` passed
+(9/9 tasks; web build 591 modules; existing >500 kB chunk warning), backend `ruff check
+.` and `ruff format --check .` passed (189 files), strict `mypy app/ scripts/` passed
+(153 files), and workspace-scoping lint passed (17 repository files). No test suite,
+browser/E2E/axe run, database migration, or production deployment is claimed.

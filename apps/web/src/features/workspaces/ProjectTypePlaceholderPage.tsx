@@ -9,9 +9,8 @@ interface ProjectTypePlaceholderPageProps {
   icon: ComponentType<SVGProps<SVGSVGElement>>;
 }
 
-// Shared empty state for the three project types that don't exist yet (Web App,
-// Mobile, Image & PDF - only Website review is actually built). Real project types
-// would reuse WorkspaceHomePage's project grid instead of this once they exist.
+// Shared empty state for the project types that do not exist yet (Web App and Mobile).
+// Website, image, and PDF projects use the real ProjectsPage flow.
 export function ProjectTypePlaceholderPage({ label, tagline, icon: TypeIcon }: ProjectTypePlaceholderPageProps) {
   const [showComingSoon, setShowComingSoon] = useState(false);
 

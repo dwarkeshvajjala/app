@@ -16,6 +16,7 @@ Backline is an agency review workspace for live websites, image sets and PDF doc
 - Sharing: actual random tokens, passcode/expiry/revoke and regeneration; scoped guest entry; view/comment/edit permissions and verified domain restrictions need genuine server enforcement before they can be offered.
 - Account: real profile and notification preferences; existing Google OAuth/email OTP. Password/reset/2FA/session controls in the prototype are desired future security features, not proof of authentication implementation.
 - Assist and billing: summary, dev task, duplicates, tagging, changelog and reply assist; plan/credit displays. Production provider work requires actual product/provider configuration; never decrement a local counter and call it billed AI, or show a successful checkout without payment verification.
+- Dashboard viewport: retain the responsive signed-in dashboard and mobile navigation; do not add the Final Draft prototype's hard block below 1024px. Guest review remains responsive as well. See TDR-0020.
 
 ## Canonical workflow
 

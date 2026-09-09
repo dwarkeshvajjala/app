@@ -37,9 +37,13 @@ export const qk = {
 ## 14.6 What Belongs in Zustand
 
 - Active pin-drop UI state (which element is being commented on, composer open/closed) - this is SDK-local state, not server state, and doesn't outlive the interaction.
-- Board view state: current filter selections (status/assignee/layer/device), kanban vs. list toggle, selected page in a multi-page project. These are per-session UI preferences, not something the server needs to know about for MVP.
-- Modal/drawer open state.
 - WebSocket connection status (`connected`/`reconnecting`/`disconnected`) - this is a client fact about the client's own connection, not server data.
+- Cross-component presence state derived from the current WebSocket connection.
+
+Board/comment/ticket filters and selected thread/page identifiers live in URL search
+parameters so refresh, browser history, and shared links reproduce the same view. Local
+component state owns transient modal/drawer state. TDR-0005 supersedes the earlier
+board-Zustand wording; TDR-0006 records the accepted connection/presence stores.
 
 ## 14.7 What Does Not Belong in Zustand
 
@@ -49,11 +53,10 @@ export const qk = {
 ## 14.8 Store Shape Example
 
 ```ts
-type BoardUIStore = {
-  activeFilters: { status?: Status; assignee?: string; layer?: Layer };
-  viewMode: 'kanban' | 'list';
-  setFilter: (patch: Partial<BoardUIStore['activeFilters']>) => void;
-  setViewMode: (mode: BoardUIStore['viewMode']) => void;
+type ConnectionStore = {
+  status: 'connected' | 'reconnecting' | 'disconnected';
+  setStatus: (status: ConnectionStore['status']) => void;
 };
 ```
-One store per feature (`stores/board-ui.ts`, `stores/composer-ui.ts`), never a single monolithic app-wide store - this keeps re-renders scoped and keeps Rule 5 (Modular by Default) true on the frontend too.
+Keep stores narrowly scoped to genuinely cross-component ephemeral state; do not create a
+second source of truth for URL or React Query data.
