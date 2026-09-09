@@ -183,7 +183,7 @@ export function MembersPage() {
                 <th>Name</th>
                 <th>Role</th>
                 <th>Projects</th>
-                {canManage && <th></th>}
+                {canManage && <th aria-label="Actions"></th>}
               </tr>
             </thead>
             <tbody>

@@ -3,6 +3,7 @@ import { type FormEvent, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import { useDocumentTitle } from "../../lib/use-document-title";
+import { qk } from "../../lib/query-keys";
 import { LoadingScreen } from "../../components/LoadingScreen";
 import type { WorkspaceOut } from "../workspaces/api";
 import * as integrationsApi from "./api";
@@ -26,7 +27,7 @@ export function IntegrationsPage() {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
-  const queryKey = ["workspace", workspace.id, "integrations"];
+  const queryKey = qk.integrations(workspace.id);
   const { data: integrations, isLoading, error: integrationsError } = useQuery({
     queryKey,
     queryFn: () => integrationsApi.listIntegrations(workspace.id),

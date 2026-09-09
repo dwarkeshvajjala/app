@@ -90,7 +90,7 @@ export function ClientsPage() {
       visible.length > 0 ? (
         <div className="bl-table-wrap">
           <table className="bl-table">
-            <thead><tr><th>Client &amp; contact</th><th>Summary</th><th>Projects</th><th>Last activity</th><th>Added</th><th /></tr></thead>
+            <thead><tr><th>Client &amp; contact</th><th>Summary</th><th>Projects</th><th>Last activity</th><th>Added</th><th aria-label="Actions" /></tr></thead>
             <tbody>
               {visible.map((client) => {
                 const clientProjects = (projects.data ?? []).filter((p) => p.client_id === client.id && !p.archived_at);
@@ -158,7 +158,7 @@ export function ClientsPage() {
         <h2 className="bl-group-title">Archived</h2>
         <div className="bl-table-wrap">
           <table className="bl-table">
-            <thead><tr><th>Client &amp; contact</th><th>Archived</th><th /></tr></thead>
+            <thead><tr><th>Client &amp; contact</th><th>Archived</th><th aria-label="Actions" /></tr></thead>
             <tbody>
               {archivedVisible.map((client) => (
                 <tr key={client.id}>

@@ -1,5 +1,23 @@
 # Delivery and verification ledger
 
+## 2026-09-09: Current-state audit (verification only)
+
+- The full set of `audit-batch-00` through `audit-batch-12` reports is present, but
+  this does **not** close the master audit: its own ledger records 3 complete, 88
+  partial, 47 pending, and 9 backlog rows. Release-complete status is therefore not
+  supported.
+- Current static verification passed: `pnpm lint`, `pnpm typecheck`, `pnpm build`
+  (existing large web-chunk warning), backend Ruff, strict mypy, and workspace-scoping
+  lint. MongoDB and Redis accepted read-only connectivity pings; no shared data,
+  migrations, fixtures, or deletes were run.
+- Existing test suites were not run and no test suite was added, per this Codex task's
+  project guidance. The latest unstaged Playwright journey revisions now use the
+  supported routes, but their helper/selectors require an isolated execution pass before
+  they become evidence. See `docs/implementation/audit-current-state-2026-09-09.md` for
+  the exact review findings and recommended completion order.
+- The source recheck found and corrected the remaining M-20 ad-hoc integration query
+  key: `IntegrationsPage.tsx` now uses `qk.integrations()` consistently.
+
 ## 2026-09-08: Slice 09 verification pass — fixes, extended coverage, and checks run
 
 Verified the "Post-login UI consistency audit and polish (Slice 09)" entry below against

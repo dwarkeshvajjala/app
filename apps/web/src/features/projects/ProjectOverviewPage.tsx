@@ -378,7 +378,7 @@ export function ProjectOverviewPage() {
       </header>
 
       <div className="bl-review-pagebar">
-        <div className="bl-review-page-tabs" ref={pageTabsRef} role="tablist" aria-label="Project pages">
+        <div className="bl-review-page-tabs" ref={pageTabsRef} role={sortedPages.length > 0 ? "tablist" : undefined} aria-label={sortedPages.length > 0 ? "Project pages" : undefined}>
           {pagesQuery.isLoading && (
             <div className="bl-review-tabs-loading" role="status" aria-label="Loading project pages">
               <i /><i /><i />

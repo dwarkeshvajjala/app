@@ -119,7 +119,7 @@ export function ShareLinksPage() {
                   <th>Status</th>
                   <th>Expires</th>
                   <th>Created</th>
-                  <th />
+                  <th aria-label="Actions" />
                 </tr>
               </thead>
               <tbody>
