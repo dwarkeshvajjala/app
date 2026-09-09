@@ -10,6 +10,7 @@ export function connectReviewSocket(
   guestToken: string,
   pageId: string,
   onEvent: (type: string, payload: any) => void, // eslint-disable-line @typescript-eslint/no-explicit-any
+  onStatusChange?: (status: "connected" | "connecting" | "offline") => void,
 ): () => void {
   const wsBaseUrl = apiBaseUrl.replace(/^http/, "ws");
   let socket: WebSocket | null = null;
@@ -23,6 +24,7 @@ export function connectReviewSocket(
 
     socket.onopen = () => {
       attempt = 0;
+      onStatusChange?.("connected");
     };
 
     socket.onmessage = (event: MessageEvent<string>) => {
@@ -36,6 +38,8 @@ export function connectReviewSocket(
 
     socket.onclose = () => {
       if (closedByCaller) return;
+      onStatusChange?.(navigator.onLine ? "connecting" : "offline");
+
       const delay = Math.min(1000 * 2 ** attempt, 30_000);
       attempt += 1;
       reconnectTimer = setTimeout(open, delay);

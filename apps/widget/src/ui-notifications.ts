@@ -24,6 +24,20 @@ export function showToast(shadow: ShadowRoot, text: string): void {
   setTimeout(() => toast.remove(), 6000);
 }
 
+export function showOfflineIndicator(shadow: ShadowRoot): { dismiss: () => void; setStatus: (status: string) => void } {
+  const toast = document.createElement("div");
+  toast.className = "bl-toast bl-toast-offline";
+  toast.setAttribute("role", "status");
+  toast.setAttribute("aria-live", "polite");
+  toast.setAttribute("aria-atomic", "true");
+  toast.textContent = "Connection lost. Trying to reconnect...";
+  shadow.appendChild(toast);
+  return {
+    dismiss: () => toast.remove(),
+    setStatus: (status: string) => { toast.textContent = status; },
+  };
+}
+
 export function promptForName(shadow: ShadowRoot): Promise<string> {
   return new Promise((resolve) => {
     const form = document.createElement("form");

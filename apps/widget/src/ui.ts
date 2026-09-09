@@ -5,7 +5,7 @@
 // Kept as a single import surface (index.ts imports only from "./ui") so this split is
 // purely internal organization, not a change to the widget's module boundaries.
 export { createShadowRoot } from "./ui-styles";
-export { showTooltip, showToast, promptForName, renderPin } from "./ui-notifications";
+export { showTooltip, showToast, showOfflineIndicator, promptForName, renderPin } from "./ui-notifications";
 export type { AttachmentResult, AttachmentInfo } from "./ui-attachments";
 export type { ComposerResult } from "./ui-composer";
 export { openComposer } from "./ui-composer";

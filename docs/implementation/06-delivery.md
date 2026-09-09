@@ -1,5 +1,19 @@
 # Delivery and verification ledger
 
+## 2026-09-09: Follow-up external implementation review
+
+- Rejected an incorrect guest-widget drag/re-anchor implementation. It sent a guest
+  token to the intentionally member-only `/comments/{id}/reanchor` endpoint, so every
+  drop would receive 403 while leaving the pin visually moved. Guest re-anchoring stays
+  disabled; pins now expose button semantics and Enter/Space thread opening instead.
+- Retained and corrected the safe accessibility/resilience work: the date picker has a
+  valid roving tab stop without a selected date and restores trigger focus when closed;
+  the widget reconnect indicator is an ARIA live status and distinguishes a browser
+  being offline from an online socket/server interruption.
+- Source verification passed for both affected packages: web and widget lint,
+  typecheck, and production builds. No Playwright or pytest suite was run. These changes
+  do not close the outstanding master-audit items or establish release completeness.
+
 ## 2026-09-09: Current-state audit (verification only)
 
 - The full set of `audit-batch-00` through `audit-batch-12` reports is present, but

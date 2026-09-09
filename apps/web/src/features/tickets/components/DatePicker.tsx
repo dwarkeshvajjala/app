@@ -1,4 +1,6 @@
-import { useState, useMemo } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useFocusTrap } from "../../../lib/use-focus-trap";
+import { useOnClickOutside } from "../../../lib/use-click-outside";
 
 // Generate locale-aware weekday names
 const getWeekdays = () => {
@@ -13,7 +15,13 @@ const getWeekdays = () => {
 
 export function DatePicker({ value, onChange }: { value: string | null | undefined, onChange: (date: string | null) => void }) {
   const [open, setOpen] = useState(false);
-  
+  const rootRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useFocusTrap(popoverRef, open);
+  useOnClickOutside(rootRef, () => setOpen(false));
+
   // We keep 'month' as a local Date representing the displayed month/year (ignoring its day)
   const [month, setMonth] = useState(() => {
     if (value) {
@@ -30,19 +38,19 @@ export function DatePicker({ value, onChange }: { value: string | null | undefin
     // Generate UTC ISO string from the calendar's currently viewed year/month and the selected day
     const key = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2,'0')}T00:00:00Z`;
     onChange(key);
-    setOpen(false);
+    closeAndRestoreFocus();
   };
 
   const handleToday = () => {
     const now = new Date();
     const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2,'0')}T00:00:00Z`;
     onChange(key);
-    setOpen(false);
+    closeAndRestoreFocus();
   };
 
   const handleClear = () => {
     onChange(null);
-    setOpen(false);
+    closeAndRestoreFocus();
   };
 
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
@@ -64,9 +72,47 @@ export function DatePicker({ value, onChange }: { value: string | null | undefin
     return d.getUTCDate() === day && d.getUTCMonth() === month.getMonth() && d.getUTCFullYear() === month.getFullYear();
   };
 
+  const today = new Date();
+  const selectedDate = value ? new Date(value) : null;
+  const focusableDay = selectedDate &&
+    selectedDate.getUTCFullYear() === month.getFullYear() &&
+    selectedDate.getUTCMonth() === month.getMonth()
+    ? selectedDate.getUTCDate()
+    : today.getFullYear() === month.getFullYear() && today.getMonth() === month.getMonth()
+      ? today.getDate()
+      : 1;
+
+  function closeAndRestoreFocus() {
+    setOpen(false);
+    requestAnimationFrame(() => triggerRef.current?.focus());
+  }
+
+  // Keyboard navigation for calendar grid
+  const handleGridKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.role !== 'gridcell') return;
+
+    const day = parseInt(target.textContent || "0", 10);
+    if (!day) return;
+
+    let nextDay = day;
+    if (e.key === 'ArrowRight') nextDay += 1;
+    else if (e.key === 'ArrowLeft') nextDay -= 1;
+    else if (e.key === 'ArrowDown') nextDay += 7;
+    else if (e.key === 'ArrowUp') nextDay -= 7;
+    else return;
+
+    e.preventDefault();
+    if (nextDay >= 1 && nextDay <= days) {
+      const btn = popoverRef.current?.querySelector(`button[data-day="${nextDay}"]`) as HTMLButtonElement | null;
+      btn?.focus();
+    }
+  };
+
   return (
-    <div style={{ position: 'relative' }}>
+    <div ref={rootRef} style={{ position: 'relative' }}>
       <button
+        ref={triggerRef}
         type="button"
         className="bl-input"
         aria-label={value ? `Change date, currently ${displayValue}` : 'Select date'}
@@ -74,22 +120,29 @@ export function DatePicker({ value, onChange }: { value: string | null | undefin
         aria-expanded={open}
         style={{ textAlign: 'left', minHeight: '38px', backgroundColor: '#fff', cursor: 'pointer' }}
         onClick={() => setOpen(!open)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') closeAndRestoreFocus();
+        }}
       >
         {displayValue}
       </button>
       {open && (
         <div
+          ref={popoverRef}
           className="bl-popover"
           role="dialog"
           aria-label="Date picker"
           style={{ position: 'absolute', zIndex: 10, top: '100%', left: 0, marginTop: '4px', background: 'white', border: '1px solid #ccc', borderRadius: '4px', padding: '1rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') closeAndRestoreFocus();
+          }}
         >
           <div className="bl-toolbar" style={{ marginBottom: '8px' }}>
             <button type="button" aria-label="Previous month" className="bl-quiet" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}>←</button>
             <strong aria-live="polite" style={{ margin: '0 8px' }}>{monthLabel}</strong>
             <button type="button" aria-label="Next month" className="bl-quiet" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}>→</button>
           </div>
-          <div className="bl-calendar" role="grid" aria-label="Calendar grid" style={{ minHeight: 'auto', gap: '4px', marginBottom: '8px' }}>
+          <div className="bl-calendar" role="grid" aria-label="Calendar grid" style={{ minHeight: 'auto', gap: '4px', marginBottom: '8px' }} onKeyDown={handleGridKeyDown}>
             <div role="row">
               {weekdays.map((d, i) => <strong key={i} role="columnheader" aria-label={d} style={{ width: '28px', textAlign: 'center', display: 'inline-block' }}>{d}</strong>)}
             </div>
@@ -102,7 +155,9 @@ export function DatePicker({ value, onChange }: { value: string | null | undefin
                     <button
                       key={i}
                       type="button"
+                      data-day={valid ? day : undefined}
                       disabled={!valid}
+                      tabIndex={valid ? (day === focusableDay ? 0 : -1) : undefined}
                       aria-label={valid ? `${monthLabel.split(' ')[0]} ${day}, ${month.getFullYear()}` : undefined}
                       aria-selected={selected}
                       onClick={() => valid && handleDateSelect(day)}
@@ -124,7 +179,6 @@ export function DatePicker({ value, onChange }: { value: string | null | undefin
           </div>
         </div>
       )}
-      {open && <div style={{ position: 'fixed', inset: 0, zIndex: 9 }} onClick={() => setOpen(false)} />}
     </div>
   );
 }

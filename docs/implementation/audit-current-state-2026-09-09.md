@@ -8,6 +8,22 @@ quality gates pass, but the master audit is intentionally not closed: 3 of its
 The Batch 00–12 reports exist, but their existence is evidence of review work,
 not evidence that every requirement is delivered.
 
+## Follow-up implementation review
+
+A subsequent AI pass added date-picker keyboard behavior, widget reconnect feedback,
+and guest-widget pin dragging. Source review found that the drag implementation called
+the member-only `PATCH /comments/{id}/reanchor` endpoint with a guest token. The server
+would correctly reject every save, leaving the pin visually displaced until reload.
+That unauthorized affordance was removed. Guest pins are now proper keyboard-operable
+buttons for opening a thread; manual re-anchoring remains member-only as required by
+the permission matrix and delivery ledger.
+
+The safe parts were retained and tightened: the date picker now has a valid roving grid
+tab stop when no selected date is visible and restores focus when dismissed, while the
+widget exposes an accessible live reconnect status and reserves “offline” wording for
+`navigator.onLine === false`. No master-ledger item is newly marked complete from this
+source-only verification.
+
 ## Evidence gathered in this pass
 
 | Check | Result | Notes |
@@ -51,20 +67,17 @@ must be resolved or consciously accepted before a release-complete claim is vali
 
 ## Current unstaged changes: review findings
 
-The small accessibility/contrast edits are type-safe, but `git diff --check` fails
-because `apps/e2e/tests/accessibility.spec.ts` has trailing whitespace on line 23.
+The small accessibility/contrast edits are type-safe and the tracked source diff passes
+`git diff --check`. The E2E changes remain outside this reviewed source commit.
 
-The latest changes corrected the route and modal assumptions in the three newly
-unstaged Playwright journeys. They still need execution against an isolated stack
-before becoming release evidence. The shared project-creation helper remains a
-code-review concern: the wizard's `Continue` button is disabled until the test first
-selects a project type, and the ticket list journey looks for a table even though the
-current list view renders ticket rows in `.bl-table-wrap`.
+The latest changes corrected the route, modal, wizard-selection, and ticket-list
+selector assumptions in the three newly unstaged Playwright journeys. They still need
+execution against an isolated stack before becoming release evidence.
 
 | File | Current review finding |
 | --- | --- | --- |
-| `journey-5-tickets-board.spec.ts` | Uses the right workspace tickets route and calendar controls, but list-mode selector must target `.bl-table-wrap`, not require a table. |
-| Shared `createProject` helper | Must select `Website` before clicking `Continue`; the production wizard correctly requires an explicit type choice. |
+| `journey-5-tickets-board.spec.ts` | Route, heading, list container and calendar-control selectors now match the source. |
+| Shared `createProject` helper | Now explicitly selects `Website` before clicking `Continue`, matching the production wizard. |
 | `journey-6-integrations-billing.spec.ts` | Routes now match the router; only isolated execution remains outstanding. |
 | `journey-7-project-delete.spec.ts` | Route/menu/archive flow now matches the source; exact destructive-dialog control behavior still needs isolated execution. |
 

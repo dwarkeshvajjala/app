@@ -1,5 +1,5 @@
 import type { ThreadManager } from "./thread-manager";
-import { showToast } from "./ui";
+import { showToast, showOfflineIndicator } from "./ui";
 import { connectReviewSocket } from "./ws-client";
 
 // FE-05: hand-kept copy of @backline/ui's STATUS_LABELS (packages/ui/src/workflow.ts)
@@ -29,6 +29,7 @@ export function wireRealtimeUpdates(
   threadManager: ThreadManager,
   ownCommentIds: Set<string>,
 ): void {
+  let indicator: { dismiss: () => void, setStatus: (status: string) => void } | null = null;
   connectReviewSocket(
     apiBaseUrl ?? "http://localhost:8000",
     guestSessionToken,
@@ -47,6 +48,20 @@ export function wireRealtimeUpdates(
         const parentId: string | null | undefined = payload?.parent_id;
         const topId = parentId ?? commentId;
         threadManager.handleCommentDeleted(commentId, topId);
+      }
+    },
+    (status) => {
+      if (status === "connected") {
+        if (indicator) {
+          indicator.dismiss();
+          indicator = null;
+        }
+      } else if (status === "offline") {
+        if (!indicator) indicator = showOfflineIndicator(shadow);
+        indicator.setStatus("You are offline. Trying to reconnect...");
+      } else if (status === "connecting") {
+        if (!indicator) indicator = showOfflineIndicator(shadow);
+        indicator.setStatus("Connection lost. Trying to reconnect...");
       }
     },
   );

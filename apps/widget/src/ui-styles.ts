@@ -153,14 +153,16 @@ const HOST_STYLES = `
        the element it marks, the same reasoning as .bl-composer above. */
     position: absolute; width: 28px; height: 28px; border-radius: 50% 50% 50% 0;
     background: #4F46E5; transform: rotate(-45deg) translate(-50%, -50%);
-    z-index: 2147482999; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    z-index: 2147482999; box-shadow: 0 2px 6px rgba(0,0,0,0.3); cursor: pointer;
   }
+  .bl-pin:focus-visible { outline: 3px solid #14141A; outline-offset: 3px; }
   .bl-status { font-size: 12px; color: #6B6B76; margin-top: 8px; }
   .bl-toast {
     position: fixed; bottom: 24px; left: 24px; z-index: 2147483000;
     background: #14141A; color: #F2F2F5; padding: 10px 14px; border-radius: 8px;
     font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,0.25); max-width: 240px;
   }
+  .bl-toast-offline { background: #8A5B00; color: #FFFFFF; }
   /* button.bl-attach-button / button.bl-attachment-remove, not the bare classes: both
      ".bl-composer button" and ".bl-thread-reply button" above already match these
      elements (they're buttons inside those containers) at equal specificity (one class

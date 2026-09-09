@@ -167,6 +167,10 @@ export function createThreadManager({
   }
 
   function attachPinClickHandler(pin: HTMLElement, topId: string): void {
+    pin.tabIndex = 0;
+    pin.setAttribute("role", "button");
+    pin.setAttribute("aria-label", "Open comment thread");
+
     // Registered inside the shadow root, so document's own "create a new comment"
     // click handler below never sees this click directly - Shadow DOM retargets it to
     // the shadow host first (index.ts's existing `target.closest("[data-backline-root]")`
@@ -180,6 +184,12 @@ export function createThreadManager({
       const x = parseFloat(pin.style.left);
       const y = parseFloat(pin.style.top);
       openThreadForComment(topId, x, y);
+    });
+    pin.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        pin.click();
+      }
     });
   }
 
