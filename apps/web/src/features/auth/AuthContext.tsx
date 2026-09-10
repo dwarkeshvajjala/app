@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -25,6 +26,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [user, setUser] = useState<UserOut | null>(null);
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
@@ -96,6 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(null);
       setUser(null);
       setStatus("unauthenticated");
+      // Without this, a stale cache (other members' names, the previous workspace's
+      // data) can flash on next render or leak into whoever logs in next in this same
+      // tab - the access token is gone but every useQuery result stays in memory.
+      queryClient.clear();
     },
     updateUser(u) {
       setUser(u);

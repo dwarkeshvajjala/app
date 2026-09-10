@@ -299,6 +299,9 @@ export function ProjectOverviewPage() {
   const activePageRequest = proxyRequestFor(activePage);
   const iframeSearch = new URLSearchParams(activePageRequest?.search);
   iframeSearch.set("blMode", mode);
+  // Threads the footer's BrowserMenu selection into the widget so it's recorded on any
+  // comment created from this canvas - see the widget's blBrowser handling in index.ts.
+  iframeSearch.set("blBrowser", browser.name);
   const iframeSrc = canvasUrl && activePageRequest
     ? `${API_BASE_URL}/proxy/${embedLink!.token}/${activePageRequest.path}?${iframeSearch.toString()}`
     : null;

@@ -28,8 +28,17 @@ async function init(config: BacklineConfig): Promise<void> {
   // there's no other channel to reach into an already-loaded proxied page's widget
   // instance, since the widget script is baked into the proxy's HTML response
   // server-side, not passed live init() args from the parent frame.
-  const commentingEnabled =
-    new URLSearchParams(window.location.search).get("blMode") !== "browse";
+  const modeParams = new URLSearchParams(window.location.search);
+  const commentingEnabled = modeParams.get("blMode") !== "browse";
+
+  // The dashboard's BrowserMenu ("CAPTURE AS") lets a team member manually tag which
+  // browser a comment should be recorded against, for QA scenarios where they can't
+  // actually load the real browser locally - it reloads this same iframe (see the
+  // blMode comment above for why that's the only channel) with `blBrowser` set.
+  // Falls back to the real navigator.userAgent detection below when absent, which is
+  // always the case for guest reviewers on the client's real site (no dashboard parent
+  // ever sets this param there).
+  const browserOverride = modeParams.get("blBrowser");
 
   const guest = await ensureGuestSession(api, config.shareToken, () => promptForName(shadow));
 
@@ -219,7 +228,8 @@ async function init(config: BacklineConfig): Promise<void> {
         }
 
         controls.setStatus("Posting comment...");
-        const { browser, os, device_type: deviceType } = parseUserAgent(navigator.userAgent);
+        const { browser: detectedBrowser, os, device_type: deviceType } = parseUserAgent(navigator.userAgent);
+        const browser = browserOverride ?? detectedBrowser;
 
         try {
           const created = await api.request<CommentRecord>(`/api/v1/pages/${pageId}/comments`, {
