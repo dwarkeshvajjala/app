@@ -1,18 +1,37 @@
 /** @type {import('tailwindcss').Config} */
+
+// audit-batch-13 P1: the old {DEFAULT, dark} shape below only ever produced two
+// *static* utilities per color (e.g. bg-accent-primary / bg-accent-primary-dark) -
+// Tailwind's darkMode:"class" strategy never wired the first to react to `.dark`
+// on its own, so every call site would have needed an explicit
+// `dark:bg-accent-primary-dark` pairing. A repo-wide grep found zero such
+// pairings, so every consumer (packages/ui's Button/Badge/Avatar, the Board
+// feature components, ...) was silently frozen in light-mode colors.
+// withOpacity() instead reads a `--tw-*` CSS variable (defined as an RGB triple
+// in apps/web/src/styles/backline.css's `:root`/`:root.dark`, alongside every
+// other themed token) so the single `bg-accent-primary` utility flips with the
+// same `.dark` class the rest of the app already uses - no call-site changes
+// needed - while still supporting Tailwind's opacity modifiers (bg-accent-primary/10).
+function withOpacity(variable) {
+  return ({ opacityValue }) =>
+    opacityValue !== undefined ? `rgb(var(${variable}) / ${opacityValue})` : `rgb(var(${variable}))`;
+}
+
 export default {
   darkMode: "class",
   content: ["./index.html", "./src/**/*.{ts,tsx}", "../../packages/ui/src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        // dark values here match apps/web/src/styles/backline.css's `.dark` block exactly -
-        // that file is the dominant styling system, so its dark palette is the canonical one;
+        // Values (light and the --tw-* dark counterpart in backline.css) match
+        // apps/web/src/styles/backline.css's `.dark` block exactly - that file is
+        // the dominant styling system, so its dark palette is the canonical one;
         // keep both in sync rather than letting them drift to visually-similar-but-different greys.
-        "bg-surface": { DEFAULT: "#FFFFFF", dark: "#151515" },
-        "bg-canvas": { DEFAULT: "#F1F2F0", dark: "#0B0B0B" },
-        "text-primary": { DEFAULT: "#0B0B0B", dark: "#F1F2F0" },
-        "text-muted": { DEFAULT: "#62665F", dark: "#9A9D99" },
-        "accent-primary": { DEFAULT: "#0A6B4B", dark: "#69DEB2" },
+        "bg-surface": withOpacity("--tw-bg-surface"),
+        "bg-canvas": withOpacity("--tw-bg-canvas"),
+        "text-primary": withOpacity("--tw-text-primary"),
+        "text-muted": withOpacity("--tw-text-muted"),
+        "accent-primary": withOpacity("--tw-accent-primary"),
         "status-in-review": "#396586",
         "status-blocked": "#A33D1F",
         // #0EA5E9/#7C3AED (sky-500/violet-600) only reached 2.39:1 / ~4.5:1 as

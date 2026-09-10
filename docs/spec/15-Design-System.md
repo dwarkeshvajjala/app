@@ -41,7 +41,7 @@ and reconciled during the `docs/implementation/audit-current-state-2026-09-09.md
 | `status-wont-fix` | `#64748B` (muted, struck-through) | - | Kanban column |
 | `recovery-ok` | (no badge shown) | - | Anchor healthy |
 | `recovery-low-confidence` | `#F59E0B` outline | - | Anchor uncertain |
-| `recovery-orphaned` | `#EF4444` outline + icon | - | Anchor lost |
+| `recovery-orphaned` | `#B91C1C` outline + icon | - | Anchor lost (upgraded from `#EF4444`, which only hit 3.51:1 against `bg-canvas`; `#B91C1C` clears 6:1 - see `tailwind.config.js`) |
 
 **Layer visual distinction is a hard requirement**, not a style preference: F3's acceptance criterion requires the layer to be "visually unambiguous (colour, label, lock icon)" in both the widget and dashboard - color alone is insufficient (fails colorblind users), so the lock icon + text label are mandatory alongside color, everywhere a layer badge renders.
 

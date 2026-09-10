@@ -27,11 +27,19 @@ export const STATUS_LABELS: Record<WorkflowStatus, string> = {
   wont_fix: "Won't fix",
 };
 
+// audit-batch-13 P2: these used to be a second, independently-drifted palette -
+// 3 of 4 compared statuses disagreed with tailwind.config.js's `status-*` tokens
+// (only wont_fix matched by coincidence), producing a visible on-screen collision
+// where the same status rendered two different colors in the same view (e.g.
+// AssetReview.tsx's pin markers via STATUS_COLORS next to StatusBadge's badge for
+// the same comment). Reconciled to tailwind.config.js's values, since those are
+// already WCAG-audited (see that file's own comments) - this is now the only
+// place a color literal for these statuses should live outside that config.
 export const STATUS_COLORS: Record<WorkflowStatus, string> = {
-  todo: "#9A9D99",
-  in_progress: "#E8B833",
-  in_review: "#5B7FA6",
-  blocked: "#C2542E",
-  resolved: "#69DEB2",
+  todo: "#94A3B8",
+  in_progress: "#F59E0B",
+  in_review: "#396586",
+  blocked: "#A33D1F",
+  resolved: "#22C55E",
   wont_fix: "#64748B",
 };

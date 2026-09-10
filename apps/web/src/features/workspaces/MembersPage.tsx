@@ -219,9 +219,9 @@ export function MembersPage() {
                     )}
                   </td>
                   <td>
-                    <span style={{ fontSize: "12px", color: "var(--bl-muted)" }}>
+                    <small>
                       {projectCount} Project{projectCount === 1 ? "" : "s"}
-                    </span>
+                    </small>
                   </td>
                   {canManage && (
                     <td style={{ textAlign: "right" }}>

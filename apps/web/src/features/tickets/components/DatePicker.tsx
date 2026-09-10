@@ -161,7 +161,7 @@ export function DatePicker({ value, onChange }: { value: string | null | undefin
                       aria-label={valid ? `${monthLabel.split(' ')[0]} ${day}, ${month.getFullYear()}` : undefined}
                       aria-selected={selected}
                       onClick={() => valid && handleDateSelect(day)}
-                      style={{ width: '28px', height: '28px', border: 'none', background: 'transparent', cursor: valid ? 'pointer' : 'default' }}
+                      style={{ width: '28px', height: '28px', cursor: valid ? 'pointer' : 'default' }}
                       role="gridcell"
                     >
                       {valid ? day : ''}
