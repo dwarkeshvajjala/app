@@ -17,6 +17,7 @@ import { PeoplePicker } from "../tickets/components/PeoplePicker";
 import * as workspaceApi from "../workspaces/api";
 import * as boardApi from "./api";
 import type { CommentLayer, CommentOut } from "./api";
+import { summarizeThread, suggestReply } from "../ai/api";
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -72,6 +73,10 @@ export function CommentThreadPanel({ comment, replies, projectId, onClose }: Com
   const [attachments, setAttachments] = useState<Schemas["AttachmentIn"][]>([]);
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [suggestedReplies, setSuggestedReplies] = useState<string[]>([]);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const queryClient = useQueryClient();
 
   // We need the workspace ID to list members. We can get it from the workspace object if available.
@@ -147,6 +152,33 @@ export function CommentThreadPanel({ comment, replies, projectId, onClose }: Com
     event.preventDefault();
     if (!body.trim()) return;
     replyMutation.mutate();
+  }
+
+  async function handleSummarize() {
+    if (!workspaceQuery.data?.id) return;
+    setIsSummarizing(true);
+    try {
+      const res = await summarizeThread(workspaceQuery.data.id, projectId, comment.id);
+      setSummary(res.summary);
+    } catch (err) {
+      console.error(err);
+      setSummary("Failed to generate summary.");
+    } finally {
+      setIsSummarizing(false);
+    }
+  }
+
+  async function handleSuggestReply() {
+    if (!workspaceQuery.data?.id) return;
+    setIsSuggesting(true);
+    try {
+      const res = await suggestReply(workspaceQuery.data.id, projectId, comment.id);
+      setSuggestedReplies(res.suggestions);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSuggesting(false);
+    }
   }
 
   const closed = isClosed(comment.status);
@@ -263,7 +295,20 @@ export function CommentThreadPanel({ comment, replies, projectId, onClose }: Com
           </p>
         )}
 
-        <h2 className="bl-group-title">Conversation</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h2 className="bl-group-title">Conversation</h2>
+          <button type="button" className="bl-quiet" onClick={handleSummarize} disabled={isSummarizing}>
+            {isSummarizing ? "Summarizing..." : "✨ Summarize"}
+          </button>
+        </div>
+
+        {summary && (
+          <div className="bl-attention" style={{ padding: "10px", marginBottom: "16px", borderRadius: "4px" }}>
+            <strong>✨ AI Summary:</strong>
+            <p style={{ marginTop: "4px" }}>{summary}</p>
+          </div>
+        )}
+
         <ThreadMessage comment={comment} />
         {replies.map((reply) => (
           <ThreadMessage key={reply.id} comment={reply} />
@@ -271,7 +316,12 @@ export function CommentThreadPanel({ comment, replies, projectId, onClose }: Com
 
         <form onSubmit={handleSubmit} className="bl-form bl-flush">
           <label>
-            Reply
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              Reply
+              <button type="button" className="bl-quiet" onClick={handleSuggestReply} disabled={isSuggesting}>
+                {isSuggesting ? "Suggesting..." : "✨ Suggest Replies"}
+              </button>
+            </div>
             <MentionsInput
               value={body}
               onChange={(event) => setBody(event.target.value)}
@@ -281,6 +331,21 @@ export function CommentThreadPanel({ comment, replies, projectId, onClose }: Com
               className="bl-input"
             />
           </label>
+
+          {suggestedReplies.length > 0 && (
+            <div className="bl-chip-row" style={{ marginTop: "-8px", marginBottom: "8px" }}>
+              {suggestedReplies.map((reply, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  className="bl-chip bl-quiet"
+                  onClick={() => setBody(reply)}
+                >
+                  {reply}
+                </button>
+              ))}
+            </div>
+          )}
 
           {attachments.length > 0 && (
             <div className="bl-chip-row">

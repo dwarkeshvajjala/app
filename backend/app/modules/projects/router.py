@@ -48,6 +48,7 @@ async def create_project(
         project_type=body.project_type,
         environment=body.environment,
         client_id=body.client_id,
+        hero_url=body.hero_url,
     )
 
 

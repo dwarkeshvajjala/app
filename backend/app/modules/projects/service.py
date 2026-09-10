@@ -43,6 +43,7 @@ def _project_out(doc: dict[str, Any]) -> ProjectOut:
         client_id=doc.get("client_id"),
         duplicated_from_project_id=doc.get("duplicated_from_project_id"),
         target_origin=doc["target_origin"],
+        hero_url=doc.get("hero_url"),
         # .get(), not [] - projects created before this field existed have none, and
         # backfilling every prior row isn't worth it at this scale (no migration tooling
         # exists yet, per core/indexes.py's own docstring).
@@ -64,6 +65,7 @@ async def create_project(
     project_type: str = "website",
     environment: str = "live",
     client_id: str | None = None,
+    hero_url: str | None = None,
 ) -> ProjectOut:
     # Deferred import: share_links.service itself imports this module (to check a
     # project exists before creating/listing links for it), so importing it at module
@@ -82,6 +84,7 @@ async def create_project(
         project_type=project_type,
         environment=environment,
         client_id=client_id,
+        hero_url=hero_url,
     )
     await append_event(
         db,

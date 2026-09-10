@@ -294,6 +294,16 @@ async def revoke_session_family(
     await refresh_repo.revoke_family(family_id)
 
 
+async def revoke_all_sessions(db: AsyncIOMotorDatabase[dict[str, Any]], user_id: str) -> None:
+    from bson import ObjectId
+    from datetime import datetime, UTC
+
+    await db.refresh_tokens.update_many(
+        {"user_id": ObjectId(user_id), "revoked_at": None},
+        {"$set": {"revoked_at": datetime.now(UTC)}}
+    )
+
+
 async def update_user(
     db: AsyncIOMotorDatabase[dict[str, Any]], user_id: str, updates: dict[str, Any]
 ) -> UserOut:

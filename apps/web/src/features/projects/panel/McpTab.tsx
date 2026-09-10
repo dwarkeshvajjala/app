@@ -2,7 +2,7 @@ import { useToast } from "../../../components/Toast";
 
 const CONNECTORS = [
   { name: "Claude", color: "#D97757" },
-  { name: "Cursor", color: "#14141A" },
+  { name: "Cursor", color: "var(--brand-cursor, #14141A)" },
   { name: "Codex", color: "#10A37F" },
   { name: "Antigravity", color: "#4F46E5" },
 ];

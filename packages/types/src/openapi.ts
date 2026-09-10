@@ -2032,6 +2032,8 @@ export interface components {
             environment: "live" | "staging";
             /** Client Id */
             client_id?: string | null;
+            /** Hero Url */
+            hero_url?: string | null;
         };
         /** ProjectDeletionCounts */
         ProjectDeletionCounts: {
@@ -2184,6 +2186,8 @@ export interface components {
             environment: "live" | "staging";
             /** Client Id */
             client_id?: string | null;
+            /** Hero Url */
+            hero_url?: string | null;
             /** Duplicated From Project Id */
             duplicated_from_project_id?: string | null;
         };
@@ -2262,6 +2266,8 @@ export interface components {
             environment?: ("live" | "staging") | null;
             /** Client Id */
             client_id?: string | null;
+            /** Hero Url */
+            hero_url?: string | null;
         };
         /** ReanchorRequest */
         ReanchorRequest: {

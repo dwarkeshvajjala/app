@@ -244,7 +244,7 @@ export function LoginPage() {
               <span className="lg-cta" />
               <span className="lg-pin" style={{ background: 'var(--mint)', top: '26px', left: '60%' }}>1</span>
               <span className="lg-pin" style={{ background: 'var(--amber)', top: '118px', left: '14%' }}>2</span>
-              <span className="lg-pin" style={{ background: '#5B7FA6', color: '#fff', top: '162px', left: '76%' }}>3</span>
+              <span className="lg-pin" style={{ background: 'var(--badge-blue)', color: 'var(--bl-invert-fg)', top: '162px', left: '76%' }}>3</span>
               <div className="lg-note">
                 <div className="lg-note-top"><span className="lg-note-av">RK</span><b>Ravi Kulkarni</b><em>18m</em></div>
                 <p>The toggle still says annual after I switch to monthly.</p>

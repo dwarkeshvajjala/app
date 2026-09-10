@@ -82,24 +82,26 @@ function ProjectArtwork({ project }: { project: api.ProjectOut }) {
 
   return (
     <div className={`bl-project-art bl-project-art-${type}`} aria-hidden="true">
-      {type === "website" && (
+      {project.hero_url ? (
+        <img src={project.hero_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      ) : type === "website" && (
         <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice">
           <rect width="320" height="180" fill={palette.paper} />
-          <rect width="320" height="22" fill="#fff" />
+          <rect width="320" height="22" fill="var(--bl-art-panel)" />
           <rect x="15" y="8" width="42" height="6" rx="2" fill={palette.ink} />
-          <rect x="218" y="9" width="20" height="4" rx="2" fill="#CDD2CC" />
-          <rect x="246" y="9" width="20" height="4" rx="2" fill="#CDD2CC" />
+          <rect x="218" y="9" width="20" height="4" rx="2" fill="var(--bl-art-ink-soft)" />
+          <rect x="246" y="9" width="20" height="4" rx="2" fill="var(--bl-art-ink-soft)" />
           <rect x="275" y="5" width="30" height="12" rx="2" fill={palette.accent} />
           <rect x="24" y="43" width="144" height="12" rx="3" fill={palette.ink} />
           <rect x="24" y="62" width="112" height="12" rx="3" fill={palette.ink} opacity=".82" />
-          <rect x="24" y="86" width="130" height="5" rx="2" fill="#C5CBC4" />
-          <rect x="24" y="98" width="96" height="5" rx="2" fill="#C5CBC4" />
+          <rect x="24" y="86" width="130" height="5" rx="2" fill="var(--bl-art-ink)" />
+          <rect x="24" y="98" width="96" height="5" rx="2" fill="var(--bl-art-ink)" />
           <rect x="24" y="119" width="58" height="17" rx="2" fill={palette.accent} />
           <rect x="190" y="38" width="106" height="102" rx="4" fill={palette.accentSoft} />
           <circle cx="243" cy="74" r="19" fill={palette.accent} opacity=".8" />
           <rect x="207" y="105" width="72" height="5" rx="2" fill={palette.ink} opacity=".3" />
           <rect x="216" y="117" width="54" height="5" rx="2" fill={palette.ink} opacity=".2" />
-          <rect x="24" y="155" width="272" height="1" fill="#D9DDD8" />
+          <rect x="24" y="155" width="272" height="1" fill="var(--bl-art-line)" />
         </svg>
       )}
       {type === "image" && (
@@ -107,33 +109,33 @@ function ProjectArtwork({ project }: { project: api.ProjectOut }) {
           <rect width="320" height="180" fill={palette.paper} />
           <rect x="18" y="18" width="136" height="70" rx="3" fill={palette.accent} />
           <path d="M18 72 53 44l31 23 24-18 46 34v5H18Z" fill={palette.ink} opacity=".22" />
-          <circle cx="125" cy="38" r="9" fill="#fff" opacity=".65" />
+          <circle cx="125" cy="38" r="9" fill="var(--bl-art-panel)" opacity=".65" />
           <rect x="166" y="18" width="136" height="70" rx="3" fill={palette.ink} />
-          <rect x="184" y="37" width="75" height="7" rx="3" fill="#fff" opacity=".38" />
-          <rect x="184" y="52" width="51" height="7" rx="3" fill="#fff" opacity=".24" />
+          <rect x="184" y="37" width="75" height="7" rx="3" fill="var(--bl-art-panel)" opacity=".38" />
+          <rect x="184" y="52" width="51" height="7" rx="3" fill="var(--bl-art-panel)" opacity=".24" />
           <rect x="184" y="68" width="42" height="11" rx="2" fill={palette.accent} />
           <rect x="18" y="100" width="86" height="62" rx="3" fill={palette.accentSoft} />
-          <rect x="116" y="100" width="86" height="62" rx="3" fill="#E1E5E8" />
-          <rect x="214" y="100" width="88" height="62" rx="3" fill="#fff" />
+          <rect x="116" y="100" width="86" height="62" rx="3" fill="var(--bl-art-line-light)" />
+          <rect x="214" y="100" width="88" height="62" rx="3" fill="var(--bl-art-panel)" />
           <circle cx="159" cy="131" r="16" fill={palette.ink} opacity=".2" />
         </svg>
       )}
       {type === "pdf" && (
         <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice">
-          <rect width="320" height="180" fill="#E9EDEA" />
-          <rect x="40" y="12" width="108" height="156" rx="2" fill="#fff" stroke="#D7DDD8" />
+          <rect width="320" height="180" fill="var(--bl-art-bg)" />
+          <rect x="40" y="12" width="108" height="156" rx="2" fill="var(--bl-art-panel)" stroke="var(--bl-art-stroke)" />
           <rect x="54" y="29" width="58" height="8" rx="2" fill={palette.ink} />
-          <rect x="54" y="47" width="79" height="4" rx="2" fill="#C9CECA" />
-          <rect x="54" y="57" width="65" height="4" rx="2" fill="#C9CECA" />
+          <rect x="54" y="47" width="79" height="4" rx="2" fill="var(--bl-art-ink-dark)" />
+          <rect x="54" y="57" width="65" height="4" rx="2" fill="var(--bl-art-ink-dark)" />
           <rect x="54" y="75" width="80" height="40" rx="2" fill={palette.accentSoft} />
-          <rect x="54" y="127" width="70" height="4" rx="2" fill="#C9CECA" />
-          <rect x="172" y="12" width="108" height="156" rx="2" fill="#fff" stroke="#D7DDD8" />
+          <rect x="54" y="127" width="70" height="4" rx="2" fill="var(--bl-art-ink-dark)" />
+          <rect x="172" y="12" width="108" height="156" rx="2" fill="var(--bl-art-panel)" stroke="var(--bl-art-stroke)" />
           <rect x="186" y="29" width="66" height="7" rx="2" fill={palette.ink} />
           <rect x="186" y="51" width="80" height="65" rx="2" fill={palette.paper} />
           <rect x="197" y="86" width="12" height="21" fill={palette.accent} opacity=".55" />
           <rect x="216" y="72" width="12" height="35" fill={palette.accent} opacity=".75" />
           <rect x="235" y="59" width="12" height="48" fill={palette.accent} />
-          <rect x="186" y="130" width="67" height="4" rx="2" fill="#C9CECA" />
+          <rect x="186" y="130" width="67" height="4" rx="2" fill="var(--bl-art-ink-dark)" />
         </svg>
       )}
 
@@ -250,8 +252,6 @@ export function ProjectsPage() {
           )}
         </section>
       )}
-
-      {!archived && <div className="bl-hatch" aria-hidden="true" />}
 
       <div className="bl-tabs" aria-label="Project types">{[['all', 'All projects'], ['website', 'Website'], ['image', 'Images'], ['pdf', 'PDF']].map(([key, label]) => <button key={key} aria-pressed={type === key} onClick={() => filter("type", key)}>{label}<span className="bl-count">{(projects.data ?? []).filter((p) => Boolean(p.archived_at) === archived && (key === "all" || (p.project_type ?? "website") === key)).length}</span></button>)}<Link to={`/w/${workspace.slug}/apps`}>Web App <small>Soon</small></Link><Link to={`/w/${workspace.slug}/mobile`}>Mobile <small>Soon</small></Link></div>
 

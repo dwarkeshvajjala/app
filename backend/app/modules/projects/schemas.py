@@ -29,6 +29,7 @@ class ProjectCreate(BaseModel):
     project_type: ProjectType = "website"
     environment: Environment = "live"
     client_id: str | None = None
+    hero_url: str | None = None
 
     @field_validator("target_origin")
     @classmethod
@@ -56,6 +57,7 @@ class ProjectUpdate(BaseModel):
     target_origin: str | None = Field(default=None, min_length=1, max_length=500)
     environment: Environment | None = None
     client_id: str | None = None
+    hero_url: str | None = None
 
     @field_validator("target_origin")
     @classmethod
@@ -99,6 +101,7 @@ class ProjectOut(BaseModel):
     project_type: ProjectType = "website"
     environment: Environment = "live"
     client_id: str | None = None
+    hero_url: str | None = None
     duplicated_from_project_id: str | None = None
 
 
