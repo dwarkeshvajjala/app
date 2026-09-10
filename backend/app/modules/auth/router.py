@@ -127,6 +127,9 @@ async def revoke_session(
     session: Session = Depends(get_current_session),
 ) -> None:
     """FD-AUD-011: Revokes a specific session family."""
+    if family_id == "all":
+        await auth_service.revoke_all_sessions(get_db(), session.user_id)
+        return
     await auth_service.revoke_session_family(get_db(), session.user_id, family_id)
 
 

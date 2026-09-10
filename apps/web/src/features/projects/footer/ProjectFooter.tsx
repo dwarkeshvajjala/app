@@ -14,6 +14,7 @@ import {
 } from "../panel/icons";
 import { CollaboratorsModal } from "../panel/CollaboratorsModal";
 import { ViewportMenu, type ViewportOption } from "./ViewportMenu";
+import { BrowserMenu, type BrowserOption } from "./BrowserMenu";
 import { VersionMenu } from "./VersionMenu";
 
 export type CanvasMode = "browse" | "comment";
@@ -29,6 +30,8 @@ interface ProjectFooterProps {
   onSelectPage: (pageId: string) => void;
   viewport: ViewportOption | null;
   onViewportChange: (viewport: ViewportOption | null) => void;
+  browser: BrowserOption;
+  onBrowserChange: (browser: BrowserOption) => void;
   orientation: "portrait" | "landscape";
   onOrientationChange: (orientation: "portrait" | "landscape") => void;
   zoomScale: number;
@@ -47,6 +50,8 @@ export function ProjectFooter({
   onSelectPage,
   viewport,
   onViewportChange,
+  browser,
+  onBrowserChange,
   orientation,
   onOrientationChange,
   zoomScale,
@@ -130,7 +135,7 @@ export function ProjectFooter({
         <span aria-hidden="true">·</span>
         <span>{width && height ? `${width} × ${height}` : "Fit canvas"}</span>
         <span aria-hidden="true">·</span>
-        <span>Current browser</span>
+        <BrowserMenu browser={browser} onChange={onBrowserChange} />
       </div>
 
       <div className="bl-review-status-actions">

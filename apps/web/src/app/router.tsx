@@ -13,7 +13,7 @@ import { ShareLinksPage } from "../features/share-links/ShareLinksPage";
 import { BillingPage } from "../features/workspaces/BillingPage";
 import { McpServerPage } from "../features/workspaces/McpServerPage";
 import { MembersPage } from "../features/workspaces/MembersPage";
-import { ProjectTypePlaceholderPage } from "../features/workspaces/ProjectTypePlaceholderPage";
+
 import { SettingsPage } from "../features/workspaces/SettingsPage";
 import { UsagePage } from "../features/workspaces/UsagePage";
 import { ProjectsPage } from "../features/projects/ProjectsPage";
@@ -71,28 +71,7 @@ const router = createBrowserRouter([
               { path: "tickets", element: <TicketsPage /> },
               { path: "clients", element: <ClientsPage /> },
               { path: "activity", element: <ActivityPage /> },
-          {
-            path: "apps",
-            element: (
-              <ProjectTypePlaceholderPage
-                label="Web App"
-                tagline="Add comments to your web applications."
-              />
-            ),
-          },
-          {
-            path: "mobile",
-            element: (
-              <ProjectTypePlaceholderPage
-                label="Mobile"
-                tagline="Add comments to your mobile applications."
-              />
-            ),
-          },
-          {
-            path: "image-pdf",
-            element: <Navigate to="..?type=image" relative="path" replace />,
-          },
+
           { path: "usage", element: <UsagePage /> },
           { path: "mcp", element: <McpServerPage /> },
           { path: "members", element: <MembersPage /> },

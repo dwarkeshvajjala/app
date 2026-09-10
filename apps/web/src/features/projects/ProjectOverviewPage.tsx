@@ -16,6 +16,7 @@ import type { WorkspaceOut } from "../workspaces/api";
 import * as projectsApi from "./api";
 import { ProjectFooter, type CanvasMode } from "./footer/ProjectFooter";
 import { VIEWPORTS, type ViewportOption } from "./footer/ViewportMenu";
+import { BROWSERS, type BrowserOption } from "./footer/BrowserMenu";
 import {
   ArrowLeftIcon,
   CommentsIcon,
@@ -85,6 +86,11 @@ export function ProjectOverviewPage() {
       return null;
     }
     return VIEWPORTS.find((option) => option.name === name) ?? null;
+  }, [searchParams]);
+  const browser = useMemo<BrowserOption>(() => {
+    const name = searchParams.get("browser");
+    if (!name) return BROWSERS[0];
+    return BROWSERS.find((option) => option.name === name) ?? BROWSERS[0];
   }, [searchParams]);
 
   const pagesQuery = useQuery({
@@ -523,6 +529,8 @@ export function ProjectOverviewPage() {
         onSelectPage={goToPage}
         viewport={viewport}
         onViewportChange={setViewport}
+        browser={browser}
+        onBrowserChange={(nextBrowser) => updateViewParams({ browser: nextBrowser.name === BROWSERS[0].name ? null : nextBrowser.name })}
         orientation={orientation}
         onOrientationChange={(nextOrientation) => updateViewParams({ orientation: nextOrientation === "portrait" ? null : nextOrientation })}
         zoomScale={zoomScale}

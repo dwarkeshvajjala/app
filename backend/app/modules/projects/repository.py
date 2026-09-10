@@ -22,6 +22,7 @@ class ProjectRepository:
         project_type: str = "website",
         environment: str = "live",
         client_id: str | None = None,
+        hero_url: str | None = None,
     ) -> dict[str, Any]:
         now = datetime.now(UTC)
         doc = {
@@ -32,6 +33,7 @@ class ProjectRepository:
             "client_id": client_id,
             "target_origin": target_origin,
             "created_by": created_by,
+            "hero_url": hero_url,
             "settings_json": {"proxy_mode": False, "snippet_installed": False},
             "archived_at": None,
             "created_at": now,
@@ -80,12 +82,14 @@ class ProjectRepository:
             {"$set": {**set_ops, "updated_at": datetime.now(UTC)}},
         )
 
-    async def update(self, project_id: str, *, name: str | None, target_origin: str | None) -> None:
+    async def update(self, project_id: str, *, name: str | None, target_origin: str | None, hero_url: str | None = None) -> None:
         patch: dict[str, Any] = {"updated_at": datetime.now(UTC)}
         if name is not None:
             patch["name"] = name
         if target_origin is not None:
             patch["target_origin"] = target_origin
+        if hero_url is not None:
+            patch["hero_url"] = hero_url
         # workspace-scope-exempt: update_project (projects/service.py) already verified
         # doc["workspace_id"] == workspace_id via find_by_id before calling this.
         await self.db.projects.update_one({"_id": to_object_id(project_id)}, {"$set": patch})

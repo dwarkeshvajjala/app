@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar } from "@backline/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
@@ -22,16 +22,53 @@ import { ThemeToggle } from "../../components/ThemeToggle";
 // Account entry point - top-right of the persistent topbar, next to search and
 // notifications, rather than a text button buried at the bottom of the sidebar
 // (where the eye has to travel past the whole nav to find it every time).
+import { useOnClickOutside } from "../../lib/use-click-outside";
+
 function AccountButton() {
-  const { user } = useAuth();
-  const [open, setOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const [popOpen, setPopOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const popRef = useRef<HTMLDivElement>(null);
+  
+  useOnClickOutside(popRef, () => setPopOpen(false));
+
   return (
-    <>
-      <button type="button" className="bl-account-btn" aria-label="Your account" onClick={() => setOpen(true)}>
+    <div style={{ position: "relative" }} ref={popRef}>
+      <button 
+        type="button" 
+        className="bl-account-btn" 
+        aria-label="Your account" 
+        aria-haspopup="menu"
+        aria-expanded={popOpen}
+        onClick={() => setPopOpen(p => !p)}
+      >
         <Avatar name={user?.name ?? "?"} avatarUrl={user?.avatar_url} size={32} />
       </button>
-      {open && <AccountModal onClose={() => setOpen(false)} />}
-    </>
+      
+      {popOpen && (
+        <div className="bl-ws-pop" style={{ right: 0, top: "100%", width: "200px" }} role="menu" aria-label="Account menu">
+          <div className="bl-ws-pop-list">
+            <button
+              className="bl-ws-item"
+              role="menuitem"
+              onClick={() => { setPopOpen(false); setSettingsOpen(true); }}
+            >
+              Profile &amp; Settings
+            </button>
+            <button
+              className="bl-ws-item"
+              role="menuitem"
+              onClick={() => { setPopOpen(false); void logout(); }}
+              style={{ color: "var(--bl-error)" }}
+            >
+              Log out
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {settingsOpen && <AccountModal onClose={() => setSettingsOpen(false)} />}
+    </div>
   );
 }
 

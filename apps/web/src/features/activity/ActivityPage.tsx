@@ -15,15 +15,15 @@ import type { Schemas } from "@backline/types";
 // PRIORITY_META/STATUS_META use in the comments panel), so the timeline reads at a
 // glance instead of every row carrying an identical grey dot.
 const EVENT_META: Record<string, { icon: ComponentType<SVGProps<SVGSVGElement>>; color: string }> = {
-  comment: { icon: CommentBubbleIcon, color: "#5B7FA6" },
-  project: { icon: FolderIcon, color: "#0A6B4B" },
-  client: { icon: BuildingIcon, color: "#C2542E" },
-  share_link: { icon: LinkIcon, color: "#8E6BAE" },
-  member: { icon: PersonIcon, color: "#B08A1E" },
+  comment: { icon: CommentBubbleIcon, color: "var(--badge-blue)" },
+  project: { icon: FolderIcon, color: "var(--badge-green)" },
+  client: { icon: BuildingIcon, color: "var(--badge-red)" },
+  share_link: { icon: LinkIcon, color: "var(--badge-purple)" },
+  member: { icon: PersonIcon, color: "var(--badge-yellow)" },
 };
 
 function eventMeta(type: string) {
-  return EVENT_META[type.split(".")[0]] ?? { icon: BoltIcon, color: "#62665F" };
+  return EVENT_META[type.split(".")[0]] ?? { icon: BoltIcon, color: "var(--bl-muted)" };
 }
 
 const FILTERS = ["mine", "clients", "deploys"];
@@ -85,7 +85,7 @@ export function ActivityPage() {
               return (
                 <article key={event.id}>
                   <span className="bl-avatar" style={{ background: meta.color }}>
-                    <EventIcon width="14" height="14" style={{ color: '#fff' }} />
+                    <EventIcon width="14" height="14" style={{ color: 'var(--bl-invert-fg)' }} />
                   </span>
                   <div>
                     <p style={{ margin: 0 }}>

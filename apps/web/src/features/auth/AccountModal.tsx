@@ -225,14 +225,25 @@ export function AccountModal({ onClose }: AccountModalProps) {
         </div>
         
         <footer className="bl-account-actions">
-          <button
-            type="button"
-            className="bl-quiet"
-            disabled={signingOut}
-            onClick={() => void handleSignOut()}
-          >
-            {signingOut ? "Signing out..." : "Sign out this session"}
-          </button>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button
+              type="button"
+              className="bl-quiet"
+              disabled={signingOut}
+              onClick={() => void handleSignOut()}
+            >
+              {signingOut ? "Signing out..." : "Sign out this session"}
+            </button>
+            <button
+              type="button"
+              className="bl-quiet"
+              style={{ color: "var(--bl-error)" }}
+              disabled={signingOut}
+              onClick={() => doRevoke("all")}
+            >
+              Sign out all sessions
+            </button>
+          </div>
           
           <div style={{ display: "flex", gap: "10px" }}>
             <button type="button" className="bl-quiet" onClick={onClose}>

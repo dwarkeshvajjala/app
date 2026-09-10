@@ -2,14 +2,7 @@ import { Button } from "@backline/ui";
 import { useEffect, useRef, useState } from "react";
 import { useOnClickOutside } from "../../lib/use-click-outside";
 
-import { ChevronDownIcon, ImagePdfIcon, MobileIcon, WebAppIcon, WebsiteIcon } from "../../app/layout/sidebar-icons";
-import { ComingSoonModal } from "./ComingSoonModal";
-
-const OTHER_TYPES = [
-  { label: "Web App", description: "Review Web Applications", icon: WebAppIcon },
-  { label: "Mobile", description: "Review Mobile Applications", icon: MobileIcon },
-  { label: "Image & PDF", description: "Review Images and PDFs", icon: ImagePdfIcon },
-];
+import { ChevronDownIcon, WebsiteIcon } from "../../app/layout/sidebar-icons";
 
 interface NewProjectMenuProps {
   onCreateWebsite: () => void;
@@ -23,7 +16,6 @@ interface NewProjectMenuProps {
 // (and pre-selected-looking) item in that menu.
 export function NewProjectMenu({ onCreateWebsite }: NewProjectMenuProps) {
   const [showMenu, setShowMenu] = useState(false);
-  const [comingSoon, setComingSoon] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useOnClickOutside(rootRef, () => setShowMenu(false));
@@ -71,28 +63,7 @@ export function NewProjectMenu({ onCreateWebsite }: NewProjectMenuProps) {
               <small>Review Live Websites</small>
             </span>
           </button>
-          {OTHER_TYPES.map(({ label, description, icon: TypeIcon }) => (
-            <button
-              key={label}
-              role="menuitem"
-              className="bl-dropdown-item"
-              onClick={() => {
-                setShowMenu(false);
-                setComingSoon(label);
-              }}
-            >
-              <TypeIcon width={20} height={20} className="text-accent-primary shrink-0" />
-              <span className="stack">
-                <strong>{label}</strong>
-                <small>{description}</small>
-              </span>
-            </button>
-          ))}
         </div>
-      )}
-
-      {comingSoon && (
-        <ComingSoonModal feature={comingSoon} onClose={() => setComingSoon(null)} />
       )}
     </div>
   );

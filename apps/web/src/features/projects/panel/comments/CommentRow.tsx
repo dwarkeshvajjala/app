@@ -187,7 +187,7 @@ export function CommentRow({
                     deleteThreadMutation.mutate();
                   }}
                   className="bl-review-menu-row"
-                  style={{ color: "#A8401F" }}
+                  style={{ color: "var(--bl-error)" }}
                 >
                   Delete thread
                 </button>
