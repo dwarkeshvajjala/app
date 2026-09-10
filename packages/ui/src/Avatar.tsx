@@ -1,8 +1,12 @@
+// audit-batch-13 P3: bg-status-in-progress (#F59E0B) used to be in this
+// rotation - white text on it is ~2.15:1, short of WCAG AA's 4.5:1, so ~1 in 4
+// avatars by name hash rendered illegibly regardless of theme. Swapped for
+// bg-status-blocked (#A33D1F, ~6.5:1 with white) to keep 4 distinct hues.
 const COLORS = [
   "bg-layer-team text-white",
   "bg-layer-client text-white",
   "bg-accent-primary text-white",
-  "bg-status-in-progress text-white",
+  "bg-status-blocked text-white",
 ];
 
 function colorFor(seed: string): string {

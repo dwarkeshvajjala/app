@@ -1,3 +1,10 @@
+> **Update (2026-09-10, later same day):** everything below marked P0/P1/P2 was
+> addressed in a follow-up pass, plus most of P3 - see the "Resolved in the
+> follow-up pass" section appended at the end of this file. `tsc -b --noEmit`
+> and `vite build` are clean; the login/loading screens were live-rendered in
+> both themes (same backend-credentials blocker as before prevented checking
+> authenticated surfaces). Kept the original report below intact for context.
+
 # Audit Batch 13 — UI/UX/Brand Consistency Sweep
 
 **Date:** 2026-09-10. Follow-on to batch 10/11/12 and the same-session dark-mode contrast
@@ -141,3 +148,44 @@ credentials not available in this environment — same blocker as
 - [[theming-dark-mode-fix]] — the dark-mode mechanism fix this batch built on
 - `docs/spec/15-Design-System.md` — token/palette source of truth (needs the `recovery-orphaned` row fixed)
 - `apps/web/src/styles/backline.css` — where most of the P0/P1 CSS fixes land
+
+## Resolved in the follow-up pass (2026-09-10)
+
+- **P0-1** `.bl-button:hover`/`.bl-button.mint:hover` — added the `.dark` counterparts
+  exactly as suggested above.
+- **P0-2** `ClientsPage.tsx`'s `.bl-chip` — swapped the hardcoded `#3A3D3A` for
+  `var(--ink-2)` (identical light-mode value, correct dark-mode value).
+- **P0-3** `DatePicker.tsx:164` — dropped the inline `border`/`background`, moved
+  the reset into `.bl-datepicker-grid [role=gridcell]` in CSS so the existing
+  hover/selected rules can actually fire.
+- **P0-4** Toast family, `.bl-dropdown-item.danger`, `.bl-icon-button.danger`,
+  `.bl-due-chip.is-late`, `.bl-required` — all routed through `var(--bl-error)`/
+  new `var(--bl-error-tint)` (and a new `var(--bl-info)`/`var(--bl-info-tint)`
+  pair for the toast's blue "progress" variant), mirroring `.is-soon`'s pattern.
+- **P0-5** `.bl-ticket-title:hover` and the identical bug in
+  `.bl-project-actions button:hover` — both now `var(--mint-deep)`.
+- **P1** Added `withOpacity()` in `tailwind.config.js` + `--tw-*` RGB-triple
+  tokens in `backline.css` so `bg-surface`/`bg-canvas`/`text-primary`/
+  `text-muted`/`accent-primary` flip with the single `.dark` class site-wide -
+  no call-site changes needed for `packages/ui`'s Button/Badge/Avatar or the
+  Board components. Also dropped `ProjectCard.tsx`'s now-redundant
+  `dark:bg-[#151515]` arbitrary values in favor of the (now-working)
+  `bg-bg-surface` token. **Still open:** the Board feature's deeper issue - raw
+  Tailwind throughout instead of `.bl-*` classes, and no `StatusBadge` reuse -
+  remains a larger, separate migration (its missing drag-over CSS is fixed
+  under P3 below, since that was a standalone, easily-isolated piece of it).
+- **P2** `packages/ui/src/workflow.ts`'s `STATUS_COLORS` reconciled to
+  `tailwind.config.js`'s WCAG-audited `status-*` values for all 6 statuses.
+- **P3** Fixed: `Avatar.tsx`'s amber seed swapped for `bg-status-blocked`;
+  `.bl-new-card`'s two dashed-border hex values unified; `TicketBoard.tsx`/
+  `TicketCalendar.tsx`'s `data-dragover`/`.bl-dragging` now have real CSS;
+  `ProjectTypePlaceholderPage.tsx` now uses `.bl-empty` like every sibling
+  empty state; `MembersPage.tsx`'s project-count cell now relies on
+  `.bl-table td small` instead of a duplicate inline style; deleted the
+  confirmed-dead `WorkspaceHomePage.tsx` (verified zero imports repo-wide,
+  same status as `WorkspaceSidebar.tsx` earlier). **Still open** (deferred as
+  product/behavior decisions, not pure style fixes): `AiTab.tsx`'s raw-Tailwind
+  placeholder vs. the `.bl-state-panel` convention, and `ProjectCard.tsx`'s
+  hand-rolled overflow menu duplicating `ProjectMenu.tsx` - the latter isn't a
+  drop-in swap, since `ProjectMenu` also exposes rename/duplicate/export/hard-
+  delete that the card's menu doesn't currently offer.

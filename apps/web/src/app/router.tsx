@@ -21,7 +21,6 @@ import { TicketsPage } from "../features/tickets/TicketsPage";
 import { ClientsPage } from "../features/clients/ClientsPage";
 import { ActivityPage } from "../features/activity/ActivityPage";
 import { WorkspacePickerPage } from "../features/workspaces/WorkspacePickerPage";
-import { MobileIcon, WebAppIcon } from "./layout/sidebar-icons";
 import { ProjectLayout } from "./layout/ProjectLayout";
 import { WorkspaceLayout } from "./layout/WorkspaceLayout";
 import { NotFoundPage } from "../features/pages/NotFoundPage";
@@ -78,7 +77,6 @@ const router = createBrowserRouter([
               <ProjectTypePlaceholderPage
                 label="Web App"
                 tagline="Add comments to your web applications."
-                icon={WebAppIcon}
               />
             ),
           },
@@ -88,7 +86,6 @@ const router = createBrowserRouter([
               <ProjectTypePlaceholderPage
                 label="Mobile"
                 tagline="Add comments to your mobile applications."
-                icon={MobileIcon}
               />
             ),
           },
