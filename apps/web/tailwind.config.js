@@ -5,10 +5,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        "bg-surface": { DEFAULT: "#FFFFFF", dark: "#14141A" },
-        "bg-canvas": { DEFAULT: "#F1F2F0", dark: "#0B0B0E" },
-        "text-primary": { DEFAULT: "#0B0B0B", dark: "#F2F2F5" },
-        "text-muted": { DEFAULT: "#62665F", dark: "#9A9AA6" },
+        // dark values here match apps/web/src/styles/backline.css's `.dark` block exactly -
+        // that file is the dominant styling system, so its dark palette is the canonical one;
+        // keep both in sync rather than letting them drift to visually-similar-but-different greys.
+        "bg-surface": { DEFAULT: "#FFFFFF", dark: "#151515" },
+        "bg-canvas": { DEFAULT: "#F1F2F0", dark: "#0B0B0B" },
+        "text-primary": { DEFAULT: "#0B0B0B", dark: "#F1F2F0" },
+        "text-muted": { DEFAULT: "#62665F", dark: "#9A9D99" },
         "accent-primary": { DEFAULT: "#0A6B4B", dark: "#69DEB2" },
         "status-in-review": "#396586",
         "status-blocked": "#A33D1F",

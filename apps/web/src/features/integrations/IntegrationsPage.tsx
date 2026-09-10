@@ -129,7 +129,7 @@ export function IntegrationsPage() {
               {integrations.map((integration) => (
                 <div
                   key={integration.id}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", border: "1px solid var(--bl-line)", borderRadius: "3px", background: "#fff" }}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", border: "1px solid var(--bl-line)", borderRadius: "3px", background: "var(--bl-surface)" }}
                 >
                   <span style={{ fontSize: "13px", fontWeight: 500 }}>{TYPE_LABELS[integration.type]}</span>
                   <button

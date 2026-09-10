@@ -30,12 +30,15 @@ export function ConfirmDialog({
       <div className="p-4">
         <p className="mb-4">{message}</p>
         <div className="flex justify-end gap-3">
-          <button type="button" className="bl-quiet" onClick={onCancel}>
+          {/* Disabled while pending too - onCancel only closes the dialog, it can't abort an
+              in-flight destructive request, so letting it stay clickable would look like it
+              cancelled the action when the mutation is still going through. */}
+          <button type="button" className="bl-quiet" disabled={pending} onClick={onCancel}>
             {cancelLabel}
           </button>
           <button
             type="button"
-            className={`bl-button disabled:opacity-50 ${destructive ? "bg-red-600 hover:bg-red-700 border-transparent text-white" : ""}`}
+            className={`bl-button${destructive ? " danger" : ""}`}
             disabled={pending}
             onClick={onConfirm}
           >

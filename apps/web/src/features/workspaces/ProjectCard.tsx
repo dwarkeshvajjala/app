@@ -111,7 +111,7 @@ export function ProjectCard({ workspaceSlug, project, creator, onShare }: Projec
       to={`/w/${workspaceSlug}/p/${project.id}`}
       className="group block overflow-hidden rounded-lg border border-black/10 transition-shadow hover:shadow-md dark:border-white/10"
     >
-      <div className="from-bg-canvas relative h-40 bg-gradient-to-b to-white dark:to-[#0B0B0E]">
+      <div className="from-bg-canvas relative h-40 bg-gradient-to-b to-white dark:to-[#0B0B0B]">
         <div className="flex items-center gap-1.5 border-b border-black/5 bg-white/60 px-3 py-2 dark:border-white/5 dark:bg-black/20">
           <span className="h-2 w-2 rounded-full bg-black/10 dark:bg-white/10" />
           <span className="h-2 w-2 rounded-full bg-black/10 dark:bg-white/10" />
@@ -133,7 +133,7 @@ export function ProjectCard({ workspaceSlug, project, creator, onShare }: Projec
             onClick={handleCopy}
             aria-label="Copy client review link"
             title={copyState === "copied" ? "Copied!" : "Copy client review link"}
-            className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-black/70 shadow hover:text-black dark:bg-[#14141A] dark:text-white/70 dark:hover:text-white"
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-black/70 shadow hover:text-black dark:bg-[#151515] dark:text-white/70 dark:hover:text-white"
           >
             {copyState === "copied" ? (
               <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
@@ -169,7 +169,7 @@ export function ProjectCard({ workspaceSlug, project, creator, onShare }: Projec
             onClick={handleShare}
             aria-label="Share project"
             title="Share project"
-            className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-black/70 shadow hover:text-black dark:bg-[#14141A] dark:text-white/70 dark:hover:text-white"
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-black/70 shadow hover:text-black dark:bg-[#151515] dark:text-white/70 dark:hover:text-white"
           >
             <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden="true">
               <circle cx="6" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.3" />
@@ -188,7 +188,7 @@ export function ProjectCard({ workspaceSlug, project, creator, onShare }: Projec
               aria-haspopup="true"
               aria-expanded={showMenu}
               title="More actions"
-              className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-black/70 shadow hover:text-black dark:bg-[#14141A] dark:text-white/70 dark:hover:text-white"
+              className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-black/70 shadow hover:text-black dark:bg-[#151515] dark:text-white/70 dark:hover:text-white"
             >
               <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
                 <circle cx="3" cy="8" r="1.3" />
@@ -197,7 +197,7 @@ export function ProjectCard({ workspaceSlug, project, creator, onShare }: Projec
               </svg>
             </button>
             {showMenu && (
-              <div className="bg-bg-surface absolute top-8 right-0 z-10 w-40 rounded-md border border-black/10 py-1 shadow-lg dark:border-white/10 dark:bg-[#14141A]">
+              <div className="bg-bg-surface absolute top-8 right-0 z-10 w-40 rounded-md border border-black/10 py-1 shadow-lg dark:border-white/10 dark:bg-[#151515]">
                 <button
                   onClick={handleShare}
                   className="hover:bg-bg-canvas block w-full px-3 py-1.5 text-left text-sm"
