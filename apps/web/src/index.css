@@ -10,6 +10,5 @@
    silently overriding that and pinning the page background to light forever. */
 body {
   @apply min-h-screen;
-  font-family:
-    "Schibsted Grotesk", Helvetica, Arial, sans-serif;
+  font-family: var(--sans);
 }
