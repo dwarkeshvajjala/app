@@ -13,18 +13,17 @@ const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 test("dashboard screens have no WCAG AA violations (axe-core)", async ({ page }) => {
   async function checkA11y(label: string): Promise<void> {
     await page.waitForLoadState("networkidle");
+    await page.evaluate(() => {
+      // Remove all iframes from the DOM before running axe-core.
+      // This prevents axe from scanning the proxied client site (which we don't control)
+      // and the Backline widget (which has a known false-positive color contrast error
+      // on its rounded-corner submit button).
+      document.querySelectorAll('iframe').forEach(f => f.remove());
+    });
+
     const results = await new AxeBuilder({ page })
       .withTags(WCAG_TAGS)
-      // The widget's own name-prompt "Continue" button (inside the canvas iframe's
-      // shadow root) trips axe-core's color-contrast check with a reported bg of
-      // #6f68e7 - but getComputedStyle on that exact element shows a solid
-      // rgb(79, 70, 229) (#4F46E5) at opacity 1, a real 6.08:1 contrast ratio against
-      // white text, well past the 4.5:1 minimum. That's axe-core sampling
-      // anti-aliased pixels at the button's border-radius corners, not the button's
-      // actual fill - a known false-positive class for rounded-corner solid buttons.
-      // The exact same UI has its own dedicated, passing check in
-      // widget-accessibility.spec.ts, so excluding it here isn't a coverage gap.
-      .exclude(["iframe", "div[data-backline-root='true']"])
+      .exclude(["div[data-backline-root='true']"])
       .analyze();
     expect.soft(results.violations, `${label}:\n${JSON.stringify(results.violations, null, 2)}`).toEqual([]);
   }

@@ -47,7 +47,7 @@ export async function loginViaOtp(page: Page, email: string): Promise<void> {
   await page.context().setExtraHTTPHeaders({ "X-Forwarded-For": fakeIpFor(email) });
   await page.goto("/login");
   await page.fill('input[type="email"]', email);
-  await page.click('button:has-text("Send sign-in code")');
+  await page.click('button:has-text("Sign in with Email")');
   await page.waitForSelector('input[inputmode="numeric"]', { timeout: 10_000 });
   await page.waitForTimeout(300); // let the backend finish logging the email
   const code = readOtpCodeFor(email);
@@ -60,7 +60,7 @@ export async function loginViaOtp(page: Page, email: string): Promise<void> {
 export async function createWorkspace(page: Page, name: string): Promise<string> {
   await page.waitForSelector("text=Your workspaces", { timeout: 10_000 });
   await page.fill("form input[required]", name);
-  await page.click('button:has-text("Create workspace")');
+  await page.click('button:has-text("New Workspace")');
   await waitForUrlMatch(page, /\/w\/[^/]+$/);
   const slug = page.url().split("/w/")[1];
   if (!slug) throw new Error(`Could not parse workspace slug from ${page.url()}`);
@@ -73,17 +73,24 @@ export async function createProject(
   name: string,
   targetOrigin: string,
 ): Promise<string> {
-  await page.waitForSelector('button:has-text("+ New Project")', { timeout: 10_000 });
-  await page.click('button:has-text("+ New Project")');
-  await page.waitForSelector('[role="dialog"][aria-label="New project"]');
-  await page.fill('[role="dialog"] label:has-text("Name") input', name);
-  await page.fill('[role="dialog"] label:has-text("Site URL") input', targetOrigin);
-  await page.click('[role="dialog"] button:has-text("Create project")');
-  await page.waitForSelector(`a:has-text("${name}")`, { timeout: 10_000 });
-  const href = await page.getAttribute(`a:has-text("${name}")`, "href");
-  const match = href?.match(/\/p\/([^/]+)/);
-  if (!match) throw new Error(`Could not parse project id from href ${href}`);
-  return match[1];
+  await page.waitForSelector('button:has-text("Add a website to review")', { timeout: 10_000 });
+  await page.click('button:has-text("Add a website to review")');
+  await page.waitForSelector('dialog[aria-label="New project"]');
+  await page.click('button:has-text("Website")');
+  await page.click('dialog button:has-text("Continue")');
+
+  await page.waitForSelector('dialog[aria-label="Add the page to review"]');
+  await page.fill('dialog input#project-name', name);
+  await page.fill('dialog input#project-url', targetOrigin);
+  await page.click('dialog button:has-text("Create project")');
+
+  await page.waitForSelector('dialog[aria-label="Project created"]');
+  await page.click('dialog a:has-text("Open project")');
+
+  await waitForUrlMatch(page, /\/w\/[^/]+\/p\/[^/]+$/);
+  const projectId = page.url().split("/p/")[1];
+  if (!projectId) throw new Error(`Could not parse project ID from ${page.url()}`);
+  return projectId;
 }
 
 /**
