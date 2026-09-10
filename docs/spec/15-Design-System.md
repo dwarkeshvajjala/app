@@ -21,13 +21,18 @@ Font: system font stack (`-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
 
 ## 15.3 Color Tokens
 
+Values below are what's actually shipped (`apps/web/tailwind.config.js` and the canonical
+palette in `apps/web/src/styles/backline.css`'s `:root`/`.dark` blocks, kept in sync with
+each other) - a mint/green accent rather than the indigo originally sketched here, discovered
+and reconciled during the `docs/implementation/audit-current-state-2026-09-09.md` theming pass.
+
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `bg-surface` | `#FFFFFF` | `#14141A` | Cards, panels |
-| `bg-canvas` | `#F7F7F9` | `#0B0B0E` | Page background |
-| `text-primary` | `#14141A` | `#F2F2F5` | Body text |
-| `text-muted` | `#6B6B76` | `#9A9AA6` | Metadata |
-| `accent-primary` | `#4F46E5` | `#818CF8` | Primary actions |
+| `bg-surface` | `#FFFFFF` | `#151515` | Cards, panels |
+| `bg-canvas` | `#F1F2F0` | `#0B0B0B` | Page background |
+| `text-primary` | `#0B0B0B` | `#F1F2F0` | Body text |
+| `text-muted` | `#62665F` | `#9A9D99` | Metadata |
+| `accent-primary` | `#0A6B4B` | `#69DEB2` | Primary actions |
 | `layer-client` | `#0EA5E9` (blue) | same, adjusted contrast | Client-visible comment badge |
 | `layer-team` | `#7C3AED` (purple) + lock icon | same | Team-only comment badge |
 | `status-todo` | `#94A3B8` | - | Kanban column |
@@ -48,7 +53,19 @@ Each ships with: default + hover + focus-visible + disabled states, and a Storyb
 
 ## 15.5 Dark Mode
 
-Dashboard: full dark mode via Tailwind's `dark:` variant, user-toggleable, persisted as a member preference (not a workspace-wide setting). Reviewer widget: **no dark mode in MVP** - it renders inside an arbitrary third-party page via Shadow DOM, and forcing a dark UI onto an unpredictable host page's context adds visual-consistency risk for a client-facing surface where trust matters more than polish; revisit post-MVP if requested.
+Dashboard: a `.dark` class on `<html>` (Tailwind's `darkMode:"class"` strategy) is the single
+trigger for both token systems - Tailwind's `dark:` variant *and* `backline.css`'s own
+`:root.dark{...}` override, which previously drove itself independently off
+`prefers-color-scheme` with no relation to Tailwind's mechanism (the bug fixed in
+`docs/implementation/audit-current-state-2026-09-09.md`). User-toggleable via `useTheme()`
+(`apps/web/src/lib/use-theme.ts`), surfaced as light/dark/match-system in Account settings.
+
+Persistence is currently **`localStorage`, per browser - not yet a member preference** as
+originally planned here; that's a deliberate, scoped-down decision (no backend field exists
+for it yet, unlike notification preferences), not silent drift. Promoting it to a real
+member-preference column, synced across devices, is open follow-up work.
+
+Reviewer widget: **no dark mode in MVP** - it renders inside an arbitrary third-party page via Shadow DOM, and forcing a dark UI onto an unpredictable host page's context adds visual-consistency risk for a client-facing surface where trust matters more than polish; revisit post-MVP if requested.
 
 ## 15.6 Responsive Breakpoints
 

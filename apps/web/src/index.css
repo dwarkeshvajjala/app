@@ -3,8 +3,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* bg/text color intentionally NOT @apply'd here: backline.css's own
+   body{background:var(--bl-paper);color:var(--bl-ink)} already covers it and is
+   theme-aware (flips with the .dark class - see use-theme.ts). A Tailwind @apply
+   here would resolve to fixed light hex at build time with no dark: variant,
+   silently overriding that and pinning the page background to light forever. */
 body {
-  @apply bg-bg-canvas text-text-primary min-h-screen;
+  @apply min-h-screen;
   font-family:
     "Schibsted Grotesk", Helvetica, Arial, sans-serif;
 }

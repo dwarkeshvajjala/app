@@ -5,6 +5,7 @@ import { useToast } from "../../components/Toast";
 import { useAuth } from "./AuthContext";
 import { updateProfile, listSessions, revokeSession, type SessionOut } from "./api";
 import { useLocale } from "../../lib/use-locale";
+import { useTheme, type Theme } from "../../lib/use-theme";
 
 interface AccountModalProps {
   onClose: () => void;
@@ -13,6 +14,7 @@ interface AccountModalProps {
 export function AccountModal({ onClose }: AccountModalProps) {
   const { user, logout, updateUser } = useAuth();
   const { locale, setLocale } = useLocale();
+  const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const [revokeCandidate, setRevokeCandidate] = useState<SessionOut | null>(null);
   const [revoking, setRevoking] = useState(false);
@@ -31,9 +33,14 @@ export function AccountModal({ onClose }: AccountModalProps) {
   const [saving, setSaving] = useState(false);
   const [sessionError, setSessionError] = useState(false);
   const [loadingSessions, setLoadingSessions] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
 
-  useEffect(() => {
+  useEffect(() => loadSessions(), []);
+
+  function loadSessions() {
     let active = true;
+    setLoadingSessions(true);
+    setSessionError(false);
     listSessions().then(res => {
       if (active) {
         setSessions(res);
@@ -43,11 +50,19 @@ export function AccountModal({ onClose }: AccountModalProps) {
       if (active) { setLoadingSessions(false); setSessionError(true); }
     });
     return () => { active = false; };
-  }, []);
+  }
 
   async function handleSignOut() {
-    await logout();
-    onClose();
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await logout();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      toast(err instanceof Error ? err.message : "Could not sign out.", "error");
+      setSigningOut(false);
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -131,7 +146,26 @@ export function AccountModal({ onClose }: AccountModalProps) {
                 </label>
               </div>
             </section>
-            
+
+            {/* Client-side only for now (see use-theme.ts) - unlike the fields above,
+                there's no backend member-preference column for this yet. */}
+            <section style={{ marginBottom: "30px" }}>
+              <p className="bl-eyebrow" style={{ margin: "0 0 12px" }}>Appearance</p>
+              <label className="bl-form-field" style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+                <span style={{ fontSize: "12px", fontWeight: 500, width: "100px" }}>Theme</span>
+                <select
+                  className="bl-select"
+                  value={theme}
+                  onChange={e => setTheme(e.target.value as Theme)}
+                  style={{ flex: 1, maxWidth: "none" }}
+                >
+                  <option value="system">Match system</option>
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                </select>
+              </label>
+            </section>
+
             <section style={{ marginBottom: "30px" }}>
               <p className="bl-eyebrow" style={{ margin: "0 0 12px" }}>Notification preferences</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -160,12 +194,17 @@ export function AccountModal({ onClose }: AccountModalProps) {
             
             <section style={{ marginBottom: "20px" }}>
               <p className="bl-eyebrow" style={{ margin: "0 0 12px" }}>Security &amp; Sessions</p>
-              {sessionError ? <p role="alert">Sessions could not load. Close and reopen your account to retry.</p> : loadingSessions ? (
+              {sessionError ? (
+                <p role="alert" style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                  Sessions could not load.
+                  <button type="button" className="bl-quiet" onClick={loadSessions}>Try again</button>
+                </p>
+              ) : loadingSessions ? (
                 <p className="bl-mono">Loading sessions...</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   {sessions.map(s => (
-                    <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px", padding: "12px", border: "1px solid var(--bl-line)", borderRadius: "3px", background: "#fff" }}>
+                    <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px", padding: "12px", border: "1px solid var(--bl-line)", borderRadius: "3px", background: "var(--bl-surface)" }}>
                       <div>
                         <strong>{s.os || "Unknown OS"}</strong> • {s.browser || "Unknown Browser"}
                         {s.current && <span style={{ marginLeft: "6px", fontSize: "10px", background: "var(--bl-paper)", padding: "2px 6px", borderRadius: "12px", color: "var(--bl-muted)" }}>Current</span>}
@@ -192,16 +231,17 @@ export function AccountModal({ onClose }: AccountModalProps) {
           <button
             type="button"
             className="bl-quiet"
+            disabled={signingOut}
             onClick={() => void handleSignOut()}
           >
-            Sign out this session
+            {signingOut ? "Signing out..." : "Sign out this session"}
           </button>
           
           <div style={{ display: "flex", gap: "10px" }}>
             <button type="button" className="bl-quiet" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="bl-button" disabled={saving}>
+            <button type="submit" className="bl-button mint" disabled={saving}>
               {saving ? "Saving..." : "Save changes"}
             </button>
           </div>

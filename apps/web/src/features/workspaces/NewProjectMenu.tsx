@@ -1,5 +1,6 @@
 import { Button } from "@backline/ui";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useOnClickOutside } from "../../lib/use-click-outside";
 
 import { ChevronDownIcon, ImagePdfIcon, MobileIcon, WebAppIcon, WebsiteIcon } from "../../app/layout/sidebar-icons";
 import { ComingSoonModal } from "./ComingSoonModal";
@@ -23,9 +24,21 @@ interface NewProjectMenuProps {
 export function NewProjectMenu({ onCreateWebsite }: NewProjectMenuProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [comingSoon, setComingSoon] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useOnClickOutside(rootRef, () => setShowMenu(false));
+
+  useEffect(() => {
+    if (!showMenu) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setShowMenu(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [showMenu]);
 
   return (
-    <div className="relative inline-flex" onMouseLeave={() => setShowMenu(false)}>
+    <div ref={rootRef} className="relative inline-flex" onMouseLeave={() => setShowMenu(false)}>
       <div className="inline-flex overflow-hidden rounded-md">
         <Button onClick={onCreateWebsite} className="rounded-r-none">
           + New Project
@@ -43,33 +56,35 @@ export function NewProjectMenu({ onCreateWebsite }: NewProjectMenuProps) {
       </div>
 
       {showMenu && (
-        <div className="bg-bg-surface absolute top-full right-0 z-20 mt-1 w-64 rounded-lg border border-black/10 p-2 shadow-lg dark:border-white/10 dark:bg-[#14141A]">
+        <div className="bl-dropdown-pop" role="menu" aria-label="Project type" style={{ minWidth: "256px" }}>
           <button
+            role="menuitem"
+            className="bl-dropdown-item"
             onClick={() => {
               setShowMenu(false);
               onCreateWebsite();
             }}
-            className="hover:bg-bg-canvas flex w-full items-start gap-3 rounded-md p-2 text-left"
           >
-            <WebsiteIcon width={20} height={20} className="text-accent-primary mt-0.5 shrink-0" />
-            <span>
-              <span className="block text-sm font-semibold">Website</span>
-              <span className="text-text-muted block text-xs">Review Live Websites</span>
+            <WebsiteIcon width={20} height={20} className="text-accent-primary shrink-0" />
+            <span className="stack">
+              <strong>Website</strong>
+              <small>Review Live Websites</small>
             </span>
           </button>
           {OTHER_TYPES.map(({ label, description, icon: TypeIcon }) => (
             <button
               key={label}
+              role="menuitem"
+              className="bl-dropdown-item"
               onClick={() => {
                 setShowMenu(false);
                 setComingSoon(label);
               }}
-              className="hover:bg-bg-canvas flex w-full items-start gap-3 rounded-md p-2 text-left"
             >
-              <TypeIcon width={20} height={20} className="text-accent-primary mt-0.5 shrink-0" />
-              <span>
-                <span className="block text-sm font-semibold">{label}</span>
-                <span className="text-text-muted block text-xs">{description}</span>
+              <TypeIcon width={20} height={20} className="text-accent-primary shrink-0" />
+              <span className="stack">
+                <strong>{label}</strong>
+                <small>{description}</small>
               </span>
             </button>
           ))}

@@ -48,7 +48,7 @@ export function McpServerPage() {
             {AGENTS.map((agent) => (
               <div
                 key={agent.name}
-                style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "16px", border: "1px solid var(--bl-line)", borderRadius: "3px", background: "#fff" }}
+                style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "16px", border: "1px solid var(--bl-line)", borderRadius: "3px", background: "var(--bl-surface)" }}
               >
                 <div>
                   <p style={{ fontSize: "14px", fontWeight: 600 }}>{agent.name}</p>
