@@ -5,7 +5,7 @@
 const COLORS = [
   "bg-layer-team text-white",
   "bg-layer-client text-white",
-  "bg-accent-primary text-white",
+  "bg-accent-fill text-on-accent",
   "bg-status-blocked text-white",
 ];
 

@@ -32,6 +32,8 @@ export default {
         "text-primary": withOpacity("--tw-text-primary"),
         "text-muted": withOpacity("--tw-text-muted"),
         "accent-primary": withOpacity("--tw-accent-primary"),
+        "accent-fill": withOpacity("--tw-accent-fill"),
+        "on-accent": withOpacity("--tw-on-accent"),
         "status-in-review": "#396586",
         "status-blocked": "#A33D1F",
         // #0EA5E9/#7C3AED (sky-500/violet-600) only reached 2.39:1 / ~4.5:1 as

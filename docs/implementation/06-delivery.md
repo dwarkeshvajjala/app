@@ -1,5 +1,35 @@
 # Delivery and verification ledger
 
+## 2026-09-10: Brand, contrast, and light/dark UI hardening
+
+- Made Light the deterministic first-visit theme and retained Dark as an explicit user
+  choice. Added a theme control to the authenticated topbar, project-review header, and sign-in screen, replaced
+  the Account modal's system/light/dark select with clear Light/Dark choices, synchronized
+  mounted controls, and kept the existing per-browser persistence boundary. Legacy
+  `system` values safely resolve to Light.
+- Repaired the root cause of mixed-theme text: Tailwind semantic colors now resolve
+  through the same runtime custom properties as `backline.css`. Accent text, filled
+  actions, and on-accent foregrounds have separate roles, preventing both dark-on-dark
+  labels and white-on-bright-mint controls. The dark palette now has distinct canvas,
+  rail, surface, elevated, border, text, muted, focus, danger, and brand states.
+- Hardened shared application chrome and components: branded active navigation, clearer
+  hierarchy, raised surfaces, consistent radii/shadows, visible focus states, responsive
+  spacing, reduced-motion support, theme-aware inputs/tables/chips/dropdowns/dialogs, and
+  responsive Account settings. Renamed the browser title from the prototype `QA Tool`
+  label to Backline and added theme metadata.
+- Migrated the project Board's remaining prototype Tailwind presentation onto shared
+  Backline headers, segmented controls, filter bar, kanban columns/cards, empty states,
+  bulk controls, and table styles. Data fetching, mutations, React Query ownership,
+  URL-owned filters, routing, and backend contracts are unchanged.
+- Verification passed: monorepo `pnpm lint`, `pnpm typecheck`, and `pnpm build`. The
+  production build retains the existing large-chunk warning. Local browser QA covered
+  the sign-in surface in Light and Dark at desktop and 390px mobile widths, verified
+  persisted switching and theme-color metadata, and found no sub-4.5:1 normal-text
+  contrast results on the rendered sign-in surface. Authenticated visual QA was not
+  claimed because no authenticated local browser session was available. No test suite
+  was added or run, per the Codex-specific project instruction.
+- Decision: [TDR-0021](../tdr/0021-light-default-and-unified-theme-contract.md).
+
 ## 2026-09-09: Follow-up external implementation review
 
 - Rejected an incorrect guest-widget drag/re-anchor implementation. It sent a guest

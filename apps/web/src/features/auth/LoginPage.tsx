@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "./AuthContext";
 import { useDocumentTitle } from "../../lib/use-document-title";
 import { buildGoogleAuthUrl } from "./google-oauth-url";
+import { ThemeToggle } from "../../components/ThemeToggle";
 
 import type { TranslationKeys } from "../../lib/i18n";
 
@@ -103,6 +104,7 @@ export function LoginPage() {
   return (
     <div className="lg" id="lgGate">
       <section className="lg-side">
+        <div className="lg-theme"><ThemeToggle /></div>
         {/* Brand centred at top of the left column */}
         <div className="lg-brand">
           <span className="lg-mark">B</span>

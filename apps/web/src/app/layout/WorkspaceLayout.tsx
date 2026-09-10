@@ -17,6 +17,7 @@ import { BrandMark } from "../../components/BrandMark";
 import { PlusIcon } from "../../components/icons";
 import { CloseIcon, MenuIcon } from "./sidebar-icons";
 import { ProjectForm } from "../../features/projects/ProjectForm";
+import { ThemeToggle } from "../../components/ThemeToggle";
 
 // Account entry point - top-right of the persistent topbar, next to search and
 // notifications, rather than a text button buried at the bottom of the sidebar
@@ -131,6 +132,7 @@ export function WorkspaceLayout() {
             <button type="button" className="bl-button bl-topbar-create" onClick={() => setCreateProjectOpen(true)}>
               <PlusIcon /> <span>New project</span>
             </button>
+            <ThemeToggle />
             <NotificationBell />
             <AccountButton />
           </div>

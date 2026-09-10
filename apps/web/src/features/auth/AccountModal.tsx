@@ -101,29 +101,30 @@ export function AccountModal({ onClose }: AccountModalProps) {
 
   return (
     <Dialog title="Your account" onClose={onClose}>
-      <form onSubmit={(e) => void handleSave(e)} className="bl-form" style={{ padding: "0" }}>
+      <form onSubmit={(e) => void handleSave(e)} className="bl-account-form">
         
-        <div style={{ display: "flex", gap: "20px" }}>
+        <div className="bl-account-layout">
           
-          <div style={{ flex: "0 0 160px", padding: "20px", borderRight: "1px solid var(--bl-line)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <aside className="bl-account-summary">
+            <div className="bl-account-identity">
               <span className="bl-mark" aria-hidden="true">
                 {(user?.name ?? "?").slice(0, 1).toUpperCase()}
               </span>
-              <div style={{ overflow: "hidden" }}>
-                <strong style={{ fontSize: "14px", display: "block", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{user?.name ?? "Your account"}</strong>
-                <p className="bl-mono" style={{ marginTop: "3px", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>{user?.email ?? ""}</p>
+              <div>
+                <strong>{user?.name ?? "Your account"}</strong>
+                <p className="bl-mono">{user?.email ?? ""}</p>
               </div>
             </div>
-          </div>
+            <p>Manage your profile, appearance, notifications, and active sessions.</p>
+          </aside>
           
-          <div style={{ flex: 1, padding: "20px 20px 0 0" }}>
+          <div className="bl-account-content">
             
-            <section style={{ marginBottom: "30px" }}>
-              <p className="bl-eyebrow" style={{ margin: "0 0 12px" }}>Profile</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <label className="bl-form-field" style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-                  <span style={{ fontSize: "12px", fontWeight: 500, width: "100px" }}>Name</span>
+            <section className="bl-account-section">
+              <p className="bl-eyebrow">Profile</p>
+              <div className="bl-account-fields">
+                <label className="bl-account-field">
+                  <span>Name</span>
                   <input 
                     type="text" 
                     className="bl-input" 
@@ -132,13 +133,12 @@ export function AccountModal({ onClose }: AccountModalProps) {
                     required
                   />
                 </label>
-                <label className="bl-form-field" style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-                  <span style={{ fontSize: "12px", fontWeight: 500, width: "100px" }}>Language</span>
+                <label className="bl-account-field">
+                  <span>Language</span>
                   <select
                     className="bl-select"
                     value={locale}
                     onChange={e => setLocale(e.target.value)}
-                    style={{ flex: 1, maxWidth: "none" }}
                   >
                     <option value="en">English (US)</option>
                     <option value="hi-IN">हिन्दी (Hindi)</option>
@@ -149,26 +149,23 @@ export function AccountModal({ onClose }: AccountModalProps) {
 
             {/* Client-side only for now (see use-theme.ts) - unlike the fields above,
                 there's no backend member-preference column for this yet. */}
-            <section style={{ marginBottom: "30px" }}>
-              <p className="bl-eyebrow" style={{ margin: "0 0 12px" }}>Appearance</p>
-              <label className="bl-form-field" style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-                <span style={{ fontSize: "12px", fontWeight: 500, width: "100px" }}>Theme</span>
-                <select
-                  className="bl-select"
-                  value={theme}
-                  onChange={e => setTheme(e.target.value as Theme)}
-                  style={{ flex: 1, maxWidth: "none" }}
-                >
-                  <option value="system">Match system</option>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
-              </label>
+            <section className="bl-account-section">
+              <p className="bl-eyebrow">Appearance</p>
+              <div className="bl-account-field">
+                <span>Theme</span>
+                <div className="bl-theme-options" role="group" aria-label="Color theme">
+                  {(["light", "dark"] as Theme[]).map((option) => (
+                    <button key={option} type="button" aria-pressed={theme === option} onClick={() => setTheme(option)}>
+                      {option === "light" ? "Light" : "Dark"}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </section>
 
-            <section style={{ marginBottom: "30px" }}>
-              <p className="bl-eyebrow" style={{ margin: "0 0 12px" }}>Notification preferences</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <section className="bl-account-section">
+              <p className="bl-eyebrow">Notification preferences</p>
+              <div className="bl-account-checks">
                 <label className="bl-check">
                   <input type="checkbox" checked={prefs.notify_on_assignment} onChange={e => setPrefs({...prefs, notify_on_assignment: e.target.checked})} />
                   <span>Notify me on assignment</span>
@@ -192,8 +189,8 @@ export function AccountModal({ onClose }: AccountModalProps) {
               </div>
             </section>
             
-            <section style={{ marginBottom: "20px" }}>
-              <p className="bl-eyebrow" style={{ margin: "0 0 12px" }}>Security &amp; Sessions</p>
+            <section className="bl-account-section">
+              <p className="bl-eyebrow">Security &amp; Sessions</p>
               {sessionError ? (
                 <p role="alert" style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                   Sessions could not load.
@@ -202,12 +199,12 @@ export function AccountModal({ onClose }: AccountModalProps) {
               ) : loadingSessions ? (
                 <p className="bl-mono">Loading sessions...</p>
               ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div className="bl-session-list">
                   {sessions.map(s => (
-                    <div key={s.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px", padding: "12px", border: "1px solid var(--bl-line)", borderRadius: "3px", background: "var(--bl-surface)" }}>
+                    <div key={s.id} className="bl-session-row">
                       <div>
                         <strong>{s.os || "Unknown OS"}</strong> • {s.browser || "Unknown Browser"}
-                        {s.current && <span style={{ marginLeft: "6px", fontSize: "10px", background: "var(--bl-paper)", padding: "2px 6px", borderRadius: "12px", color: "var(--bl-muted)" }}>Current</span>}
+                        {s.current && <span className="bl-session-current">Current</span>}
                         <p className="bl-mono" style={{ margin: "4px 0 0" }}>
                           {s.ip_address || "Unknown IP"} • {new Date(s.last_active_at).toLocaleDateString()}
                         </p>
@@ -227,7 +224,7 @@ export function AccountModal({ onClose }: AccountModalProps) {
           
         </div>
         
-        <footer className="bl-form-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderTop: "1px solid var(--bl-line)", background: "var(--bl-paper)" }}>
+        <footer className="bl-account-actions">
           <button
             type="button"
             className="bl-quiet"

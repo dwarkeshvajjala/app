@@ -28,11 +28,12 @@ and reconciled during the `docs/implementation/audit-current-state-2026-09-09.md
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `bg-surface` | `#FFFFFF` | `#151515` | Cards, panels |
-| `bg-canvas` | `#F1F2F0` | `#0B0B0B` | Page background |
-| `text-primary` | `#0B0B0B` | `#F1F2F0` | Body text |
-| `text-muted` | `#62665F` | `#9A9D99` | Metadata |
-| `accent-primary` | `#0A6B4B` | `#69DEB2` | Primary actions |
+| `bg-surface` | `#FFFFFF` | `#171D19` | Cards, panels |
+| `bg-canvas` | `#F1F2F0` | `#0E1210` | Page background |
+| `text-primary` | `#0B0B0B` | `#F3F7F4` | Body text |
+| `text-muted` | `#62665F` | `#AAB5AD` | Metadata |
+| `accent-primary` | `#0A6B4B` | `#7CE7BE` | Links, focus and accent text |
+| `accent-fill` | `#0A6B4B` | `#16825D` | Filled actions with white foreground |
 | `layer-client` | `#0EA5E9` (blue) | same, adjusted contrast | Client-visible comment badge |
 | `layer-team` | `#7C3AED` (purple) + lock icon | same | Team-only comment badge |
 | `status-todo` | `#94A3B8` | - | Kanban column |
@@ -54,11 +55,12 @@ Each ships with: default + hover + focus-visible + disabled states, and a Storyb
 ## 15.5 Dark Mode
 
 Dashboard: a `.dark` class on `<html>` (Tailwind's `darkMode:"class"` strategy) is the single
-trigger for both token systems - Tailwind's `dark:` variant *and* `backline.css`'s own
-`:root.dark{...}` override, which previously drove itself independently off
-`prefers-color-scheme` with no relation to Tailwind's mechanism (the bug fixed in
-`docs/implementation/audit-current-state-2026-09-09.md`). User-toggleable via `useTheme()`
-(`apps/web/src/lib/use-theme.ts`), surfaced as light/dark/match-system in Account settings.
+trigger for both token systems - Tailwind semantic utilities resolve through the same
+custom properties as `backline.css`, rather than compiling a second fixed palette. The
+default is light. Users can explicitly select light or dark from the global chrome,
+sign-in screen, or Account settings; the earlier match-system option was removed by
+[TDR-0021](../tdr/0021-light-default-and-unified-theme-contract.md) after it exposed
+inconsistent dark styling on first visit.
 
 Persistence is currently **`localStorage`, per browser - not yet a member preference** as
 originally planned here; that's a deliberate, scoped-down decision (no backend field exists

@@ -277,7 +277,7 @@ export function BoardPage() {
   }
 
   if (!projectId) {
-    return <p className="text-recovery-orphaned p-6 text-sm">Missing project context.</p>;
+    return <main className="bl-review-gate"><p role="alert">Missing project context.</p></main>;
   }
 
   if (isLoading) {
@@ -333,7 +333,7 @@ export function BoardPage() {
       )}
 
       {filtered.length === 0 && (
-        <p className="text-text-muted mt-8 text-sm">No comments match the current filters.</p>
+        <div className="bl-empty"><strong>No matching comments</strong><p>Try clearing one or more board filters.</p></div>
       )}
     </main>
   );

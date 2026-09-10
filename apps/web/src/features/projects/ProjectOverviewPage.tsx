@@ -29,6 +29,7 @@ import { ProjectSidePanel } from "./panel/ProjectSidePanel";
 import { ProjectForm } from "./ProjectForm";
 import { ProjectMenu } from "./ProjectMenu";
 import { ProjectPagesModal } from "./ProjectPagesModal";
+import { ThemeToggle } from "../../components/ThemeToggle";
 
 type PageOut = Schemas["PageOut"];
 
@@ -367,6 +368,7 @@ export function ProjectOverviewPage() {
             <ShareIcon width={13} height={13} />
             Share
           </button>
+          <ThemeToggle />
           <ProjectMenu
             project={project}
             workspaceSlug={workspace.slug}

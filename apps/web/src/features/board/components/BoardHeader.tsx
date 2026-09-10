@@ -25,39 +25,45 @@ export function BoardHeader({
 }: BoardHeaderProps) {
   return (
     <>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">Board</h1>
-          <span className="text-text-muted flex items-center gap-1.5 text-xs">
+      <div className="bl-board-head">
+        <div>
+          <p className="bl-eyebrow">Project workflow</p>
+          <div className="bl-board-title-row">
+            <h1>Board</h1>
+            <span className="bl-connection-state">
             <span
-              className={`h-1.5 w-1.5 rounded-full ${CONNECTION_DOT[connectionStatus]}`}
+              className={`bl-connection-dot ${CONNECTION_DOT[connectionStatus]}`}
               aria-hidden="true"
             />
             {CONNECTION_LABEL[connectionStatus]}
           </span>
+          </div>
+          <p>Review, assign, and move every comment through a clear delivery workflow.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="bl-segment" aria-label="Board layout">
           <button
+            type="button"
             onClick={() => setView("kanban")}
-            className={`rounded-md px-3 py-1.5 text-sm ${view === "kanban" ? "bg-accent-primary text-white" : "border border-black/10 dark:border-white/10"}`}
+            aria-pressed={view === "kanban"}
           >
             Kanban
           </button>
           <button
+            type="button"
             onClick={() => setView("list")}
-            className={`rounded-md px-3 py-1.5 text-sm ${view === "list" ? "bg-accent-primary text-white" : "border border-black/10 dark:border-white/10"}`}
+            aria-pressed={view === "list"}
           >
             List
           </button>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="bl-board-filterbar" aria-label="Board filters">
         <select
           value={filters.status}
           onChange={(e) => setFilter("status", e.target.value)}
           aria-label="Filter by status"
-          className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
+          className="bl-select"
         >
           <option value="">All statuses</option>
           {STATUSES.map((status) => (
@@ -70,7 +76,7 @@ export function BoardHeader({
           value={filters.layer}
           onChange={(e) => setFilter("layer", e.target.value)}
           aria-label="Filter by layer"
-          className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
+          className="bl-select"
         >
           <option value="">All layers</option>
           <option value="client">Client visible</option>
@@ -80,7 +86,7 @@ export function BoardHeader({
           value={filters.assignee}
           onChange={(e) => setFilter("assignee", e.target.value)}
           aria-label="Filter by assignee"
-          className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
+          className="bl-select"
         >
           <option value="">All assignees</option>
           {(members ?? []).map((member) => (
@@ -93,7 +99,7 @@ export function BoardHeader({
           value={filters.device}
           onChange={(e) => setFilter("device", e.target.value)}
           aria-label="Filter by device"
-          className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
+          className="bl-select"
         >
           <option value="">All devices</option>
           <option value="desktop">Desktop</option>
@@ -104,7 +110,7 @@ export function BoardHeader({
           value={filters.page}
           onChange={(e) => setFilter("page", e.target.value)}
           aria-label="Filter by page"
-          className="rounded-md border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
+          className="bl-select"
         >
           <option value="">All pages</option>
           {pageUrls.map((url) => {

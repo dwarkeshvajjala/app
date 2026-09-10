@@ -6,39 +6,69 @@ import { useCallback, useEffect, useState } from "react";
 // of "persisted as a member preference": client-side only, per browser, for now.
 const THEME_KEY = "backline_theme";
 
-export type Theme = "light" | "dark" | "system";
+export type Theme = "light" | "dark";
 
-function systemPrefersDark(): boolean {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
+const THEME_EVENT = "backline:theme-change";
 
-function isDark(theme: Theme): boolean {
-  return theme === "system" ? systemPrefersDark() : theme === "dark";
+function storedTheme(): Theme {
+  // Older builds offered a "system" value. Treat it as light so the product now
+  // has the requested deterministic, legible default on every device.
+  try {
+    return localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
+  } catch {
+    return "light";
+  }
 }
 
 // Also used by the anti-flash inline script in index.html (kept in sync by hand - that
 // script runs before any JS module loads, so it can't import this function directly).
 function applyTheme(theme: Theme) {
-  document.documentElement.classList.toggle("dark", isDark(theme));
+  document.documentElement.classList.toggle("dark", theme === "dark");
+  document.documentElement.style.colorScheme = theme;
+  document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute(
+    "content",
+    theme === "dark" ? "#0e1210" : "#f4f7f5",
+  );
 }
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(THEME_KEY) as Theme | null) ?? "system"
-  );
+  const [theme, setThemeState] = useState<Theme>(storedTheme);
 
   useEffect(() => {
     applyTheme(theme);
-    localStorage.setItem(THEME_KEY, theme);
-
-    if (theme !== "system") return;
-    // Only "system" needs to keep listening - an explicit light/dark choice shouldn't
-    // silently move when the OS setting changes underneath it.
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => applyTheme("system");
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // The visible theme still works when storage is unavailable.
+    }
   }, [theme]);
 
-  return { theme, setTheme: useCallback((next: Theme) => setTheme(next), []) };
+  useEffect(() => {
+    const syncTheme = (event: Event) => {
+      const next = (event as CustomEvent<Theme>).detail;
+      if (next === "light" || next === "dark") setThemeState(next);
+    };
+    const syncStorage = (event: StorageEvent) => {
+      if (event.key === THEME_KEY) setThemeState(event.newValue === "dark" ? "dark" : "light");
+    };
+    window.addEventListener(THEME_EVENT, syncTheme);
+    window.addEventListener("storage", syncStorage);
+    return () => {
+      window.removeEventListener(THEME_EVENT, syncTheme);
+      window.removeEventListener("storage", syncStorage);
+    };
+  }, []);
+
+  const setTheme = useCallback((next: Theme) => {
+    applyTheme(next);
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch {
+      // The visible theme still works when storage is unavailable.
+    }
+    setThemeState(next);
+    window.dispatchEvent(new CustomEvent<Theme>(THEME_EVENT, { detail: next }));
+  }, []);
+
+  return { theme, setTheme };
 }

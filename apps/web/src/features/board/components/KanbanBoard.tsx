@@ -1,7 +1,7 @@
 import { LayerBadge, RecoveryBadge } from "@backline/ui";
 import type { UseMutationResult } from "@tanstack/react-query";
 
-import { WORKFLOW_STATUSES as STATUSES, STATUS_LABELS } from "../../../lib/workflow";
+import { WORKFLOW_STATUSES as STATUSES, STATUS_COLORS, STATUS_LABELS } from "../../../lib/workflow";
 import type {
   CreateClickUpTaskResult,
   CreateTrelloCardResult,
@@ -40,39 +40,42 @@ export function KanbanBoard({
   createTrelloCardMutation,
 }: KanbanBoardProps) {
   return (
-    <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="bl-kanban-grid">
       {STATUSES.map((status) => (
-        <div key={status} className="flex flex-col gap-2">
-          <h2 className="text-text-muted text-xs font-medium uppercase tracking-wide">
-            {STATUS_LABELS[status]} ({filtered.filter((c) => c.status === status).length})
-          </h2>
-          <div className="flex flex-col gap-2">
+        <section key={status} className="bl-kanban-column">
+          <header className="bl-kanban-column-head">
+            <i style={{ background: STATUS_COLORS[status] }} aria-hidden="true" />
+            <h2>{STATUS_LABELS[status]}</h2>
+            <span>{filtered.filter((c) => c.status === status).length}</span>
+          </header>
+          <div className="bl-kanban-stack">
             {filtered
               .filter((comment) => comment.status === status)
               .map((comment) => (
-                <div
+                <article
                   key={comment.id}
-                  className="flex flex-col gap-2 rounded-md border border-black/10 p-3 dark:border-white/10"
+                  className="bl-kanban-card"
                 >
                   {comment.screenshot_url && (
                     <img
                       src={comment.screenshot_url}
                       alt=""
-                      className="h-20 w-full rounded object-cover"
+                      className="bl-kanban-shot"
                     />
                   )}
-                  <p className="line-clamp-3 text-sm">{comment.body}</p>
-                  <div className="flex flex-wrap items-center gap-1">
+                  <p className="bl-kanban-copy">{comment.body}</p>
+                  <div className="bl-chip-row">
                     <LayerBadge layer={comment.layer} />
                     <RecoveryBadge status={comment.recovery_status} />
                   </div>
-                  <div className="text-text-muted flex items-center justify-between text-xs">
+                  <div className="bl-kanban-meta">
                     <span>{memberName(comment.assignee_id) ?? "Unassigned"}</span>
                     <span>{commentContext(comment).device_type ?? ""}</span>
                   </div>
                   <button
+                    type="button"
                     onClick={() => setOpenThreadId(comment.id)}
-                    className="text-accent-primary self-start text-xs underline"
+                    className="bl-text-link"
                   >
                     {(repliesByParent.get(comment.id)?.length ?? 0) > 0
                       ? `View thread (${repliesByParent.get(comment.id)?.length})`
@@ -87,7 +90,7 @@ export function KanbanBoard({
                       })
                     }
                     aria-label="Change comment status"
-                    className="rounded border border-black/10 bg-transparent px-2 py-1 text-xs dark:border-white/10"
+                    className="bl-select bl-kanban-status"
                   >
                     {STATUSES.map((s) => (
                       <option key={s} value={s}>
@@ -100,17 +103,17 @@ export function KanbanBoard({
                       href={taskLinks[comment.id]}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-accent-primary text-xs underline"
+                      className="bl-text-link"
                     >
                       View linked task
                     </a>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="bl-kanban-integrations">
                       {clickupIntegration && (
                         <button
                           onClick={() => createClickUpTaskMutation.mutate(comment.id)}
                           disabled={createClickUpTaskMutation.isPending}
-                          className="text-text-muted text-xs underline"
+                          className="bl-text-link muted"
                         >
                           Send to ClickUp
                         </button>
@@ -119,17 +122,20 @@ export function KanbanBoard({
                         <button
                           onClick={() => createTrelloCardMutation.mutate(comment.id)}
                           disabled={createTrelloCardMutation.isPending}
-                          className="text-text-muted text-xs underline"
+                          className="bl-text-link muted"
                         >
                           Send to Trello
                         </button>
                       )}
                     </div>
                   )}
-                </div>
+                </article>
               ))}
+            {filtered.filter((comment) => comment.status === status).length === 0 && (
+              <p className="bl-kanban-empty">No comments</p>
+            )}
           </div>
-        </div>
+        </section>
       ))}
     </div>
   );

@@ -49,7 +49,7 @@ export function NewProjectMenu({ onCreateWebsite }: NewProjectMenuProps) {
           aria-label="Choose project type"
           aria-haspopup="true"
           aria-expanded={showMenu}
-          className="bg-accent-primary flex items-center justify-center rounded-r-md border-l border-white/20 px-2 text-white hover:opacity-90"
+          className="bg-accent-fill text-on-accent flex items-center justify-center rounded-r-md border-l border-white/20 px-2 hover:opacity-90"
         >
           <ChevronDownIcon width={14} height={14} />
         </button>
