@@ -186,7 +186,6 @@ export function WorkspaceLayout() {
           </div>
         )}
         <div id="workspace-content" className="bl-route-content" tabIndex={-1}>
-          {location.pathname !== `/w/${workspace.slug}` && <nav aria-label="Breadcrumb" className="bl-mono"><Link to={`/w/${workspace.slug}`}>{workspace.name}</Link> / <span aria-current="page">{location.pathname.split("/").pop()?.replace(/-/g, " ")}</span></nav>}
           <Outlet context={{ workspace }} />
         </div>
       </div>

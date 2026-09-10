@@ -89,6 +89,17 @@ export function AccountModal({ onClose }: AccountModalProps) {
     setRevoking(true);
     try {
       await revokeSession(familyId);
+      if (familyId === "all") {
+        // The backend just invalidated every session's refresh token, including this
+        // tab's own - revokeSession() doesn't distinguish "all" from a single family
+        // id, so the current session is dead server-side now too. Without a real local
+        // logout+redirect here, this tab keeps looking "logged in" (stale cached user/
+        // session list) until its next API call 401s.
+        toast("Signed out of all sessions.");
+        await logout();
+        onClose();
+        return;
+      }
       setSessions(s => s.filter(x => x.id !== familyId));
       setRevokeCandidate(null);
     } catch (err) {
@@ -238,10 +249,10 @@ export function AccountModal({ onClose }: AccountModalProps) {
               type="button"
               className="bl-quiet"
               style={{ color: "var(--bl-error)" }}
-              disabled={signingOut}
-              onClick={() => doRevoke("all")}
+              disabled={signingOut || revoking}
+              onClick={() => void doRevoke("all")}
             >
-              Sign out all sessions
+              {revoking ? "Signing out everywhere..." : "Sign out all sessions"}
             </button>
           </div>
           
