@@ -56,7 +56,6 @@ export function ActivityPage() {
   return <main className="bl-wrap">
     <header className="bl-head">
       <div>
-        <p className="bl-eyebrow">Workspace</p>
         <h1>Activity</h1>
         <p>What changed across your workspace.</p>
       </div>

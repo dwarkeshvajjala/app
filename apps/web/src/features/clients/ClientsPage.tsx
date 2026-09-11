@@ -56,7 +56,6 @@ export function ClientsPage() {
   return <main className="bl-wrap">
     <header className="bl-head">
       <div>
-        <p className="bl-eyebrow">Workspace</p>
         <h1>Clients</h1>
         <p>Your client relationships and the projects you're reviewing together.</p>
       </div>

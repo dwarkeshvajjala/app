@@ -138,7 +138,6 @@ export function MembersPage() {
     <main className="bl-wrap">
       <header className="bl-head">
         <div>
-          <p className="bl-eyebrow">Workspace</p>
           <h1>Team Members</h1>
           <p>Manage who has access to this workspace.</p>
         </div>

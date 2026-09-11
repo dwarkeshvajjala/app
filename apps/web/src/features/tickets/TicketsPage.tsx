@@ -73,7 +73,6 @@ export function TicketsPage() {
     <main className="bl-wrap">
       <header className="bl-head">
         <div>
-          <p className="bl-eyebrow">Across your projects</p>
           <h1>{params.get("view") === "mine" ? "Assigned to me" : "All tickets"}</h1>
           <p>Every comment, plus the work your team raises directly.</p>
         </div>

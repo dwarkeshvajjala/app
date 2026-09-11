@@ -10,7 +10,10 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const variantClasses: Record<ButtonVariant, string> = {
   primary: "bg-accent-fill text-on-accent hover:opacity-90",
   secondary: "bg-transparent border border-current text-text-primary hover:bg-bg-canvas",
-  danger: "bg-red-600 text-white hover:bg-red-700",
+  // Raw Tailwind red (bg-red-600/700) doesn't flip with the app's theme like every
+  // other variant here does - bl-btn-danger (backline.css) uses the app's own
+  // --bl-error/--bl-on-accent tokens instead, matching .bl-button.mint's pattern.
+  danger: "bl-btn-danger",
 };
 
 export function Button({ variant = "primary", className = "", children, ...rest }: ButtonProps) {
