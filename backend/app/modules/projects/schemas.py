@@ -76,6 +76,10 @@ class ProjectSettingsOut(BaseModel):
     reviewer_can_resolve: bool = False
     show_board_to_client: bool = False
     client_digest_enabled: bool = False
+    # Gates modules/browser_render: real per-engine (Chromium/WebKit/Firefox) headless
+    # screenshots are real compute cost per render, so this stays an explicit opt-in
+    # like the flags above rather than on by default.
+    enable_cross_browser_render: bool = False
 
 
 class ProjectSettingsUpdate(BaseModel):
@@ -86,6 +90,7 @@ class ProjectSettingsUpdate(BaseModel):
     reviewer_can_resolve: bool | None = None
     show_board_to_client: bool | None = None
     client_digest_enabled: bool | None = None
+    enable_cross_browser_render: bool | None = None
 
 
 class ProjectOut(BaseModel):

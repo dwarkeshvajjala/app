@@ -17,6 +17,7 @@ import * as projectsApi from "./api";
 import { ProjectFooter, type CanvasMode } from "./footer/ProjectFooter";
 import { VIEWPORTS, type ViewportOption } from "./footer/ViewportMenu";
 import { BROWSERS, type BrowserOption } from "./footer/BrowserMenu";
+import { useBrowserRenderSnapshot } from "./render-api";
 import {
   ArrowLeftIcon,
   CommentsIcon,
@@ -38,6 +39,22 @@ type PageOut = Schemas["PageOut"];
 
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 1.5;
+
+// Playwright needs a concrete pixel size to launch a viewport with - unlike the live
+// iframe, which can just fill whatever CSS gives it ("Fit canvas" / is-fit below), a
+// render request always needs real numbers. Used only when the reviewer hasn't picked
+// an explicit viewport from ViewportMenu.
+const DEFAULT_RENDER_WIDTH = 1440;
+const DEFAULT_RENDER_HEIGHT = 900;
+
+// Matches backend/app/modules/browser_render/schemas.py's ENGINE_BY_BROWSER - shown so
+// a reviewer knows "Safari" really means the WebKit engine, not a UA-spoofed Chromium.
+const ENGINE_LABEL: Record<string, string> = {
+  Chrome: "Chromium",
+  Edge: "Chromium",
+  Safari: "WebKit",
+  Firefox: "Firefox",
+};
 
 function clampZoom(value: number) {
   if (!Number.isFinite(value)) return 1;
@@ -153,6 +170,63 @@ export function ProjectOverviewPage() {
   const hasProxyCandidate = (shareLinksQuery.data ?? []).some(
     (link) => link.revoked_at === null && link.mode === "proxy",
   );
+
+  // Hoisted above every early return below (project.isLoading/.error/.archived_at/
+  // non-website type) so useBrowserRenderSnapshot is never called conditionally -
+  // React's Rules of Hooks require every hook to run in the same order on every
+  // render, loading/error states included. None of these actually need the narrowed
+  // `project` const those guards produce, only the raw queries, so they're safe here.
+  const sortedPages = [...(pagesQuery.data ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+  const activePage =
+    sortedPages.find((page) => page.id === activePageIdParam) ??
+    sortedPages.find((page) => page.id === currentPageId) ??
+    sortedPages[0] ??
+    null;
+  const visibleWidth = viewport
+    ? orientation === "portrait"
+      ? viewport.width
+      : viewport.height
+    : undefined;
+  const visibleHeight = viewport
+    ? orientation === "portrait"
+      ? viewport.height
+      : viewport.width
+    : undefined;
+  // Chrome (BROWSERS[0]) stays the live, interactive proxy iframe exactly as before -
+  // only a real non-Chrome pick, on a project that has opted into the real-render
+  // project setting, switches the stage over to a rendered screenshot. Projects that
+  // haven't turned the setting on keep today's behavior unchanged: the dropdown still
+  // tags the browser on new comments (the blBrowser search param below), it just
+  // doesn't visually change the canvas.
+  const isCrossBrowserRenderActive =
+    browser.name !== BROWSERS[0].name &&
+    Boolean(projectQuery.data?.settings.enable_cross_browser_render);
+  // Deliberately the *un*-swapped viewport (not visibleWidth/visibleHeight above,
+  // which already flip width/height for landscape display) - the render request sends
+  // this plus `orientation` separately, and backend/app/modules/browser_render/
+  // service.py's run_render() does its own single portrait/landscape swap. Feeding it
+  // the already-swapped display dimensions would flip them a second time and cancel
+  // the swap out, producing a portrait-shaped render for a landscape request.
+  const renderBaseWidth = viewport?.width ?? DEFAULT_RENDER_WIDTH;
+  const renderBaseHeight = viewport?.height ?? DEFAULT_RENDER_HEIGHT;
+  // For the snapshot shell's own CSS box (visual only) - this one *should* already
+  // reflect orientation, the same way the live iframe shell's visibleWidth/
+  // visibleHeight do below.
+  const renderWidth = visibleWidth ?? renderBaseWidth;
+  const renderHeight = visibleHeight ?? renderBaseHeight;
+  const browserRender = useBrowserRenderSnapshot({
+    projectId: isCrossBrowserRenderActive ? (projectQuery.data?.id ?? null) : null,
+    pageId: isCrossBrowserRenderActive ? (activePage?.id ?? null) : null,
+    browser: browser.name,
+    width: renderBaseWidth,
+    height: renderBaseHeight,
+    orientation,
+    // hasProxyCandidate rather than the later `iframeSrc`: this hook is declared
+    // before the early-return guards, so it can't reference anything computed after
+    // them, but an active proxy link existing is a close-enough stand-in for "there's
+    // something to render" without duplicating iframeSrc's own resolution logic here.
+    enabled: isCrossBrowserRenderActive && Boolean(activePage) && hasProxyCandidate,
+  });
 
   // Global hotkeys for the shortcuts ShortcutsModal/QuickToolsDock advertise ("Add
   // Comment (C)", "Draw Region (D)", ...) - without this the modal only ever relabeled
@@ -349,12 +423,6 @@ export function ProjectOverviewPage() {
     return <AssetReview projectId={project.id} title={project.name} workspaceSlug={workspace.slug} />;
   }
 
-  const sortedPages = [...(pagesQuery.data ?? [])].sort((a, b) => a.sort_order - b.sort_order);
-  const activePage =
-    sortedPages.find((page) => page.id === activePageIdParam) ??
-    sortedPages.find((page) => page.id === currentPageId) ??
-    sortedPages[0] ??
-    null;
   const activeLinks = (shareLinksQuery.data ?? []).filter((link) => link.revoked_at === null);
   const reviewLink = activeLinks[0] ?? null;
   const embedLink = activeLinks.find((link) => link.mode === "proxy") ?? null;
@@ -389,16 +457,6 @@ export function ProjectOverviewPage() {
         .sort((a, b) => a.created_at.localeCompare(b.created_at))
         .findIndex((comment) => comment.id === selectedCommentId) + 1
     : 0;
-  const visibleWidth = viewport
-    ? orientation === "portrait"
-      ? viewport.width
-      : viewport.height
-    : undefined;
-  const visibleHeight = viewport
-    ? orientation === "portrait"
-      ? viewport.height
-      : viewport.width
-    : undefined;
   const pageIds = sortedPages.map((page) => page.id);
   const effectiveFrameStatus = iframeSrc ? iframeStatus : "unavailable";
 
@@ -524,6 +582,71 @@ export function ProjectOverviewPage() {
               <div className="bl-review-empty-actions">
                 <button type="button" className="bl-button" onClick={() => setShowPages(true)}>Manage pages</button>
                 <button type="button" className="bl-quiet" onClick={() => setShowSettings(true)}>Check project URL</button>
+              </div>
+            </div>
+          ) : iframeSrc && isCrossBrowserRenderActive ? (
+            <div
+              className="bl-live-frame-shell is-fixed bl-render-snapshot"
+              style={{ width: renderWidth, height: renderHeight, zoom: zoomScale } as CSSProperties}
+            >
+              <div className="bl-live-frame-bar">
+                <span className="bl-live-frame-lights" aria-hidden="true"><i /><i /><i /></span>
+                <span className="bl-live-frame-address" title={displayUrl}>{displayUrl.replace(/^https?:\/\//, "")}</span>
+                <span className="bl-live-frame-source">
+                  <i aria-hidden="true" />
+                  Rendered as {browser.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={browserRender.refresh}
+                  aria-label={`Refresh the ${browser.name} render`}
+                  title={`Refresh the ${browser.name} render`}
+                  disabled={browserRender.isLoading}
+                >
+                  <ReloadIcon width={13} height={13} className={browserRender.isLoading ? "bl-is-spinning" : ""} />
+                </button>
+              </div>
+              <div className="bl-live-frame-canvas">
+                {browserRender.error ? (
+                  <div className="bl-iframe-state is-error" role="alert">
+                    <span className="bl-review-state-icon is-warning"><GlobeIcon /></span>
+                    <strong>Couldn’t request a {browser.name} render</strong>
+                    <p>{browserRender.error}</p>
+                    <div>
+                      <button type="button" className="bl-button" onClick={browserRender.refresh}>Try again</button>
+                    </div>
+                  </div>
+                ) : browserRender.status?.status === "failed" ? (
+                  <div className="bl-iframe-state is-error" role="alert">
+                    <span className="bl-review-state-icon is-warning"><GlobeIcon /></span>
+                    <strong>The {browser.name} render failed</strong>
+                    <p>{browserRender.status.error ?? "The target page didn’t load in time for this engine."}</p>
+                    <div>
+                      <button type="button" className="bl-button" onClick={browserRender.refresh}>Try again</button>
+                    </div>
+                  </div>
+                ) : browserRender.status?.status === "ready" && browserRender.status.screenshot_url ? (
+                  <img
+                    src={browserRender.status.screenshot_url}
+                    alt={`${displayUrl} rendered in ${browser.name}`}
+                    className="bl-render-snapshot-img"
+                  />
+                ) : (
+                  <div className="bl-iframe-state is-loading" role="status">
+                    <span className="bl-review-loader" aria-hidden="true" />
+                    <strong>Rendering in {browser.name}</strong>
+                    <span className="bl-iframe-steps" aria-hidden="true"><i /><i /><i /></span>
+                    <p>Backline is loading this page in a real {browser.name} engine on its render worker. This usually takes a few seconds.</p>
+                  </div>
+                )}
+              </div>
+              <div className="bl-live-frame-meta">
+                <span>
+                  {browserRender.status?.status === "ready" && browserRender.status.rendered_at
+                    ? `Static ${browser.name} screenshot — comment pins aren’t available here yet. Switch to Chrome to comment.`
+                    : `Preparing a real ${browser.name} render…`}
+                </span>
+                <span>Source: {ENGINE_LABEL[browser.name] ?? "render worker"}</span>
               </div>
             </div>
           ) : iframeSrc ? (

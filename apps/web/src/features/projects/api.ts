@@ -103,6 +103,7 @@ export interface ProjectSettingsUpdate {
   reviewer_can_resolve?: boolean;
   show_board_to_client?: boolean;
   client_digest_enabled?: boolean;
+  enable_cross_browser_render?: boolean;
 }
 
 export function updateProjectSettings(projectId: string, settings: ProjectSettingsUpdate) {

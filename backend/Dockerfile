@@ -65,3 +65,26 @@ EXPOSE 8000
 # a single process *doesn't* need to coordinate - scale via multiple Railway replicas
 # behind its own load balancer instead, not multiple workers inside one container.
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+
+# --- Stage 3: the worker (adds Playwright's browser binaries) -----------------------
+# A separate target, not baked into `base` above, because only the worker process ever
+# calls modules/browser_render/service.py's run_render() (see that file's lazy
+# `from playwright...` import) - the API service gets zero benefit from these binaries
+# and they are large (three engines + OS deps, roughly 1GB+), so bloating every API
+# instance/redeploy with them for no reason would be a pure regression.
+#
+# On Railway: the WORKER service needs one settings change from what's documented in
+# DEPLOYMENT.md Part 8 - same repo, same Dockerfile Path ("backend/Dockerfile"), but set
+# Settings -> Build -> "Docker Build Target" to "worker". Leaving it unset (as today)
+# keeps building the `base` stage above, i.e. exactly the pre-existing image with no
+# Playwright - so this is opt-in and cannot regress the current worker or API deploy
+# until that one field is changed.
+FROM base AS worker
+
+# --with-deps installs the OS-level libraries each engine needs to actually launch
+# headless (fonts, codecs, etc.) - without it the binaries download fine but every
+# launch() call fails at runtime with a missing-shared-library error, which is a much
+# more confusing failure mode to debug from Railway's logs than a slower build.
+RUN playwright install --with-deps chromium firefox webkit
+
+CMD ["sh", "-c", "arq app.workers.main.WorkerSettings"]

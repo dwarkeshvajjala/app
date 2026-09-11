@@ -99,7 +99,7 @@ export function BrowserMenu({ browser, onChange }: BrowserMenuProps) {
       </button>
 
       {open && (
-        <div className="bl-review-popover bl-viewport-popover" role="menu">
+        <div className="bl-review-popover bl-viewport-popover" role="menu" aria-label="Browser">
           <div className="bl-review-popover-label">CAPTURE AS</div>
           {BROWSERS.map((option) => (
             <button
@@ -118,7 +118,7 @@ export function BrowserMenu({ browser, onChange }: BrowserMenuProps) {
             </button>
           ))}
           <div className="bl-review-popover-sep" style={{ borderTop: "1px solid var(--bl-line)", margin: "4px 0" }} />
-          <div style={{ padding: "2px 10px 6px", fontFamily: "var(--bl-mono)", fontSize: "9.5px", color: "var(--ink-4)", lineHeight: "1.6" }}>
+          <div style={{ padding: "2px 10px 6px", fontFamily: "var(--bl-mono)", fontSize: "12px", color: "var(--ink-4)", lineHeight: "1.5" }}>
             Sets the browser recorded on new comments. Real cross-engine screenshots run on Backline’s device grid.
           </div>
         </div>

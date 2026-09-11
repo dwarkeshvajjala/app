@@ -12,9 +12,9 @@ test("reviewer selects browser before commenting", async ({ page }) => {
   const projectId = await createProject(page, "Browser Site", "https://example.com");
 
   await page.goto(`/w/${workspaceSlug}/p/${projectId}`);
-  
+
   // Open the new comment panel or look for the footer
-  const footer = page.locator(".bl-project-footer");
+  const footer = page.locator(".bl-review-statusbar");
   await expect(footer).toBeVisible();
 
   // Find the browser menu trigger
@@ -23,7 +23,7 @@ test("reviewer selects browser before commenting", async ({ page }) => {
   await browserTrigger.click();
 
   // The dropdown should appear
-  const dropdown = page.locator('.bl-dropdown-pop[aria-label="Browser"]');
+  const dropdown = page.locator('.bl-review-popover[aria-label="Browser"]');
   await expect(dropdown).toBeVisible();
 
   // Click Safari
