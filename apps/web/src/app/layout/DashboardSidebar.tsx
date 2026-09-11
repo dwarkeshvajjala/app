@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { TranslationKeys } from "../../lib/i18n";
 import { getDashboard } from "../../features/tickets/api";
@@ -33,7 +33,12 @@ export function DashboardSidebar({ workspace, mobileOpen = false, onClose, onNav
 
   return <aside id="workspace-navigation" className={`bl-rail${mobileOpen ? " is-open" : ""}`} aria-label="Workspace sidebar">
     <header className="bl-rail-brand">
-      <BrandMark />
+      {/* Issue (g): this used to be a plain, non-interactive <span> with no click
+          affordance - a real link back to the workspace root, like clicking a
+          logo does on every other app, with a matching hover state (backline.css). */}
+      <Link to={base} className="bl-rail-brand-link" aria-label="Go to Backline home">
+        <BrandMark />
+      </Link>
       <button type="button" className="bl-rail-close" aria-label="Close navigation" onClick={onClose}><CloseIcon /></button>
     </header>
     {/* Workspace switcher trigger */}

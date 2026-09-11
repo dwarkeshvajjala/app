@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root{
   /* ── Backline design tokens (shared across app + login) ────────────── */
@@ -9,11 +9,26 @@
   --amber:#E8B833; --amber-tint:#FBF1D6; --amber-ink:#6B520B;
   --r:3px;
   --sans:"Inter",Helvetica,Arial,sans-serif;
-  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  /* 2026-09 typography pass: one font family app-wide (Inter) instead of a second
+     "JetBrains Mono" download for counts/timestamps/labels - a coding font read as
+     an inconsistent, overly-small "different font family" to non-technical/
+     international reviewers. --mono/--bl-mono are kept as tokens (rather than
+     switching every one of the ~60 call sites individually) so this is a single
+     point of change; genuinely tabular content (counts, clocks, dates) instead gets
+     `font-variant-numeric:tabular-nums` further down so digits still line up. */
+  --mono:var(--sans);
+
+  /* ── Type scale (2026-09 typography pass) ────────────────────────────
+     A small set of named sizes so headings/body/labels read as one deliberate
+     scale instead of ad-hoc per-component values. Not retrofitted onto every
+     existing font-size in this file (too large a change to do safely in one
+     pass) - applied to page headings/body copy and the clearest outliers. */
+  --fs-h1:28px; --fs-h2:18px; --fs-h3:16px;
+  --fs-body:14px; --fs-body-sm:12px; --fs-label:12px;
 
   /* ── Legacy bl- aliases (keep existing components working) ─────────── */
   --bl-ink:#0B0B0B; --bl-muted:#62665F; --bl-paper:#F1F2F0; --bl-surface:#fff;
-  --bl-line:#DDDEDA; --bl-mint:#69DEB2; --bl-mono:'JetBrains Mono',monospace;
+  --bl-line:#DDDEDA; --bl-mint:#69DEB2; --bl-mono:var(--mono);
   --bl-error:#A33317;
   /* ── Danger/info tint pairs (audit-batch-13 P0/P4) ───────────────────
      Mirror --mint-tint/--mint-deep and --amber-tint/--amber-ink: a themed
@@ -39,7 +54,22 @@
   --bl-accent-text:#0A6B4B; --bl-accent-fill:#0A6B4B; --bl-on-accent:#FFFFFF;
   --bl-rail:#F8FAF8; --bl-elevated:#FFFFFF; --bl-subtle:#F6F8F6;
   --bl-focus:#087654; --bl-danger-bg:#FFF3EE; --bl-danger-border:#E7B6AA;
+  /* Solid-fill danger button background (2026-09 polish pass) - unlike --bl-error
+     (which lightens toward pale salmon in dark mode because it's meant to be read as
+     text or a border against a dark surface), this stays a filled, readable-with-white-text
+     red in both themes, mirroring how --bl-accent-fill stays filled-green in both themes. */
+  --bl-danger-fill:#A33317;
   --tw-accent-fill:10 107 75; --tw-on-accent:255 255 255;
+
+  /* ── Badge tone bridge (2026-09 polish pass) ──────────────────────────
+     RGB counterparts of tailwind.config.js's status/layer/recovery hex colors,
+     so those Tailwind utilities can read `rgb(var(--tw-x) / <alpha>)` and flip
+     with :root.dark exactly like the 7 bridge colors above - see the matching
+     :root.dark block (bottom of this file) for the dark-mode values and why. */
+  --tw-status-todo:148 163 184; --tw-status-in-progress:245 158 11; --tw-status-in-review:57 101 134;
+  --tw-status-blocked:163 61 31; --tw-status-resolved:34 197 94; --tw-status-wont-fix:100 116 139;
+  --tw-layer-client:7 89 133; --tw-layer-team:109 40 217;
+  --tw-recovery-low-confidence:245 158 11; --tw-recovery-orphaned:185 28 28;
 
   /* ── Theming utility tokens ──────────────────────────────────────────
      --hov already had call sites via var(--hov,#EDEEEB)) with no definition
@@ -709,8 +739,8 @@ button{letter-spacing:inherit}
 /* Dashboard composition */
 .bl-wrap{width:100%;padding:26px 28px 64px}
 .bl-head{margin-bottom:22px}
-.bl-head h1{font-size:27px;letter-spacing:-.035em;margin-bottom:5px;text-wrap:balance}
-.bl-head p:not(.bl-eyebrow){font-size:13.5px;color:var(--ink-3)}
+.bl-head h1{font-size:var(--fs-h1);letter-spacing:-.035em;margin-bottom:5px;text-wrap:balance}
+.bl-head p:not(.bl-eyebrow){font-size:var(--fs-body);color:var(--ink-3)}
 .bl-head p b{color:var(--ink);font-weight:600}
 .bl-head-clock{color:var(--ink-4);font-size:10.5px}
 
@@ -1373,7 +1403,7 @@ button{letter-spacing:inherit}
    `darkMode:"class"` strategy (tailwind.config.js) so the two token systems never drift again,
    and lets it be a real user-toggleable setting (docs/spec/15-Design-System.md §15.5) rather than
    silently following the OS with no way to override it. */
-:root.dark { --brand-cursor: #E2E2E8; --badge-blue: #88A6C5; --badge-green: #2CB183; --badge-red: #E17855; --badge-purple: #AD8BCB; --badge-yellow: #D1AE45; --bl-art-bg: #1A211D; --bl-art-panel: #212924; --bl-art-line: #323F38; --bl-art-line-light: #2A352F; --bl-art-stroke: #3A4A41; --bl-art-ink: #556B5D; --bl-art-ink-soft: #485A4F; --bl-art-ink-dark: #627A6A; --ink: #F3F7F4; --ink-2: #D7DED9; --ink-3: #AAB5AD; --ink-4: #8B978F; --paper: #0E1210; --surface: #171D19; --line: #344139; --line-soft: #263129; --mint: #69DEB2; --mint-deep: #7CE7BE; --mint-tint: #17382C; --amber: #F2C94C; --amber-tint: #463B16; --amber-ink: #FFF3C4; --bl-ink: #F3F7F4; --bl-muted: #AAB5AD; --bl-paper: #0E1210; --bl-surface: #171D19; --bl-line: #344139; --bl-mint: #69DEB2; --bl-error: #FF9A7C; --bl-error-tint:#3B211B; --bl-info:#8AB4FF; --bl-info-tint:#122A4A; --bl-accent-text:#7CE7BE; --bl-accent-fill:#16825D; --bl-on-accent:#FFFFFF; --bl-rail:#121713; --bl-elevated:#1D2520; --bl-subtle:#151B17; --bl-focus:#7CE7BE; --bl-danger-bg:#3B211B; --bl-danger-border:#754334; --hov: #222B25; --bl-invert-fg: #0B0B0B; --bl-glass: rgba(18,23,19,.9); --tw-bg-surface:23 29 25; --tw-bg-canvas:14 18 16; --tw-text-primary:243 247 244; --tw-text-muted:170 181 173; --tw-accent-primary:124 231 190; --tw-accent-fill:22 130 93; --tw-on-accent:255 255 255; }
+:root.dark { --brand-cursor: #E2E2E8; --badge-blue: #88A6C5; --badge-green: #2CB183; --badge-red: #E17855; --badge-purple: #AD8BCB; --badge-yellow: #D1AE45; --bl-art-bg: #1A211D; --bl-art-panel: #212924; --bl-art-line: #323F38; --bl-art-line-light: #2A352F; --bl-art-stroke: #3A4A41; --bl-art-ink: #556B5D; --bl-art-ink-soft: #485A4F; --bl-art-ink-dark: #627A6A; --ink: #F3F7F4; --ink-2: #D7DED9; --ink-3: #AAB5AD; --ink-4: #8B978F; --paper: #0E1210; --surface: #171D19; --line: #344139; --line-soft: #263129; --mint: #69DEB2; --mint-deep: #7CE7BE; --mint-tint: #17382C; --amber: #F2C94C; --amber-tint: #463B16; --amber-ink: #FFF3C4; --bl-ink: #F3F7F4; --bl-muted: #AAB5AD; --bl-paper: #0E1210; --bl-surface: #171D19; --bl-line: #344139; --bl-mint: #69DEB2; --bl-error: #FF9A7C; --bl-error-tint:#3B211B; --bl-info:#8AB4FF; --bl-info-tint:#122A4A; --bl-accent-text:#7CE7BE; --bl-accent-fill:#16825D; --bl-on-accent:#FFFFFF; --bl-rail:#121713; --bl-elevated:#1D2520; --bl-subtle:#151B17; --bl-focus:#7CE7BE; --bl-danger-bg:#3B211B; --bl-danger-border:#754334; --bl-danger-fill:#C23B1E; --hov: #222B25; --bl-invert-fg: #0B0B0B; --bl-glass: rgba(18,23,19,.9); --tw-bg-surface:23 29 25; --tw-bg-canvas:14 18 16; --tw-text-primary:243 247 244; --tw-text-muted:170 181 173; --tw-accent-primary:124 231 190; --tw-accent-fill:22 130 93; --tw-on-accent:255 255 255; }
 
 /* ── audit-batch-13 P0 fixes: dark-mode hover/contrast regressions ─────────
    .bl-button:hover / .bl-button.mint:hover only overrode `background`, never
@@ -1734,3 +1764,63 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
    shared class with dock-only flex rules, which silently broke every other settings
    toggle row in the app (ProjectForm, ShareProjectModal, CollaboratorsModal, ...)
    since CSS source order made this the winning declaration everywhere, not just here. */
+
+/* ── 2026-09 UI/UX polish pass ────────────────────────────────────────────
+   Additive, appended after every other section (see this file's own history of
+   regressions when earlier passes rewrote rules in place instead of overriding
+   them later in the cascade) - each rule below targets one named, reported issue. */
+
+/* Digits still line up without a monospace font now that --mono==Inter (see the
+   :root token comment near the top of this file). */
+.bl-count,.bl-head-clock,.bl-project-stats strong,.bl-date,.bl-due-chip,
+.bl-review-zoom-value,.bl-page-index{font-variant-numeric:tabular-nums}
+
+/* Issue (a): "New project" type icons (Website/Image/PDF) read as heavy, wrong-looking
+   dark squares in light mode. Swap the near-black chip for the same soft mint-tint
+   treatment already used by .bl-mark (line ~1405), and token the disabled/roadmap
+   variant's background instead of a hardcoded hex. */
+.bl-type-icon{background:var(--mint-tint);color:var(--bl-accent-text);border:1px solid color-mix(in srgb,var(--mint-deep) 30%,var(--line))}
+.bl-project-type-card:disabled .bl-type-icon{background:var(--bl-paper);color:var(--ink-4);border-color:transparent}
+
+/* Issue (b): active-tab .bl-count was pairing an inverting background (var(--ink):
+   near-black in light mode, near-white in dark) with a non-inverting mint text color,
+   so in dark mode it became light-mint-on-near-white - very low contrast. Use the
+   token this codebase already defines for exactly this "text on a flipping ink chip"
+   case (see the --bl-invert-fg doc comment near the top of this file). Resting-state
+   .bl-count also gets a slightly stronger border so the pill doesn't disappear against
+   the near-identical --bl-surface card background it usually sits on. */
+.bl-tabs>button[aria-pressed="true"] .bl-count{color:var(--bl-invert-fg)}
+.bl-count{border-color:var(--line)}
+
+/* Issue (c): widen the main-content cap further than the previous min(1800px,96vw)
+   pass so large desktop screens don't waste as much horizontal space on side margin. */
+.bl-wrap{max-width:min(2000px,98vw)}
+
+/* packages/ui/src/Button.tsx's danger variant used raw Tailwind bg-red-600/700 -
+   the only button in the app that didn't flip with the theme. --bl-error itself isn't
+   right here (it's a *text* token that lightens in dark mode - see --bl-danger-fill's
+   own doc comment near the top of this file); this pairs the new fill token with
+   --bl-on-accent, same shape as .bl-button.mint below it. */
+.bl-btn-danger{background:var(--bl-danger-fill);color:var(--bl-on-accent)}
+.bl-btn-danger:hover{background:color-mix(in srgb,var(--bl-danger-fill) 86%,#000)}
+
+/* Issue (g): the Backline brand lockup at the top of the sidebar was a plain,
+   non-interactive <span> - no hover state, no visual affordance that it's clickable.
+   DashboardSidebar.tsx now wraps it in a <Link>; this gives that link a hover state
+   matching the .bl-workspace switcher button directly below it. */
+.bl-rail-brand-link{display:flex;margin:-6px -8px;padding:6px 8px;border-radius:6px;transition:background-color .14s ease}
+.bl-rail-brand-link:hover{background:var(--bl-surface)}
+.bl-rail-brand-link:focus-visible{outline:2px solid var(--bl-focus);outline-offset:2px}
+
+/* Badge dark-mode contrast (packages/ui/src/Badge.tsx StatusBadge/LayerBadge/RecoveryBadge):
+   tailwind.config.js's status/layer/recovery colors were chosen for AA contrast against a
+   *light* bg-canvas only (see that file's own comments) and had no dark-mode counterpart,
+   unlike the 7 "bridge" colors (bg-surface, accent-primary, ...) right above them in that
+   same file. Brightened dark-mode equivalents, each re-checked for AA against dark
+   --bl-surface (~#171D19) at the 15%-opacity tint Badge.tsx renders them on. */
+:root.dark{
+  --tw-status-todo:148 163 184; --tw-status-in-progress:245 191 92; --tw-status-in-review:120 170 214;
+  --tw-status-blocked:224 138 106; --tw-status-resolved:74 222 148; --tw-status-wont-fix:148 158 150;
+  --tw-layer-client:110 189 232; --tw-layer-team:196 165 232;
+  --tw-recovery-low-confidence:245 191 92; --tw-recovery-orphaned:240 128 107;
+}
