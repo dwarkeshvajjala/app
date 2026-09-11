@@ -22,6 +22,12 @@ dependencies = [
   "sentry-sdk[fastapi]==2.19.2",
   "pillow==12.3.0",
   "google-genai==0.3.0",
+  # modules/browser_render: real Chromium/WebKit/Firefox headless rendering for the
+  # "Capture As" dropdown. Only imported lazily inside browser_render/service.py's
+  # run_render(), so the API process never pays its import cost - but the *browser
+  # binaries* (`playwright install chromium firefox webkit`) must still be present
+  # wherever render_browser_snapshot_job actually runs (see backend/Dockerfile).
+  "playwright==1.49.1",
 ]
 
 [dependency-groups]
@@ -49,6 +55,13 @@ ignore = ["B008"]
 python_version = "3.12"
 strict = true
 exclude = ["tests/"]
+
+[[tool.mypy.overrides]]
+# playwright ships its own inline types once actually installed (`uv sync` /
+# `playwright install`) - this override only covers a checkout where that hasn't
+# happened yet, so modules/browser_render's lazy import still type-checks either way.
+module = "playwright.*"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

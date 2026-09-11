@@ -2230,6 +2230,11 @@ export interface components {
              * @default false
              */
             client_digest_enabled: boolean;
+            /**
+             * Enable Cross Browser Render
+             * @default false
+             */
+            enable_cross_browser_render: boolean;
         };
         /**
          * ProjectSettingsUpdate
@@ -2246,6 +2251,8 @@ export interface components {
             show_board_to_client?: boolean | null;
             /** Client Digest Enabled */
             client_digest_enabled?: boolean | null;
+            /** Enable Cross Browser Render */
+            enable_cross_browser_render?: boolean | null;
         };
         /** ProjectStatsOut */
         ProjectStatsOut: {

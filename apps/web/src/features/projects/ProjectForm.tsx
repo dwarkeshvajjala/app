@@ -96,6 +96,9 @@ export function ProjectForm({ workspace, project, initialType, onClose }: {
   const [captureDeviceDetails, setCaptureDeviceDetails] = useState(project?.settings.capture_device_details ?? false);
   const [reviewerCanResolve, setReviewerCanResolve] = useState(project?.settings.reviewer_can_resolve ?? false);
   const [showBoardToClient, setShowBoardToClient] = useState(project?.settings.show_board_to_client ?? false);
+  const [enableCrossBrowserRender, setEnableCrossBrowserRender] = useState(
+    project?.settings.enable_cross_browser_render ?? false,
+  );
   const [newClientName, setNewClientName] = useState("");
   const [newClientContact, setNewClientContact] = useState("");
   const [newClientEmail, setNewClientEmail] = useState("");
@@ -145,6 +148,7 @@ export function ProjectForm({ workspace, project, initialType, onClose }: {
           capture_device_details: captureDeviceDetails,
           reviewer_can_resolve: reviewerCanResolve,
           show_board_to_client: showBoardToClient,
+          enable_cross_browser_render: enableCrossBrowserRender,
         });
         return api.updateProject(project.id, { name: name.trim(), ...(type === "website" ? { target_origin: url.trim(), environment } : {}), client_id: clientId || null });
       }
@@ -251,7 +255,7 @@ export function ProjectForm({ workspace, project, initialType, onClose }: {
           {fileError && <p role="alert" className="bl-error">{fileError}</p>}{uploaded.length > 0 && <p className="bl-mono">{uploaded.length} of {files.length} uploaded</p>}
         </div> : null}
 
-        {project && <fieldset className="bl-review-settings"><legend>Review settings</legend><SettingRow checked={captureDeviceDetails} onChange={setCaptureDeviceDetails} label="Capture browser and device details" description="Attaches OS, viewport and the element selector to every new comment." /><SettingStatusRow label="Automatic anchor recovery" description="Recovery runs for every new revision. The legacy per-project toggle is retained for compatibility but is not an active control." status="Always on" /><SettingRow checked={reviewerCanResolve} onChange={setReviewerCanResolve} label="Let reviewers resolve their own comments" description="Off means only your team can move a guest comment to Resolved." /><SettingRow checked={showBoardToClient} onChange={setShowBoardToClient} label="Show the ticket board to this client" description="Off hides due dates, assignees and the board from guest reviewers." /><SettingStatusRow label="Client email digest" description="Client digest delivery has no approved recipient, privacy, or scheduling contract and cannot be enabled." status="Not available" /></fieldset>}
+        {project && <fieldset className="bl-review-settings"><legend>Review settings</legend><SettingRow checked={captureDeviceDetails} onChange={setCaptureDeviceDetails} label="Capture browser and device details" description="Attaches OS, viewport and the element selector to every new comment." /><SettingStatusRow label="Automatic anchor recovery" description="Recovery runs for every new revision. The legacy per-project toggle is retained for compatibility but is not an active control." status="Always on" /><SettingRow checked={reviewerCanResolve} onChange={setReviewerCanResolve} label="Let reviewers resolve their own comments" description="Off means only your team can move a guest comment to Resolved." /><SettingRow checked={showBoardToClient} onChange={setShowBoardToClient} label="Show the ticket board to this client" description="Off hides due dates, assignees and the board from guest reviewers." /><SettingRow checked={enableCrossBrowserRender} onChange={setEnableCrossBrowserRender} label="Render real cross-browser screenshots" description="Lets the footer's Capture As dropdown request a real Chromium/WebKit/Firefox screenshot instead of just tagging the browser name. Each render costs worker time, so it's off by default." /><SettingStatusRow label="Client email digest" description="Client digest delivery has no approved recipient, privacy, or scheduling contract and cannot be enabled." status="Not available" /></fieldset>}
 
         </fieldset>
         {phase === "saving" && <p role="status">{files.length ? `${uploaded.length} of ${files.length} files uploaded. Processing remaining files…` : "Saving project…"}</p>}

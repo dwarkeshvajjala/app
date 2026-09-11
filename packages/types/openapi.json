@@ -7059,6 +7059,11 @@
             "type": "boolean",
             "title": "Client Digest Enabled",
             "default": false
+          },
+          "enable_cross_browser_render": {
+            "type": "boolean",
+            "title": "Enable Cross Browser Render",
+            "default": false
           }
         },
         "type": "object",
@@ -7124,6 +7129,17 @@
               }
             ],
             "title": "Client Digest Enabled"
+          },
+          "enable_cross_browser_render": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enable Cross Browser Render"
           }
         },
         "type": "object",

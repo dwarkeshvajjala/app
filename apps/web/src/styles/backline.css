@@ -1194,6 +1194,15 @@ button{letter-spacing:inherit}
 .bl-review-empty-canvas>span:last-child{display:block;margin-top:11px;color:var(--ink-4);font:10px var(--mono)}
 .bl-review-empty-actions{display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap}
 
+/* Real cross-browser render (modules/browser_render): a static screenshot standing in
+   for the live iframe, so it gets its own scroll behavior (a full-page capture is
+   usually taller than the viewport it was captured at) and a visual cue that this
+   isn't the live, interactive proxy. */
+.bl-render-snapshot .bl-live-frame-canvas{overflow:auto}
+.bl-render-snapshot-img{display:block;width:100%;height:auto}
+.bl-render-snapshot .bl-live-frame-source{color:var(--amber-ink)}
+.bl-render-snapshot .bl-live-frame-source i{background:var(--amber-ink)}
+
 .bl-review-sidepanel{position:absolute;inset:0 0 0 auto;z-index:20;display:flex;height:100%;pointer-events:none}
 .bl-review-drawer,.bl-review-panel-rail{pointer-events:auto}
 .bl-review-drawer{display:flex;width:min(380px,calc(100vw - 54px));flex-direction:column;border-left:1px solid var(--line);background:var(--bl-surface);box-shadow:-7px 0 24px rgba(11,11,11,.07);animation:bl-review-drawer-in .18s ease}

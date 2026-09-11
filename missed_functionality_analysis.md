@@ -2,9 +2,12 @@
 Based on the `backline-Final Draft.html` prototype, here is a breakdown of functional features we are currently missing in the React app (excluding UI and styling):
 
 ## 1. Browser & Environment Emulation
-- **Browser Selection ("Capture As")**: Ability to select which browser environment (Chrome, Safari, Firefox, Edge, etc.) you are recording a comment as. The HTML prototype tracks this state and injects it into new comments.
-- **Device Orientation & Framing**: Functionality to toggle between "Portrait" and "Landscape" orientations, and adjust the canvas size (zoom in/out buttons). 
-- **Environment Metadata Capture**: Comments capture and store rich environment data, such as OS version (e.g. `macOS 14.5`), device type (`desktop`, `phone`), and viewport dimensions.
+- ~~**Browser Selection ("Capture As")**~~ — **IMPLEMENTED** (2026-09-10, commit `e86227e`). `ProjectFooter.tsx` renders `BrowserMenu.tsx` (Chrome/Safari/Firefox/Edge + version), selection is persisted in the URL (`?browser=`), threaded into the review iframe via a `blBrowser` param, and the widget (`apps/widget/src/index.ts`) stamps it onto `comment.context` on the backend (`ContextIn` in `backend/app/modules/comments/schemas.py`: `browser`, `os`, `viewport`, `device_type`, `url`). Filterable via `commentBrowser()`/`FilterSortBar.tsx`. Two real gaps remain, not a rebuild:
+  1. The full environment string ("Chrome 128 · macOS 14.5 · 1512px") isn't rendered on the comment row/detail — only a generic device-type icon (`CommentRow.tsx`). The reference HTML showed this inline; worth adding as a small display change.
+  2. `apps/e2e/tests/journeys/journey-8-browser-selection.spec.ts` targets selectors that never matched the real markup (`.bl-project-footer` / `.bl-dropdown-pop[aria-label="Browser"]` vs actual `.bl-review-statusbar` / `.bl-review-popover`) — it has been a false-green (or erroring) test since it was written, so there's no working regression coverage for this feature.
+  3. Not implemented, and probably shouldn't be as a P0: real cross-engine rendering. The dropdown (in both the reference prototype and the current app) only tags metadata + light cosmetic touches — it does not actually re-render the iframe in Safari's/Firefox's real engine. The reference prototype's own copy says as much ("Real cross-engine screenshots run on Backline's device grid") — that's a separate, much larger feature (see Phase 2 note below) than the dropdown itself.
+- **Device Orientation & Framing**: Toggle between "Portrait"/"Landscape", zoom in/out — already implemented (`ProjectFooter.tsx`, `ViewportMenu.tsx`).
+- **Environment Metadata Capture**: OS, device type, viewport dimensions — already implemented, see above (`ContextIn` schema).
 
 ## 2. Advanced Commenting Tools
 - **Region / Shape Tool (`is-drawing`)**: The prototype supports an `is-drawing` state where the cursor turns into a crosshair (`cursor:crosshair`), allowing users to draw a shape or select an area for a comment rather than just pinning a single point.

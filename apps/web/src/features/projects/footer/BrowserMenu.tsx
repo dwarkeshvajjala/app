@@ -99,7 +99,7 @@ export function BrowserMenu({ browser, onChange }: BrowserMenuProps) {
       </button>
 
       {open && (
-        <div className="bl-review-popover bl-viewport-popover" role="menu">
+        <div className="bl-review-popover bl-viewport-popover" role="menu" aria-label="Browser">
           <div className="bl-review-popover-label">CAPTURE AS</div>
           {BROWSERS.map((option) => (
             <button

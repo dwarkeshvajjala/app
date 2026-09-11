@@ -19,6 +19,7 @@ from app.core.redis_client import close_redis, get_redis
 from app.modules.assets.router import router as assets_router
 from app.modules.auth.account import router as account_router
 from app.modules.auth.router import router as auth_router
+from app.modules.browser_render.router import router as browser_render_router
 from app.modules.clients.router import router as clients_router
 from app.modules.comments.router import router as comments_router
 from app.modules.dashboard.router import router as dashboard_router
@@ -95,6 +96,7 @@ app.include_router(pages_router, prefix="/api/v1")
 app.include_router(snapshots_router, prefix="/api/v1")
 app.include_router(storage_router, prefix="/api/v1")
 app.include_router(comments_router, prefix="/api/v1")
+app.include_router(browser_render_router, prefix="/api/v1")
 app.include_router(ai_router)
 app.include_router(integrations_router, prefix="/api/v1")
 app.include_router(notifications_router, prefix="/api/v1")

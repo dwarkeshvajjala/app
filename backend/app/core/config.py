@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     snapshot_submit_rate_limit_per_minute: int = 30
     comment_create_rate_limit_per_minute: int = 20
     upload_rate_limit_per_minute: int = 20
+    # Real per-engine headless-browser renders are actual CPU/memory cost, unlike the
+    # writes above - kept deliberately low so one workspace can't queue enough
+    # concurrent Playwright launches to starve the single worker process (see
+    # app/workers/main.py's note on why there's exactly one).
+    browser_render_rate_limit_per_minute: int = 6
 
     # Where a reviewer's browser can reach this API from - used to build the absolute
     # widget script src/apiBaseUrl injected server-side in proxy mode

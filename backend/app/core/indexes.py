@@ -92,6 +92,30 @@ AUDIT_BATCH_03_INDEXES: tuple[AdditiveIndex, ...] = (
 )
 
 
+BROWSER_RENDER_INDEXES: tuple[AdditiveIndex, ...] = (
+    # One cache/job-status document per (page, browser, viewport, orientation)
+    # combination - modules/browser_render's repository upserts against exactly this
+    # key, never generates duplicates for the same combination.
+    AdditiveIndex(
+        "browser_renders",
+        (
+            ("page_id", 1),
+            ("browser", 1),
+            ("viewport.width", 1),
+            ("viewport.height", 1),
+            ("orientation", 1),
+        ),
+        "browser_renders_page_browser_viewport_orientation",
+        {"unique": True},
+    ),
+    AdditiveIndex(
+        "browser_renders",
+        (("workspace_id", 1), ("project_id", 1)),
+        "browser_renders_workspace_project",
+    ),
+)
+
+
 DELETION_SUPPORT_INDEXES: tuple[AdditiveIndex, ...] = (
     AdditiveIndex(
         "deletion_plans",
@@ -226,3 +250,4 @@ async def ensure_indexes(db: AsyncIOMotorDatabase[dict[str, Any]]) -> None:
     await ensure_additive_indexes(db, AUDIT_BATCH_02_INDEXES)
     await ensure_additive_indexes(db, DELETION_SUPPORT_INDEXES)
     await ensure_additive_indexes(db, AUDIT_BATCH_03_INDEXES)
+    await ensure_additive_indexes(db, BROWSER_RENDER_INDEXES)
