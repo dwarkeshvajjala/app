@@ -78,32 +78,31 @@ function paletteFor(seed: string) {
 function ProjectArtwork({ project }: { project: api.ProjectOut }) {
   const palette = paletteFor(project.id || project.name);
   const type = project.project_type ?? "website";
-
+  const initial = project.name.trim()[0]?.toUpperCase() ?? "?";
+  // target_origin gives every website project one real, project-specific asset for
+  // free: its own favicon. No per-project screenshot capture exists yet (that's a
+  // real headless-browser render, see browser_render/ - too heavy to fire for every
+  // card in a grid), so rather than fake a live preview this hero shows the site's
+  // actual icon on a palette-tinted ground, falling back to the project's initial if
+  // the origin can't be parsed or the site has no favicon / blocks hotlinking.
+  const [faviconFailed, setFaviconFailed] = useState(false);
+  let hostname: string | null = null;
+  try { hostname = new URL(project.target_origin).hostname; } catch { hostname = null; }
+  const faviconUrl = hostname ? `https://${hostname}/favicon.ico` : null;
 
   return (
     <div className={`bl-project-art bl-project-art-${type}`} aria-hidden="true">
       {project.hero_url ? (
         <img src={project.hero_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-      ) : type === "website" && (
-        <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice">
-          <rect width="320" height="180" fill={palette.paper} />
-          <rect width="320" height="22" fill="var(--bl-art-panel)" />
-          <rect x="15" y="8" width="42" height="6" rx="2" fill={palette.ink} />
-          <rect x="218" y="9" width="20" height="4" rx="2" fill="var(--bl-art-ink-soft)" />
-          <rect x="246" y="9" width="20" height="4" rx="2" fill="var(--bl-art-ink-soft)" />
-          <rect x="275" y="5" width="30" height="12" rx="2" fill={palette.accent} />
-          <rect x="24" y="43" width="144" height="12" rx="3" fill={palette.ink} />
-          <rect x="24" y="62" width="112" height="12" rx="3" fill={palette.ink} opacity=".82" />
-          <rect x="24" y="86" width="130" height="5" rx="2" fill="var(--bl-art-ink)" />
-          <rect x="24" y="98" width="96" height="5" rx="2" fill="var(--bl-art-ink)" />
-          <rect x="24" y="119" width="58" height="17" rx="2" fill={palette.accent} />
-          <rect x="190" y="38" width="106" height="102" rx="4" fill={palette.accentSoft} />
-          <circle cx="243" cy="74" r="19" fill={palette.accent} opacity=".8" />
-          <rect x="207" y="105" width="72" height="5" rx="2" fill={palette.ink} opacity=".3" />
-          <rect x="216" y="117" width="54" height="5" rx="2" fill={palette.ink} opacity=".2" />
-          <rect x="24" y="155" width="272" height="1" fill="var(--bl-art-line)" />
-        </svg>
-      )}
+      ) : type === "website" ? (
+        <div className="bl-project-hero" style={{ background: `radial-gradient(circle at 30% 22%, ${palette.accentSoft}, ${palette.paper} 70%)` }}>
+          {faviconUrl && !faviconFailed ? (
+            <img key={faviconUrl} src={faviconUrl} alt="" className="bl-project-hero-favicon" onError={() => setFaviconFailed(true)} />
+          ) : (
+            <span className="bl-project-hero-initial" style={{ background: palette.accent, color: palette.ink }}>{initial}</span>
+          )}
+        </div>
+      ) : null}
       {type === "image" && (
         <svg viewBox="0 0 320 180" preserveAspectRatio="xMidYMid slice">
           <rect width="320" height="180" fill={palette.paper} />
