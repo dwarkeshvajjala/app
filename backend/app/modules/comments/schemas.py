@@ -20,6 +20,12 @@ class ClickOffsetPct(BaseModel):
     y: float = Field(ge=0, le=1)
 
 
+class RegionBoxPct(BaseModel):
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+    width: float = Field(ge=0, le=1)
+    height: float = Field(ge=0, le=1)
+
 class DomFingerprintIn(BaseModel):
     """node_hash/ancestor_path_hash use the same hash scheme as a snapshot's NodeRecord
     (09-Snapshot-Engine.md §9.6) - required for modules/anchor_engine to compare an
@@ -36,6 +42,7 @@ class DomFingerprintIn(BaseModel):
     # drops unknown fields by default - without it the SDK's offset would be silently
     # discarded on the way into the database.
     click_offset_pct: ClickOffsetPct | None = None
+    region_box_pct: RegionBoxPct | None = None
 
 
 class TextFingerprintIn(BaseModel):
@@ -50,6 +57,7 @@ class AnchorIn(BaseModel):
     """Tier 1 only in Milestone 4/5 (08-Anchor-Engine.md §8.1/§8.2)."""
 
     tier: Literal[1]
+    type: Literal["point", "region"] = "point"
     dom_fingerprint: DomFingerprintIn
     text_fingerprint: TextFingerprintIn
 

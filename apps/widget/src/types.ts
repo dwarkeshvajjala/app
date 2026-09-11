@@ -52,10 +52,12 @@ export interface DomFingerprint {
   // Optional: comments created before this field existed have no value, and fall back to
   // the corner - the same (honest) behavior they were created with.
   click_offset_pct?: { x: number; y: number };
+  region_box_pct?: { x: number; y: number; width: number; height: number };
 }
 
 export interface AnchorPayload {
   tier: 1;
+  type?: "point" | "region";
   dom_fingerprint: DomFingerprint;
   text_fingerprint: {
     normalized_text: string;

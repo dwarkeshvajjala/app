@@ -17,7 +17,7 @@ import { ViewportMenu, type ViewportOption } from "./ViewportMenu";
 import { BrowserMenu, type BrowserOption } from "./BrowserMenu";
 import { VersionMenu } from "./VersionMenu";
 
-export type CanvasMode = "browse" | "comment";
+export type CanvasMode = "browse" | "comment" | "draw";
 
 interface ProjectFooterProps {
   project: ProjectOut;

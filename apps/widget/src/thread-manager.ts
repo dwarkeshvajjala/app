@@ -31,7 +31,10 @@ export function createThreadManager({
   // full flat list the backend returns per page, regrouped here since the widget is
   // the one place that needs to render it as threads rather than a flat feed.
   const threadMessages = new Map<string, CommentRecord[]>();
-  const pinsByTopId = new Map<string, { pin: HTMLElement; untrack: () => void }>();
+  const pinsByTopId = new Map<
+    string,
+    { pin: HTMLElement; untrack: () => void; regionOverlay?: HTMLElement }
+  >();
   let openThread: { topId: string; controls: ReturnType<typeof openThreadView> } | null = null;
 
   // Keeps a pin glued to its target element even while the element itself moves - a
@@ -91,6 +94,10 @@ export function createThreadManager({
     if (!entry) return;
     entry.untrack();
     entry.pin.remove();
+    // Region comments (region-drawer.ts) additionally leave a draft rectangle overlay
+    // on the live page - without this it never gets cleaned up when the comment is
+    // deleted, leaving a stuck highlight box on the page for the rest of the session.
+    entry.regionOverlay?.remove();
     pinsByTopId.delete(topId);
   }
 

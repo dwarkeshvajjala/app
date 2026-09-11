@@ -16,6 +16,7 @@ import {
   showTooltip,
 } from "./ui";
 import { parseUserAgent } from "./user-agent";
+import { setupRegionDrawer } from "./region-drawer";
 
 async function init(config: BacklineConfig): Promise<void> {
   const api = createApiClient(config.apiBaseUrl);
@@ -29,7 +30,16 @@ async function init(config: BacklineConfig): Promise<void> {
   // instance, since the widget script is baked into the proxy's HTML response
   // server-side, not passed live init() args from the parent frame.
   const modeParams = new URLSearchParams(window.location.search);
-  const commentingEnabled = modeParams.get("blMode") !== "browse";
+  const blMode = modeParams.get("blMode");
+  // Real guest reviewers (the /review/:shareToken flow, redirected straight to the
+  // proxied site) never carry a blMode param at all - only the dashboard's own canvas
+  // iframe sets one, always to one of "browse"/"comment"/"draw" (ProjectOverviewPage's
+  // iframeSearch.set("blMode", mode)). Comment mode has to stay the default for that
+  // absent case, same as before "draw" existed - flipping this to an allowlist
+  // (`=== "comment"`) would silently turn commenting off for every real guest
+  // reviewer, since their URL never says "comment" explicitly.
+  const drawingEnabled = blMode === "draw";
+  const commentingEnabled = !drawingEnabled && blMode !== "browse";
 
   // The dashboard's BrowserMenu ("CAPTURE AS") lets a team member manually tag which
   // browser a comment should be recorded against, for QA scenarios where they can't
@@ -163,7 +173,22 @@ async function init(config: BacklineConfig): Promise<void> {
     ownCommentIds,
   );
 
-  if (!commentingEnabled) return;
+  if (!commentingEnabled && !drawingEnabled) return;
+
+  if (drawingEnabled) {
+    setupRegionDrawer({
+      shadow,
+      api,
+      guest,
+      projectId,
+      pageId,
+      browserOverride,
+      threadManager,
+      ownCommentIds,
+      tooltip,
+    });
+    return;
+  }
 
   document.addEventListener("click", (event) => {
     const target = event.target as Element | null;

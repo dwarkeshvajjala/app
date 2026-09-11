@@ -1315,6 +1315,12 @@ export interface components {
             tier: 1;
             dom_fingerprint: components["schemas"]["DomFingerprintIn"];
             text_fingerprint: components["schemas"]["TextFingerprintIn"];
+            /**
+             * Type
+             * @default point
+             * @enum {string}
+             */
+            type: "point" | "region";
         };
         /** AssetCommentCreate */
         AssetCommentCreate: {
@@ -1704,6 +1710,8 @@ export interface components {
             /** Ancestor Path Hash */
             ancestor_path_hash: string;
             click_offset_pct?: components["schemas"]["ClickOffsetPct"] | null;
+            /** Region Box Pct */
+            region_box_pct?: components["schemas"]["RegionBoxPct"] | null;
         };
         /** GoogleCallbackRequest */
         GoogleCallbackRequest: {
@@ -2859,6 +2867,17 @@ export interface components {
              * Format: date-time
              */
             last_active_at: string;
+        };
+        /** RegionBoxPct */
+        RegionBoxPct: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
         };
     };
     responses: never;

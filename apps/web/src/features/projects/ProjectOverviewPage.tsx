@@ -31,6 +31,8 @@ import { ProjectForm } from "./ProjectForm";
 import { ProjectMenu } from "./ProjectMenu";
 import { ProjectPagesModal } from "./ProjectPagesModal";
 import { ThemeToggle } from "../../components/ThemeToggle";
+import { QuickToolsDock } from "./footer/QuickToolsDock";
+import { loadShortcuts, ShortcutsModal } from "./ShortcutsModal";
 
 type PageOut = Schemas["PageOut"];
 
@@ -55,6 +57,33 @@ function pageLabel(page: PageOut) {
   }
 }
 
+/** Normalizes a saved shortcut key ("Ctrl .", "ArrowRight", user-edited "CTRL C") and
+ * a live KeyboardEvent to the same "ctrl+alt+shift+key" shape so they can be compared
+ * case-insensitively - ShortcutsModal's own capture logic doesn't keep consistent
+ * casing between the defaults and a freshly-recorded binding. */
+function normalizeCombo(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .sort()
+    .join("+");
+}
+
+// The DOM's KeyboardEvent, not React's - this file also imports the latter (as
+// `KeyboardEvent`, from "react") for the page-tab arrow-key handler below, and a
+// window-level "keydown" listener always receives the native DOM event.
+function comboFromEvent(event: globalThis.KeyboardEvent): string {
+  const parts: string[] = [];
+  if (event.ctrlKey) parts.push("ctrl");
+  if (event.altKey) parts.push("alt");
+  if (event.shiftKey) parts.push("shift");
+  if (!["Control", "Alt", "Shift", "Meta"].includes(event.key)) {
+    parts.push(event.key.toLowerCase());
+  }
+  return parts.sort().join("+");
+}
+
 export function ProjectOverviewPage() {
   const { workspace } = useOutletContext<{ workspace: WorkspaceOut }>();
   const { projectId } = useParams<{ projectId: string }>();
@@ -62,6 +91,7 @@ export function ProjectOverviewPage() {
   const [showShare, setShowShare] = useState(false);
   const [showPages, setShowPages] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const [currentPageId, setCurrentPageId] = useState<string | null>(null);
   const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
   const [iframeStatus, setIframeStatus] = useState<"loading" | "loaded" | "error">("loading");
@@ -70,8 +100,15 @@ export function ProjectOverviewPage() {
   const pageTabsRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    const handleOpenShortcuts = () => setShowShortcuts(true);
+    window.addEventListener("backline:open-shortcuts", handleOpenShortcuts);
+    return () => window.removeEventListener("backline:open-shortcuts", handleOpenShortcuts);
+  }, []);
+
   const activePageIdParam = searchParams.get("page");
-  const mode: CanvasMode = searchParams.get("mode") === "browse" ? "browse" : "comment";
+  const searchMode = searchParams.get("mode");
+  const mode: CanvasMode = searchMode === "browse" ? "browse" : searchMode === "draw" ? "draw" : "comment";
   const orientation = searchParams.get("orientation") === "landscape" ? "landscape" : "portrait";
   const zoomScale = clampZoom(Number(searchParams.get("zoom") ?? 1));
   const viewport = useMemo<ViewportOption | null>(() => {
@@ -116,6 +153,45 @@ export function ProjectOverviewPage() {
   const hasProxyCandidate = (shareLinksQuery.data ?? []).some(
     (link) => link.revoked_at === null && link.mode === "proxy",
   );
+
+  // Global hotkeys for the shortcuts ShortcutsModal/QuickToolsDock advertise ("Add
+  // Comment (C)", "Draw Region (D)", ...) - without this the modal only ever relabeled
+  // a key, it never actually bound one. Reads the reviewer's saved bindings (or the
+  // defaults) fresh on every keydown rather than once, so editing a shortcut applies
+  // immediately. Suppressed while any modal is open or while typing in a field, so it
+  // never hijacks normal text entry (e.g. a comment body that happens to contain "c").
+  useEffect(() => {
+    function handleKeyDown(event: globalThis.KeyboardEvent) {
+      if (showShare || showPages || showSettings || showShortcuts) return;
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target?.isContentEditable) return;
+
+      const combo = comboFromEvent(event);
+      const shortcut = loadShortcuts().find((s) => normalizeCombo(s.key) === combo);
+      if (!shortcut) return;
+
+      if (shortcut.id === "comment" || shortcut.id === "draw" || shortcut.id === "browse") {
+        event.preventDefault();
+        setMode(shortcut.id);
+        return;
+      }
+      if (shortcut.id === "next-page" || shortcut.id === "prev-page") {
+        const ids = [...(pagesQuery.data ?? [])]
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map((page) => page.id);
+        if (ids.length === 0) return;
+        const currentIndex = Math.max(0, ids.indexOf(activePageIdParam ?? ""));
+        const step = shortcut.id === "next-page" ? 1 : -1;
+        event.preventDefault();
+        goToPage(ids[(currentIndex + step + ids.length) % ids.length]);
+      }
+      // "hide-dock" (Ctrl .) is already handled by QuickToolsDock's own listener.
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showShare, showPages, showSettings, showShortcuts, activePageIdParam, pagesQuery.data]);
 
   const upsertComment = useCallback(
     (payload: CommentOut & { project_id: string }) => {
@@ -426,7 +502,7 @@ export function ProjectOverviewPage() {
       </div>
 
       <section className="bl-review-main" aria-label="Website review canvas">
-        <div className={`bl-review-stage ${mode === "comment" ? "is-commenting" : "is-browsing"}`}>
+        <div className={`bl-review-stage ${mode === "comment" || mode === "draw" ? "is-commenting" : "is-browsing"} ${mode === "draw" ? "is-drawing" : ""}`}>
           {shareLinksQuery.isLoading ? (
             <div className="bl-review-empty-canvas" role="status">
               <span className="bl-review-loader" aria-hidden="true" />
@@ -494,7 +570,7 @@ export function ProjectOverviewPage() {
                 )}
               </div>
               <div className="bl-live-frame-meta">
-                <span>{selectedCommentNumber > 0 ? `Comment ${selectedCommentNumber} selected · locating its pin` : mode === "comment" ? "Comment mode · click the page to place a pin" : "Browse mode · page interactions enabled"}</span>
+                <span>{selectedCommentNumber > 0 ? `Comment ${selectedCommentNumber} selected — locating its pin` : mode === "comment" ? "Comment mode — click the page to place a pin" : mode === "draw" ? "Draw mode — click and drag to select an area" : "Browse mode — page interactions enabled"}</span>
                 <span>Source: proxy</span>
               </div>
             </div>
@@ -508,6 +584,12 @@ export function ProjectOverviewPage() {
             </div>
           )}
         </div>
+
+        <QuickToolsDock
+          environment={project.environment}
+          mode={mode}
+          onModeChange={(m) => setMode(m)}
+        />
 
         <ProjectSidePanel
           project={project}
@@ -558,6 +640,7 @@ export function ProjectOverviewPage() {
           onClose={() => setShowPages(false)}
         />
       )}
+      {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
       {showSettings && <ProjectForm workspace={workspace} project={project} onClose={() => setShowSettings(false)} />}
     </main>
   );

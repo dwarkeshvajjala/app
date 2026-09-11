@@ -111,7 +111,43 @@ export async function computeAnchor(
 
   return {
     tier: 1,
+    type: "point",
     dom_fingerprint: domFingerprint,
+    text_fingerprint: {
+      normalized_text: normalizedText,
+      text_similarity_hash: computeSimhash(normalizedText),
+    },
+  };
+}
+
+export async function computeRegionAnchor(
+  el: Element,
+  rect: { x: number; y: number; width: number; height: number }
+): Promise<AnchorPayload> {
+  const tag = el.tagName.toLowerCase();
+  const attributes = getStableAttributes(el);
+  const { nodeHash, ancestorPathHash } = await computeIdentity(el);
+  const normalizedText = getDirectText(el).toLowerCase();
+  
+  const elRect = el.getBoundingClientRect();
+  const region_box_pct = {
+    x: elRect.width > 0 ? clamp01((rect.x - (elRect.left + window.scrollX)) / elRect.width) : 0,
+    y: elRect.height > 0 ? clamp01((rect.y - (elRect.top + window.scrollY)) / elRect.height) : 0,
+    width: elRect.width > 0 ? clamp01(rect.width / elRect.width) : 0,
+    height: elRect.height > 0 ? clamp01(rect.height / elRect.height) : 0,
+  };
+
+  return {
+    tier: 1,
+    type: "region",
+    dom_fingerprint: {
+      selector_path: buildSelectorPath(el),
+      tag,
+      attributes,
+      node_hash: nodeHash,
+      ancestor_path_hash: ancestorPathHash,
+      region_box_pct,
+    },
     text_fingerprint: {
       normalized_text: normalizedText,
       text_similarity_hash: computeSimhash(normalizedText),
