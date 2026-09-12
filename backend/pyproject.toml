@@ -20,7 +20,16 @@ dependencies = [
   "google-auth==2.36.0",
   "email-validator==2.2.0",
   "sentry-sdk[fastapi]==2.19.2",
-  "pillow==12.3.0",
+  # Imported directly by modules/assets/service.py (PdfReader) but never declared here -
+  # it only stayed resolvable because some other dependency pulled it in transitively.
+  # Regenerating uv.lock below to fix the playwright/google-genai gap silently dropped
+  # it from the resolution entirely, which would have broken PDF asset handling.
+  "pypdf==6.17.0",
+  # Capped below 12.0.0: google-genai==0.3.0 requires pillow<12.0.0, and uv.lock
+  # simply never included google-genai (or playwright, below) at all rather than
+  # error - `uv sync --frozen` installed whatever the last successful lock had and
+  # silently skipped both, so this conflict shipped to prod undetected.
+  "pillow==11.3.0",
   "google-genai==0.3.0",
   # modules/browser_render: real Chromium/WebKit/Firefox headless rendering for the
   # "Capture As" dropdown. Only imported lazily inside browser_render/service.py's

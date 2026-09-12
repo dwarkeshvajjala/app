@@ -75,10 +75,7 @@ CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 #
 # On Railway: the WORKER service needs one settings change from what's documented in
 # DEPLOYMENT.md Part 8 - same repo, same Dockerfile Path ("backend/Dockerfile"), but set
-# Settings -> Build -> "Docker Build Target" to "worker". Leaving it unset (as today)
-# keeps building the `base` stage above, i.e. exactly the pre-existing image with no
-# Playwright - so this is opt-in and cannot regress the current worker or API deploy
-# until that one field is changed.
+# Settings -> Build -> "Docker Build Target" to "worker".
 FROM base AS worker
 
 # --with-deps installs the OS-level libraries each engine needs to actually launch
@@ -88,3 +85,20 @@ FROM base AS worker
 RUN playwright install --with-deps chromium firefox webkit
 
 CMD ["sh", "-c", "arq app.workers.main.WorkerSettings"]
+
+# --- Stage 4: default build target ---------------------------------------------------
+# Docker builds the LAST stage in a Dockerfile when no --target is given. With `worker`
+# defined last (above), every deploy that doesn't explicitly set a Docker Build Target -
+# including the API service, which has never set one - silently built the *worker* image
+# instead. That's why this stage previously claimed the untargeted build "keeps building
+# the base stage": it doesn't, and the API service broke the moment `uv sync --frozen`
+# could no longer paper over `worker`'s `RUN playwright install` failing (see
+# backend/pyproject.toml's pypdf/google-genai/pillow comments - the stale lock had been
+# silently skipping playwright and google-genai entirely).
+#
+# This stage is a trivial alias back to `base` so the default (untargeted) build - i.e.
+# the API service, and anything else that doesn't set a target - produces the
+# lightweight image again. The WORKER service must still explicitly set
+# Settings -> Build -> "Docker Build Target" = "worker" to get the Playwright-equipped
+# image; leaving it unset now gets this image instead (correct, just without Playwright).
+FROM base AS api
